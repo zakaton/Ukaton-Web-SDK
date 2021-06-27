@@ -1,0 +1,194 @@
+<html>
+  <head>
+    <title>Ukaton Side Mission</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="./SideMission.js"></script>
+  </head>
+  <style>
+    label {
+      display: block;
+    }
+  </style>
+  <body>
+    <h1>
+      Ukaton Side Mission
+    </h1>
+
+    <button onclick="connect(event)">
+      connect
+    </button>
+
+    <label class="rate">
+      Rate (ms)
+      <input
+        oninput="setRate(event)"
+        type="number"
+        min="20"
+        max="1000"
+        value="40"
+        step="10"
+      />
+    </label>
+
+    <br /><br />
+
+    <div data-type="acceleration">
+      <b>
+        Acceleration
+      </b>
+
+      <label class="enabled">
+        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      </label>
+
+      <label class="x"> x: <input readonly /> </label>
+      <label class="y"> y: <input readonly /> </label>
+      <label class="z"> z: <input readonly /> </label>
+      <label class="timestamp"> timestamp: <input readonly /> </label>
+      <label class="interval"> interval: <input readonly /> </label>
+    </div>
+    <br />
+    
+    <div data-type="gravity">
+      <b>
+        Gravity
+      </b>
+
+      <label class="enabled">
+        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      </label>
+
+      <label class="x"> x: <input readonly /> </label>
+      <label class="y"> y: <input readonly /> </label>
+      <label class="z"> z: <input readonly /> </label>
+      <label class="timestamp"> timestamp: <input readonly /> </label>
+      <label class="interval"> interval: <input readonly /> </label>
+    </div>
+    <br />
+    
+    <div data-type="linearAcceleration">
+      <b>
+        Linear Acceleration
+      </b>
+
+      <label class="enabled">
+        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      </label>
+
+      <label class="x"> x: <input readonly /> </label>
+      <label class="y"> y: <input readonly /> </label>
+      <label class="z"> z: <input readonly /> </label>
+      <label class="timestamp"> timestamp: <input readonly /> </label>
+      <label class="interval"> interval: <input readonly /> </label>
+    </div>
+    <br />
+    
+    <div data-type="rotationRate">
+      <b>
+        Rotation Rate
+      </b>
+
+      <label class="enabled">
+        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      </label>
+
+      <label class="x"> pitch: <input readonly /> </label>
+      <label class="y"> yaw: <input readonly /> </label>
+      <label class="z"> roll: <input readonly /> </label>
+      <label class="timestamp"> timestamp: <input readonly /> </label>
+      <label class="interval"> interval: <input readonly /> </label>
+    </div>
+    <br />
+    
+    <div data-type="magnetometer">
+      <b>
+        Magnetometer
+      </b>
+
+      <label class="enabled">
+        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      </label>
+
+      <label class="x"> x: <input readonly /> </label>
+      <label class="y"> y: <input readonly /> </label>
+      <label class="z"> z: <input readonly /> </label>
+      <label class="timestamp"> timestamp: <input readonly /> </label>
+      <label class="interval"> interval: <input readonly /> </label>
+    </div>
+    <br />
+    
+    <div data-type="quaternion">
+      <b>
+        Quaternion
+      </b>
+
+      <label class="enabled">
+        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      </label>
+
+      <label class="x"> x: <input readonly /> </label>
+      <label class="y"> y: <input readonly /> </label>
+      <label class="z"> z: <input readonly /> </label>
+      <label class="w"> w: <input readonly /> </label>
+      <label class="timestamp"> timestamp: <input readonly /> </label>
+      <label class="interval"> interval: <input readonly /> </label>
+    </div>
+    <br />
+    
+    <div data-type="euler">
+      <b>
+        Euler
+      </b>
+      
+      <label class="x"> pitch: <input readonly /> </label>
+      <label class="y"> yaw: <input readonly /> </label>
+      <label class="z"> roll: <input readonly /> </label>
+      <label class="timestamp"> timestamp: <input readonly /> </label>
+      <label class="interval"> interval: <input readonly /> </label>
+    </div>
+    <br />
+  </body>
+
+  <script>
+    const sideMission = new SideMission();
+
+    function connect(event) {
+      sideMission.connect().then(() => event.target.remove());
+    }
+
+    function setRate(event) {
+      const rate = Number(event.target.value);
+      sideMission.setRate(rate);
+    }
+
+    function toggleData(event) {
+      const dataType = event.target.closest("[data-type]").dataset.type;
+      const enabled = event.target.checked;
+      sideMission.configureSensors({ [dataType]: enabled });
+    }
+
+    const timestamps = {};
+    sideMission.dataTypes.forEach(dataType => {
+      sideMission.addEventListener(dataType, event => {
+        const { message } = event;
+        const { timestamp } = message;
+
+        const components = ["x", "y", "z"];
+        if (dataType === "quaternion") {
+          components.push("w");
+        }
+
+        const container = document.querySelector(`[data-type="${dataType}"]`);
+        components.forEach(component => {
+          container.querySelector(`.${component} input`).value =
+            message[dataType][component].toFixed(2);
+        });
+        container.querySelector(`.timestamp input`).value = timestamp;
+
+        const interval = dataType in timestamps ? timestamp - timestamps[dataType] : 0;
+        timestamps[dataType] = timestamp;
+        container.querySelector(`.interval input`).value = interval;
+      });
+    });
+  </script>
+</html>

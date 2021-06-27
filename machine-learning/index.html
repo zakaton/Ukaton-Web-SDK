@@ -1,0 +1,945 @@
+<html>
+  <head>
+    <title>Ukaton Side Missions | Machine Learning</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+
+    <script src="/SideMission.js"></script>
+
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+  </head>
+
+  <style>
+    label {
+      display: block;
+      user-select: none;
+    }
+
+    [data-results] h1 {
+      font-size: 70;
+    }
+
+    input[type="number"] {
+      width: 100px;
+    }
+
+    a-scene {
+      width: 200px;
+      height: 200px;
+    }
+
+    .connection.hide {
+      display: none;
+    }
+    .connection:not(.connected) .connected {
+      display: none;
+    }
+  </style>
+
+  <body>
+    <h1>
+      Ukaton Side Mission | Machine Learning
+    </h1>
+
+    <hr />
+
+    <div id="connect">
+      <h2>Connect</h2>
+
+      <label id="numberOfSideMissions">
+        Number of Side Missions:
+        <input
+          oninput="onInputNumberOfSideMissions(event)"
+          value="1"
+          type="number"
+          min="1"
+          step="1"
+        />
+      </label>
+
+      <ol id="connections">
+        <template>
+          <li class="connection">
+            <button onclick="onClickConnectButton(event)">connect</button>
+            <span class="connected">Connected</span>
+          </li>
+        </template>
+      </ol>
+    </div>
+
+    <hr />
+
+    <div id="options" data-type="task">
+      <h2>Options</h2>
+
+      <label id="task">
+        Task:
+        <select data-options oninput="onSelectTask(event)">
+          <optgroup label="Task">
+            <option value="classification">Classification</option>
+            <option value="regression">Regression</option>
+          </optgroup>
+        </select>
+      </label>
+
+      <hr />
+
+      <div id="inputs">
+        <h3>
+          Inputs
+        </h3>
+
+        <label data-input="acceleration">
+          Acceleration
+          <input type="checkbox" oninput="onToggleInput(event)" data-options />
+        </label>
+        <label data-input="gravity">
+          Gravity
+          <input type="checkbox" oninput="onToggleInput(event)" data-options />
+        </label>
+        <label data-input="linearAcceleration">
+          Linear Acceleration
+          <input type="checkbox" oninput="onToggleInput(event)" data-options />
+        </label>
+        <label data-input="rotationRate">
+          Rotation Rate
+          <input type="checkbox" oninput="onToggleInput(event)" data-options />
+        </label>
+        <label data-input="magnetometer">
+          Magnetometer
+          <input type="checkbox" oninput="onToggleInput(event)" data-options />
+        </label>
+        <label data-input="quaternion">
+          Quaternion
+          <input type="checkbox" oninput="onToggleInput(event)" data-options />
+        </label>
+        <label data-input="euler">
+          Euler
+          <input type="checkbox" oninput="onToggleInput(event)" data-options />
+        </label>
+      </div>
+
+      <hr />
+
+      <div id="outputs">
+        <h3>
+          Outputs
+        </h3>
+
+        <label id="numberOfOutputs">
+          Number of Outputs:
+          <input
+            type="number"
+            step="1"
+            min="1"
+            value="1"
+            oninput="onInputNumberOfOutputs(event)"
+            data-options
+          />
+        </label>
+
+        <div class="outputs">
+          <template>
+            <div class="output">
+              <input
+                type="string"
+                data-name
+                placeholder="output label"
+                data-options
+              />:
+              <input
+                type="number"
+                value="0"
+                min="0"
+                max="1"
+                step="1"
+                data-value
+              />
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <hr />
+
+      <div id="Sampling">
+        <h3>
+          Sampling
+        </h3>
+
+        <label data-number-of-samples>
+          Number of Samples:
+          <input
+            type="number"
+            min="1"
+            value="1"
+            step="1"
+            data-options
+            oninput="onInputNumberOfSamples(event)"
+          />
+        </label>
+
+        <label data-sampling-period>
+          Sampling Period (ms):
+          <input
+            disabled
+            type="number"
+            value="0"
+            min="0"
+            step="20"
+            data-options
+          />
+        </label>
+
+        <label data-sampling-rate>
+          Sampling Rate (ms)
+          <input
+            type="number"
+            value="40"
+            min="20"
+            max="1000"
+            step="10"
+            data-options
+            oninput="onInputSamplingRate(event)"
+          />
+        </label>
+      </div>
+
+      <hr />
+
+      <div id="create">
+        <h3>
+          Create Neural Network
+        </h3>
+
+        <button onclick="onClickCreateNeuralNetwork(event)">
+          Create
+        </button>
+      </div>
+
+      <hr />
+
+      <div id="addingData">
+        <h3>
+          Add Data
+        </h3>
+
+        <button data-add disabled onclick="onClickAddData(event)">
+          Add Data
+        </button>
+
+        <label>
+          Continuous:
+          <input
+            data-add
+            disabled
+            type="checkbox"
+            oninput="onToggleAddDataContinuously(event)"
+          />
+        </label>
+      </div>
+
+      <hr />
+
+      <a-scene embedded vr-mode-ui="enabled: false">
+        <a-assets>
+          <a-asset-item
+            id="caseAsset"
+            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission.obj?v=1621228628422"
+          ></a-asset-item>
+          <a-asset-item
+            id="lidAsset"
+            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission%20lid.obj?v=1621228763857"
+          ></a-asset-item>
+          <img
+            id="logoAsset"
+            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fname_logo.PNG?v=1621230110826"
+          />
+        </a-assets>
+
+        <a-camera active zoom="60" position="0 0 120"></a-camera>
+
+        <template id="sideMissionTemplate">
+          <a-entity class="sideMission" position="0 0 0" rotation="0 -90 0">
+            <a-image
+              scale="1.8 1.8 1.8"
+              rotation="-90 0 0"
+              position="0 0.455 0"
+              id="logo"
+              src="#logoAsset"
+            ></a-image>
+            <a-entity scale="0.05 0.05 0.05" rotation="-90 -90 0">
+              <a-entity position="-20 -17.5 -10">
+                <a-entity id="case" obj-model="obj: #caseAsset;"></a-entity>
+                <a-entity id="lid" obj-model="obj: #lidAsset;"></a-entity>
+              </a-entity>
+            </a-entity>
+          </a-entity>
+        </template>
+        <a-sky color="darkgrey"></a-sky>
+      </a-scene>
+
+      <hr />
+
+      <div id="train">
+        <h3>
+          Train Neural Network
+        </h3>
+
+        <button data-train disabled onclick="onClickTrain(event)">
+          Train
+        </button>
+      </div>
+
+      <hr />
+
+      <div id="results">
+        <h3>
+          Classify & Predict
+        </h3>
+
+        <button onclick="onClickTest()" disabled data-test>Test</button>
+        <label>
+          Test Continuously
+          <input
+            data-test
+            type="checkbox"
+            disabled
+            onclick="onToggleTestContinuously(event)"
+          />
+        </label>
+
+        <div>
+          <h4>
+            Results
+          </h4>
+
+          <div data-results></div>
+        </div>
+      </div>
+
+      <hr />
+
+      <div id="save">
+        <h3>
+          Save
+        </h3>
+
+        <button data-save disabled onclick="onClickSaveData(event)">
+          Save Data
+        </button>
+
+        <button data-save disabled onclick="onClickSaveModel(event)">
+          Save Model
+        </button>
+      </div>
+
+      <hr />
+
+      <div id="load">
+        <h3>
+          Load
+        </h3>
+
+        <label>
+          Load Data
+          <input
+            disabled
+            data-load
+            type="file"
+            accept=".json"
+            oninput="onInputLoadData(event)"
+          />
+        </label>
+
+        <label>
+          Load Model
+          <input
+            disabled
+            data-load
+            type="file"
+            multiple
+            accept=".json,.bin"
+            oninput="onInputLoadModel(event)"
+          />
+        </label>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    if (location.protocol != "https:") {
+      location.replace(
+        `https:${location.href.substring(location.protocol.length)}`
+      );
+    }
+
+    const _sideMissions = [];
+    let sideMissions = _sideMissions.slice();
+
+    const connectionsContainer = document.getElementById("connections");
+    const connectionTemplate = connectionsContainer.querySelector("template");
+    const scene = document.querySelector("a-scene");
+    const sideMissionEntityTemplate = scene.querySelector(
+      "#sideMissionTemplate"
+    );
+    const camera = scene.querySelector("a-camera");
+
+    const numberOfSideMissionsInput = document.querySelector(
+      "#numberOfSideMissions input"
+    );
+    function onInputNumberOfSideMissions(event) {
+      const numberOfSideMissions = Number(event.target.value);
+
+      camera.object3D.position.x = ((numberOfSideMissions - 1) * 3.2) / 2;
+      scene.style.width = `${numberOfSideMissions * 200}px`;
+      window.dispatchEvent(new Event("resize"));
+
+      while (_sideMissions.length < numberOfSideMissions) {
+        const sideMission = new SideMission();
+        const index = _sideMissions.length;
+        const sideMissionEntity = sideMissionEntityTemplate.content
+          .cloneNode(true)
+          .querySelector(".sideMission");
+        sideMissionEntity.setAttribute("position", `${index * 3.2} 0 0`);
+        scene.appendChild(sideMissionEntity);
+        sideMission.addEventListener("quaternion", event => {
+          const { message } = event;
+          const { quaternion, timestamp } = message;
+          sideMissionEntity.object3D.quaternion.copy(quaternion);
+        });
+        _sideMissions.push(sideMission);
+      }
+      sideMissions = _sideMissions.slice(0, numberOfSideMissions);
+      console.log(`changed number of side missions to ${numberOfSideMissions}`);
+
+      const connectionContainers = Array.from(
+        connectionsContainer.querySelectorAll(".connection")
+      );
+      while (connectionContainers.length < numberOfSideMissions) {
+        const connectionContainer = connectionTemplate.content
+          .cloneNode(true)
+          .querySelector(".connection");
+        connectionsContainer.appendChild(connectionContainer);
+        connectionContainers.push(connectionContainer);
+      }
+
+      connectionContainers.forEach((connectionContainer, index) => {
+        const sideMissionEntity = scene.querySelectorAll(".sideMission")[index];
+        if (index >= numberOfSideMissions) {
+          connectionContainer.classList.add("hide");
+          sideMissionEntity.setAttribute("visible", "false");
+        } else {
+          connectionContainer.classList.remove("hide");
+          sideMissionEntity.setAttribute("visible", "true");
+        }
+      });
+    }
+    numberOfSideMissionsInput.dispatchEvent(new Event("input"));
+
+    function onClickConnectButton(event) {
+      const connectionContainer = event.target.closest(".connection");
+      const index = Array.from(
+        connectionsContainer.querySelectorAll(".connection")
+      ).indexOf(connectionContainer);
+      const sideMission = sideMissions[index];
+      sideMission.connect().then(() => {
+        connectionContainer.classList.add("connected");
+        event.target.remove();
+      });
+    }
+
+    let task = "classification";
+    function onSelectTask(event) {
+      task = event.target.value;
+      console.log(`changing task to ${task}`);
+      document
+        .querySelectorAll(`#outputs .outputs .output input`)
+        .forEach(input => {
+          formatOutputs();
+        });
+    }
+
+    function formatOutputs() {
+      const outputElements = Array.from(
+        document.querySelectorAll("#outputs .outputs .output")
+      );
+      outputElements.forEach(outputElement => {
+        const value = outputElement.querySelector("[data-value]");
+        if (task == "classification") {
+          value.setAttribute("value", 0);
+          value.setAttribute("min", 0);
+          value.setAttribute("max", 1);
+          value.setAttribute("step", 1);
+        } else {
+          value.removeAttribute("min");
+          value.removeAttribute("max");
+          value.removeAttribute("step");
+        }
+      });
+    }
+
+    let outputs;
+    function getOutputs() {
+      if (outputs) return outputs;
+
+      const outputElements = Array.from(
+        document.querySelectorAll("#outputs .outputs .output")
+      );
+
+      const _outputs = outputElements.map(
+        outputElement => outputElement.querySelector("[data-name]").value
+      );
+
+      if (_outputs.length) {
+        outputs = _outputs;
+      }
+      return _outputs;
+    }
+    function getOutputValues() {
+      let outputValues = Array.from(
+        document.querySelectorAll("#outputs .outputs .output [data-value]")
+      ).map(input => {
+        let value = Number(input.value);
+        return value;
+      });
+
+      if (task == "classification") {
+        outputValues = outputValues.reduce(
+          (_outputValues, outputValue, index) => {
+            if (outputValue) {
+              _outputValues.push(outputs[index]);
+            }
+            return _outputValues;
+          },
+          []
+        );
+      } else {
+        outputValues = outputValues.reduce(
+          (_outputValues, outputValue, index) => {
+            _outputValues[outputs[index]] = outputValue;
+            return _outputValues;
+          },
+          {}
+        );
+      }
+
+      return outputValues;
+    }
+
+    let inputs = [];
+    function onToggleInput(event) {
+      const { input } = event.target.closest("[data-input]").dataset;
+      if (event.target.checked) {
+        if (!inputs.includes(input)) {
+          console.log(`adding input ${input}`);
+
+          inputs.push(input);
+        }
+      } else {
+        if (inputs.includes(input)) {
+          console.log(`removing input ${input}`);
+
+          inputs.splice(inputs.indexOf(input), 1);
+        }
+      }
+      console.log("current inputs:", inputs);
+    }
+    document
+      .querySelectorAll("[checked]")
+      .forEach(input => input.dispatchEvent(new Event("input")));
+
+    let numberOfOutputs = 0;
+
+    const numberOfOutputsInput = document.querySelector(
+      "#numberOfOutputs input"
+    );
+    function onInputNumberOfOutputs(event) {
+      numberOfOutputs = Number(event.target.value);
+      console.log(`changed number of outputs to ${numberOfOutputs}`);
+      const outputElements = Array.from(
+        document.querySelectorAll(`#outputs .output`)
+      );
+      if (outputElements.length !== numberOfOutputs) {
+        if (outputElements.length > numberOfOutputs) {
+          outputElements
+            .slice(numberOfOutputs)
+            .forEach(output => output.remove());
+        } else {
+          for (
+            let index = 0;
+            index < numberOfOutputs - outputElements.length;
+            index++
+          ) {
+            const output = document
+              .querySelector("#outputs .outputs template")
+              .content.cloneNode(true)
+              .querySelector(".output");
+            document.querySelector("#outputs .outputs").appendChild(output);
+            const name = output.querySelector("[data-name]");
+
+            name.value = `output${index + outputElements.length}`;
+          }
+          formatOutputs();
+        }
+      }
+    }
+    numberOfOutputsInput.dispatchEvent(new Event("input"));
+
+    // SAMPLING
+    const numberOfSamplesInput = document.querySelector(
+      "#sampling [data-number-of-samples] input"
+    );
+    const samplingPeriodInput = document.querySelector(
+      "#sampling [data-sampling-period] input"
+    );
+    const samplingRateInput = document.querySelector(
+      "#sampling [data-sampling-rate] input"
+    );
+
+    let numberOfSamples = Number(numberOfSamplesInput.value);
+    let samplingPeriod = Number(samplingPeriodInput.value);
+    let samplingRate = Number(samplingRateInput.value);
+
+    function updateSamplingPeriod() {
+      samplingPeriod = (numberOfSamples - 1) * samplingRate;
+      samplingPeriodInput.value = samplingPeriod;
+
+      console.log(`changed sampling period to ${samplingPeriod}`);
+    }
+
+    function onInputNumberOfSamples(event) {
+      numberOfSamples = Number(event.target.value);
+      console.log(`changed number of samples to ${numberOfSamples}`);
+
+      updateSamplingPeriod();
+    }
+
+    function onInputSamplingRate(event) {
+      samplingRate = Number(event.target.value);
+      console.log(`changed sampling rate to ${samplingRate}`);
+
+      samplingPeriodInput.step = samplingRate;
+
+      updateSamplingPeriod();
+    }
+
+    /* global ml5 */
+    let neuralNetwork;
+    function onClickCreateNeuralNetwork(event) {
+      const outputs = getOutputs();
+      if (
+        inputs.length &&
+        outputs.length &&
+        sideMissions.every(sideMission => sideMission.isConnected)
+      ) {
+        sideMissions.forEach(sideMission => {
+          sideMission.configureSensors(
+            {
+              acceleration: inputs.includes("acceleration"),
+              gravity: inputs.includes("gravity"),
+              linearAcceleration: inputs.includes("linearAcceleration"),
+              rotationRate: inputs.includes("rotationRate"),
+              magnetometer: inputs.includes("magnetometer"),
+              quaternion: inputs.includes("quaternion")
+            },
+            samplingRate
+          );
+        });
+
+        neuralNetwork = ml5.neuralNetwork({
+          task,
+
+          inputs: getNumberOfInputs(),
+          outputs,
+
+          debug: true,
+
+          learningRate: 0.08,
+          hiddenUnits: 72
+        });
+
+        event.target.disabled = true;
+        document
+          .querySelectorAll("[data-options]")
+          .forEach(input => (input.disabled = true));
+
+        document
+          .querySelectorAll("[data-add]")
+          .forEach(input => (input.disabled = false));
+        document
+          .querySelectorAll("[data-train]")
+          .forEach(input => (input.disabled = false));
+
+        document
+          .querySelectorAll("[data-save]")
+          .forEach(input => (input.disabled = false));
+
+        document
+          .querySelectorAll("[data-load]")
+          .forEach(input => (input.disabled = false));
+
+        console.log("created neural network", neuralNetwork);
+      }
+    }
+
+    let inputCounts = {
+      acceleration: 3,
+      gravity: 3,
+      linearAcceleration: 3,
+      rotationRate: 3,
+      magnetometer: 3,
+      quaternion: 4,
+      euler: 3
+    };
+    function getNumberOfInputs() {
+      let numberOfInputs = 0;
+      for (const input in inputCounts) {
+        if (inputs.includes(input)) {
+          numberOfInputs += inputCounts[input];
+        }
+      }
+      numberOfInputs *= numberOfSamples;
+      numberOfInputs *= sideMissions.length;
+      return numberOfInputs;
+    }
+
+    function includesAny(a, ...b) {
+      return b.some(_ => a.includes(_));
+    }
+
+    let isAddingData = false;
+    function onClickAddData(event) {
+      if (!isAddingData) {
+        addData();
+      }
+    }
+
+    let addDataButton = document.querySelector("[data-add]");
+    function addData() {
+      if (!isAddingData) {
+        console.log("Adding data");
+        isAddingData = true;
+        addDataButton.disabled = true;
+        addDataButton.innerText = "collecting data";
+        collectData(data => {
+          const outputs = getOutputValues();
+          data.forEach((value, index) => {
+            if (!value) {
+              data[index] = 0.000001 * Math.random();
+            }
+          });
+          console.log("got data", data, outputs);
+
+          neuralNetwork.addData(data, outputs);
+          isAddingData = false;
+          if (addDataContinuously) {
+            addData();
+          } else {
+            addDataButton.innerText = "Add Data";
+            addDataButton.disabled = false;
+          }
+        });
+      }
+    }
+
+    let addDataContinuously = false;
+    function onToggleAddDataContinuously(event) {
+      addDataContinuously = event.target.checked;
+    }
+
+    function collectData(callback) {
+      const datum = []; // [sideMissionIndex: [{type: value, isComplete: true|false}]]
+
+      const checkData = data => {
+        if (inputs.every(input => input in data)) {
+          data.isComplete = true;
+        }
+
+        if (
+          sideMissions.every(
+            (sideMission, index) =>
+              datum[index].filter(data => data.isComplete).length >=
+              numberOfSamples
+          )
+        ) {
+          onCollectedData();
+        }
+      };
+
+      const onCollectedData = () => {
+        console.log(datum);
+
+        datum.forEach((data, index) => {
+          datum[index] = data
+            .filter(_data => _data.isComplete)
+            .sort((a, b) => a.timestamp - b.timestamp);
+        });
+
+        let data = datum.flatMap(data =>
+          data
+            .slice(0, numberOfSamples)
+            .flatMap(values => inputs.flatMap(input => values[input]))
+        );
+        callback(data);
+        sideMissions.forEach((sideMission, index) => {
+          for (const input in eventListeners[index]) {
+            sideMission.removeEventListener(
+              input,
+              eventListeners[index][input]
+            );
+          }
+        });
+      };
+
+      const eventListeners = []; // [sideMissionIndex: {type: eventListener}]
+      sideMissions.forEach((sideMission, index) => {
+        datum[index] = []; // [{type: value, isComplete: true|false}]
+        eventListeners[index] = {};
+        inputs.forEach(input => {
+          eventListeners[index][input] = event => {
+            const { timestamp } = event.message;
+
+            const data = datum[index].find(
+              data => data.timestamp == timestamp
+            ) || { timestamp };
+            if (!datum[index].includes(data)) {
+              datum[index].push(data);
+            }
+
+            const _data = event.message[input];
+            const array = _data.toArray();
+            if (_data instanceof THREE.Euler) {
+              array.pop();
+            }
+            data[input] = array;
+            checkData(data, index);
+          };
+          sideMission.addEventListener(input, eventListeners[index][input]);
+        });
+      });
+    }
+
+    let overlapMinimum = 250;
+    let overlaps = 1;
+    let overlap = 250;
+    function onClickTrain(event) {
+      if (neuralNetwork) {
+        neuralNetwork.normalizeData();
+        neuralNetwork.train(
+          {
+            batchSize: 16,
+            epochs: 32
+          },
+          () => {
+            console.log("done training");
+            event.target.disabled = true;
+            document
+              .querySelectorAll("[data-test]")
+              .forEach(input => (input.disabled = false));
+            test();
+
+            if (samplingPeriod >= 2 * overlapMinimum) {
+              overlaps = Math.floor(samplingPeriod / overlapMinimum);
+              overlap = Math.floor(samplingPeriod / overlaps);
+              for (let index = 0; index < overlaps; index++) {
+                setTimeout(() => {
+                  test();
+                }, overlap);
+              }
+            }
+          }
+        );
+      }
+    }
+
+    function onClickTest() {
+      test();
+    }
+
+    let testContinuously = false;
+    function onToggleTestContinuously(event) {
+      testContinuously = event.target.checked;
+    }
+
+    function test() {
+      if (neuralNetwork) {
+        collectData(data => {
+          console.log("collected data", data);
+          if (task == "classification") {
+            neuralNetwork.classify(data, handleResults);
+          } else {
+            neuralNetwork.predict(data, handleResults);
+          }
+        });
+      }
+    }
+    function handleResults(error, results) {
+      if (error) {
+        console.error(error);
+      } else {
+        console.log(results);
+        const resultsContainer = document.querySelector("[data-results]");
+        resultsContainer.innerHTML = "";
+        results.forEach(result => {
+          const { label } = result;
+          let string = `label: ${label}, `;
+          if (task == "classification") {
+            string += `value: ${result[label].toFixed(
+              3
+            )}, confidence: ${result.confidence.toFixed(3)},`;
+          } else {
+            const { value } = result;
+            string += `value: ${value.toFixed(3)}`;
+          }
+          resultsContainer.innerText += `${string}\n`;
+        });
+
+        resultsContainer.innerHTML += `<h1>${results[0].label}</h1>`;
+
+        if (testContinuously) {
+          test();
+        }
+      }
+    }
+
+    function onClickSaveData() {
+      if (neuralNetwork) {
+        console.log("saving data");
+        neuralNetwork.saveData();
+      }
+    }
+    function onClickSaveModel() {
+      if (neuralNetwork) {
+        console.log("saving model");
+        neuralNetwork.save();
+      }
+    }
+
+    function onInputLoadData(event) {
+      if (neuralNetwork) {
+        console.log("loading data");
+        console.log(event.target.files);
+        neuralNetwork.loadData(event.target.files, () => {
+          console.log("loaded data");
+        });
+      }
+    }
+
+    function onInputLoadModel(event) {
+      if (neuralNetwork) {
+        console.log("loading model");
+        neuralNetwork.load(event.target.files, () => {
+          console.log("loaded model");
+        });
+      }
+    }
+  </script>
+</html>

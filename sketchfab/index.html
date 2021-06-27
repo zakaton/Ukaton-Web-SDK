@@ -1,0 +1,114 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sketchfab Viewer API example</title>
+
+    <!-- Insert this script -->
+    <script
+      type="text/javascript"
+      src="https://static.sketchfab.com/api/sketchfab-viewer-1.10.1.js"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="./SideMission.js"></script>
+  </head>
+
+  <style>
+    iframe {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+
+  <body>
+    <button onclick="connectToSideMission(event)">
+      connect
+    </button>
+    <!-- Insert an empty iframe -->
+    <iframe
+      id="api-frame"
+      allow="autoplay; fullscreen; vr"
+      allowvr
+      allowfullscreen
+      mozallowfullscreen="true"
+      webkitallowfullscreen="true"
+    ></iframe>
+
+    <!-- Initialize the viewer -->
+    <script type="text/javascript">
+      var iframe = document.getElementById("api-frame");
+      var uid = "7w7pAfrCfjovwykkEeRFLGw5SXS";
+
+      // By default, the latest version of the viewer API will be used.
+      var client = new Sketchfab(iframe);
+
+      // Alternatively, you can request a specific version.
+      // var client = new Sketchfab( '1.10.1', iframe );
+
+      let api;
+      client.init(uid, {
+        success: function onSuccess(_api) {
+          api = _api;
+          api.start();
+          api.addEventListener("viewerready", function() {
+            // API is ready to use
+            // Insert your code here
+            console.log("Viewer is ready");
+          });
+        },
+        error: function onError() {
+          console.log("Viewer error");
+        },
+        animation_autoplay: 0,
+        annotation_tooltip_visible: 0,
+        camera: 0
+      });
+    </script>
+
+    <script>
+      const sideMission = new SideMission();
+      function connectToSideMission(event) {
+        sideMission.connect().then(() => {
+          event.target.remove();
+          sideMission.configureSensors({
+            quaternion: true
+          });
+        });
+      }
+
+      const lookAtPosition = new THREE.Vector3();
+      const lookAtTarget = new THREE.Vector3(0, 0, 0);
+      let yawOffset = 0;
+      function callibrateYaw() {
+        yawOffset = sideMission.euler.y;
+      }
+      document.addEventListener("keypress", event => {
+        if (event.key === "c") {
+          callibrateYaw();
+        }
+      });
+      let didCallibrateYaw = false;
+      sideMission.addEventListener("euler", event => {
+        const { message } = event;
+        const { euler } = message;
+        if (!didCallibrateYaw) {
+          setTimeout(() => callibrateYaw(), 100);
+          didCallibrateYaw = true;
+        }
+        euler.y -= yawOffset;
+        euler.y *= -1;
+        lookAtPosition.set(0, 0, -2).applyEuler(euler);
+        api.setCameraLookAt(
+          [lookAtPosition.x, lookAtPosition.z, lookAtPosition.y],
+          [lookAtTarget.x, lookAtTarget.z, lookAtTarget.y],
+          0,
+          error => {
+            if (error) {
+              console.error(error);
+            }
+          }
+        );
+      });
+    </script>
+  </body>
+</html>
