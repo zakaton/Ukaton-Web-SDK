@@ -18,27 +18,46 @@
       connect
     </button>
 
-    <label class="rate">
-      Rate (ms)
-      <input
-        oninput="setRate(event)"
-        type="number"
-        min="20"
-        max="1000"
-        value="40"
-        step="10"
-      />
-    </label>
+    <br /><br />
+
+    <div class="name">
+      <label
+        ><b>Name</b>
+        <input type="text" maxlength="30" />
+        <button onclick="setName(event)">
+          change name
+        </button>
+      </label>
+    </div>
 
     <br /><br />
+
+    <div class="calibration">
+      <b>Calibration</b>
+      <label data-calibration="system"> system: <span></span> </label>
+      <label data-calibration="gyroscope"> gyroscope: <span></span> </label>
+      <label data-calibration="accelerometer">
+        accelerometer: <span></span>
+      </label>
+      <label data-calibration="magnetometer"> magnetometer: <span></span> </label>
+      <label data-calibration="fully"> fully calibrated: <span></span> </label>
+    </div>
+
+    <br /><br />
+    
+    <div class="batteryLevel">
+      <b>Battery Level</b>: <span>0</span>
+    </div>
+    
+    <br><br>
 
     <div data-type="acceleration">
       <b>
         Acceleration
       </b>
 
-      <label class="enabled">
-        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      <label class="rate">
+        rate: <input value="0" type="number" oninput="setRate(event)" min="0" max="65535" step="20" />
       </label>
 
       <label class="x"> x: <input readonly /> </label>
@@ -48,14 +67,14 @@
       <label class="interval"> interval: <input readonly /> </label>
     </div>
     <br />
-    
+
     <div data-type="gravity">
       <b>
         Gravity
       </b>
 
-      <label class="enabled">
-        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      <label class="rate">
+        rate: <input value="0" type="number" oninput="setRate(event)" min="0" max="65535" step="20" />
       </label>
 
       <label class="x"> x: <input readonly /> </label>
@@ -65,14 +84,14 @@
       <label class="interval"> interval: <input readonly /> </label>
     </div>
     <br />
-    
+
     <div data-type="linearAcceleration">
       <b>
         Linear Acceleration
       </b>
 
-      <label class="enabled">
-        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      <label class="rate">
+        rate: <input value="0" type="number" oninput="setRate(event)" min="0" max="65535" step="20" />
       </label>
 
       <label class="x"> x: <input readonly /> </label>
@@ -82,14 +101,14 @@
       <label class="interval"> interval: <input readonly /> </label>
     </div>
     <br />
-    
+
     <div data-type="rotationRate">
       <b>
         Rotation Rate
       </b>
 
-      <label class="enabled">
-        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      <label class="rate">
+        rate: <input value="0" type="number" oninput="setRate(event)" min="0" max="65535" step="20" />
       </label>
 
       <label class="x"> pitch: <input readonly /> </label>
@@ -99,14 +118,14 @@
       <label class="interval"> interval: <input readonly /> </label>
     </div>
     <br />
-    
+
     <div data-type="magnetometer">
       <b>
         Magnetometer
       </b>
 
-      <label class="enabled">
-        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      <label class="rate">
+        rate: <input value="0" type="number" oninput="setRate(event)" min="0" max="65535" step="20" />
       </label>
 
       <label class="x"> x: <input readonly /> </label>
@@ -116,14 +135,14 @@
       <label class="interval"> interval: <input readonly /> </label>
     </div>
     <br />
-    
+
     <div data-type="quaternion">
       <b>
         Quaternion
       </b>
 
-      <label class="enabled">
-        enabled: <input type="checkbox" oninput="toggleData(event)" />
+      <label class="rate">
+        rate: <input value="0" type="number" oninput="setRate(event)" min="0" max="65535" step="20" />
       </label>
 
       <label class="x"> x: <input readonly /> </label>
@@ -134,12 +153,12 @@
       <label class="interval"> interval: <input readonly /> </label>
     </div>
     <br />
-    
+
     <div data-type="euler">
       <b>
         Euler
       </b>
-      
+
       <label class="x"> pitch: <input readonly /> </label>
       <label class="y"> yaw: <input readonly /> </label>
       <label class="z"> roll: <input readonly /> </label>
@@ -153,7 +172,12 @@
     const sideMission = new SideMission();
 
     function connect(event) {
-      sideMission.connect().then(() => event.target.remove());
+      sideMission.connect().then(() => {
+        event.target.remove();
+        sideMission.getName().then(name => {
+          document.querySelector(".name input").value = name;
+        });
+      });
     }
 
     function setRate(event) {
@@ -161,11 +185,31 @@
       sideMission.setRate(rate);
     }
 
-    function toggleData(event) {
+    function setRate(event) {
       const dataType = event.target.closest("[data-type]").dataset.type;
-      const enabled = event.target.checked;
-      sideMission.configureSensors({ [dataType]: enabled });
+      const rate = Number(event.target.value);
+      sideMission.configureImu({ [dataType]: rate });
     }
+
+    function setName(event) {
+      const name = document.querySelector(".name input").value;
+      event.target.disabled = true;
+      sideMission.setName(name).then(() => {
+        event.target.disabled = false;
+      });
+    }
+
+    sideMission.addEventListener("calibration", event => {
+      for (const type in sideMission.calibration) {
+        document.querySelector(`[data-calibration="${type}"] span`).innerText =
+          sideMission.calibration[type];
+      }
+      document.querySelector(`[data-calibration="fully"] span`).innerText = sideMission.isFullyCalibrated? "true":"false";
+    });
+    
+    sideMission.addEventListener("batterylevel", event => {
+      document.querySelector(".batteryLevel span").innerText = sideMission.batteryLevel
+    })
 
     const timestamps = {};
     sideMission.dataTypes.forEach(dataType => {
@@ -180,12 +224,14 @@
 
         const container = document.querySelector(`[data-type="${dataType}"]`);
         components.forEach(component => {
-          container.querySelector(`.${component} input`).value =
-            message[dataType][component].toFixed(2);
+          container.querySelector(`.${component} input`).value = message[
+            dataType
+          ][component].toFixed(2);
         });
         container.querySelector(`.timestamp input`).value = timestamp;
 
-        const interval = dataType in timestamps ? timestamp - timestamps[dataType] : 0;
+        const interval =
+          dataType in timestamps ? timestamp - timestamps[dataType] : 0;
         timestamps[dataType] = timestamp;
         container.querySelector(`.interval input`).value = interval;
       });

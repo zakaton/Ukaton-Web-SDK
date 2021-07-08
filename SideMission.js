@@ -2,6 +2,15 @@
 
 class SideMission {
   constructor() {
+    this.batteryLevel = 100;
+
+    this.calibration = {
+      system: 0,
+      gyroscope: 0,
+      accelerometer: 0,
+      magnetometer: 0
+    };
+
     this.acceleration = new THREE.Vector3();
     this.gravity = new THREE.Quaternion();
     this.linearAcceleration = new THREE.Vector3();
@@ -10,14 +19,24 @@ class SideMission {
     this.quaternion = new THREE.Quaternion();
     this.euler = new THREE.Euler();
 
-    this.SERVICE_UUID = "ca51b65e-1c92-4e54-9bd7-fc1088f48832";
-    this.CONFIGURATION_CHARACTERISTIC_UUID =
-      "816ad53c-29df-4699-b25a-4acdf89699d6";
-    this.DATA_CHARACTERISTIC_UUID = "bb52dc35-1a47-41c1-ae97-ce138dbf2cab";
+    this.textEncoder = new TextEncoder();
+    this.textDecoder = new TextDecoder();
+
+    this.SERVICE_UUID = this.GENERATE_UUID("0000");
+
+    this.NAME_CHARACTERISTIC_UUID = this.GENERATE_UUID("1000");
+
+    this.IMU_CALIBRATION_CHARACTERISTIC_UUID = this.GENERATE_UUID("2000");
+    this.IMU_CONFIGURATION_CHARACTERISTIC_UUID = this.GENERATE_UUID("2001");
+    this.IMU_DATA_CHARACTERISTIC_UUID = this.GENERATE_UUID("2002");
 
     window.addEventListener("beforeunload", event => {
       this.disableAllSensors();
     });
+  }
+
+  GENERATE_UUID(val) {
+    return `5691eddf-${val}-4420-b7a5-bb8751ab5181`;
   }
 
   connect() {
@@ -56,32 +75,53 @@ class SideMission {
           this.service = service;
         })
         .then(() => {
-          return this.service.getCharacteristic(
-            this.CONFIGURATION_CHARACTERISTIC_UUID
-          );
+          return this.service.getCharacteristic(this.NAME_CHARACTERISTIC_UUID);
         })
-        .then(configurationCharacteristic => {
-          console.log("got configuration characteristic");
-          this.configurationCharacteristic = configurationCharacteristic;
-          this.configurationCharacteristic.addEventListener(
-            "characteristicvaluechanged",
-            this.onConfigurationCharacteristicValueChanged.bind(this)
-          );
-          return this.configurationCharacteristic
+        .then(nameCharacteristic => {
+          console.log("got name characteristic");
+          this.nameCharacteristic = nameCharacteristic;
+          return this.nameCharacteristic
             .startNotifications()
             .catch(error => console.log(error));
         })
         .then(() => {
-          return this.service.getCharacteristic(this.DATA_CHARACTERISTIC_UUID);
-        })
-        .then(dataCharacteristic => {
-          console.log("got data characteristic");
-          this.dataCharacteristic = dataCharacteristic;
-          this.dataCharacteristic.addEventListener(
-            "characteristicvaluechanged",
-            this.onDataCharacteristicValueChanged.bind(this)
+          return this.service.getCharacteristic(
+            this.IMU_CALIBRATION_CHARACTERISTIC_UUID
           );
-          return this.dataCharacteristic
+        })
+        .then(imuCalibrationCharacteristic => {
+          console.log("got imu calibration characteristic");
+          this.imuCalibrationCharacteristic = imuCalibrationCharacteristic;
+          this.imuCalibrationCharacteristic.addEventListener(
+            "characteristicvaluechanged",
+            this.onImuCalibrationCharacteristicValueChanged.bind(this)
+          );
+          return this.imuCalibrationCharacteristic
+            .startNotifications()
+            .catch(error => console.log(error));
+        })
+        .then(() => {
+          return this.service.getCharacteristic(
+            this.IMU_CONFIGURATION_CHARACTERISTIC_UUID
+          );
+        })
+        .then(imuConfigurationCharacteristic => {
+          console.log("got imu configuration characteristic");
+          this.imuConfigurationCharacteristic = imuConfigurationCharacteristic;
+        })
+        .then(() => {
+          return this.service.getCharacteristic(
+            this.IMU_DATA_CHARACTERISTIC_UUID
+          );
+        })
+        .then(imuDataCharacteristic => {
+          console.log("got imu data characteristic");
+          this.imuDataCharacteristic = imuDataCharacteristic;
+          this.imuDataCharacteristic.addEventListener(
+            "characteristicvaluechanged",
+            this.onImuDataCharacteristicValueChanged.bind(this)
+          );
+          return this.imuDataCharacteristic
             .startNotifications()
             .catch(error => console.log(error));
         })
@@ -99,6 +139,13 @@ class SideMission {
         .then(batteryLevelCharacteristic => {
           console.log("got battery level characteristic");
           this.batteryLevelCharacteristic = batteryLevelCharacteristic;
+          this.batteryLevelCharacteristic.addEventListener(
+            "characteristicvaluechanged",
+            this.onBatteryLevelCharacteristicValueChanged.bind(this)
+          );
+          return this.batteryLevelCharacteristic
+            .startNotifications()
+            .catch(error => console.log(error));
         })
         .then(() => {
           console.log("connected");
@@ -111,107 +158,121 @@ class SideMission {
   }
 
   onGattServerDisconnected(event) {
-    console.log("gettserverdisconnected");
+    console.log("disconnected");
     this.dispatchEvent({ type: "disconnected" });
     this.device.gatt.connect();
   }
 
-  configureSensors(configuration = {}, rate) {
-    if (this.isConnected) {
-      this.configurationCharacteristic.readValue().then(dataView => {
-        let configurationBitmask = dataView.getUint8(0);
-        configuration = Object.assign(
-          this.parseConfiguration(configurationBitmask),
-          configuration
+  onBatteryLevelCharacteristicValueChanged(event) {
+    const dataView = event.target.value;
+    this.batteryLevel = dataView.getUint8(0);
+    this.dispatchEvent({
+      type: "batterylevel",
+      message: { batteryLevel: this.batteryLevel }
+    });
+  }
+
+  getName() {
+    return Promise.resolve().then(() => {
+      if (this.isConnected) {
+        return this.nameCharacteristic.readValue().then(dataView => {
+          const name = this.textDecoder.decode(dataView);
+          return name;
+        });
+      }
+    });
+  }
+  setName(name) {
+    return Promise.resolve().then(() => {
+      if (this.isConnected && name.length > 0 && name.length <= 30) {
+        return this.nameCharacteristic.writeValue(
+          this.textEncoder.encode(name)
         );
-        configurationBitmask = this.createConfigurationBitmask(configuration);
-        dataView.setUint8(0, configurationBitmask);
+      }
+    });
+  }
 
-        rate = rate || dataView.getUint16(1, true);
-        dataView.setUint16(1, rate, true);
+  get isFullyCalibrated() {
+    const { gyroscope, accelerometer, magnetometer, system } = this.calibration;
+    return (
+      gyroscope == 3 && accelerometer == 3 && magnetometer == 3 && system == 3
+    );
+  }
+  onImuCalibrationCharacteristicValueChanged(event) {
+    const dataView = event.target.value;
+    this.imuCalibrationTypes.forEach((calibrationType, index) => {
+      this.calibration[calibrationType] = dataView.getUint8(index);
+    });
 
-        return this.configurationCharacteristic.writeValue(dataView);
+    this.dispatchEvent({
+      type: "calibration",
+      message: { calibration: this.calibration }
+    });
+
+    if (this.isFullyCalibrated) {
+      this.dispatchEvent({
+        type: "fullycalibrated"
       });
-    } else {
-      return Promise.resolve();
     }
   }
-  
-  setRate(rate) {
-    return this.configureSensors(null, rate);
+
+  configureImu(imuConfiguration = {}) {
+    return Promise.resolve().then(() => {
+      if (this.isConnected) {
+        return this.imuConfigurationCharacteristic
+          .readValue()
+          .then(dataView => {
+            this.imuDataTypes.forEach((dataType, index) => {
+              if (dataType in imuConfiguration) {
+                let rate = imuConfiguration[dataType];
+                if (Number.isInteger(rate) && rate >= 0) {
+                  rate -= rate % 20;
+                  dataView.setUint16(index * 2, rate, true);
+                }
+              }
+            });
+            return this.imuConfigurationCharacteristic.writeValue(dataView);
+          });
+      }
+    });
   }
 
   disableAllSensors() {
-    return this.configureSensors({
-      acceleration: false,
-      gravity: false,
-      linearAcceleration: false,
-      rotationRate: false,
-      magnetometer: false,
-      quaternion: false
+    return this.configureImu({
+      acceleration: 0,
+      gravity: 0,
+      linearAcceleration: 0,
+      rotationRate: 0,
+      magnetometer: 0,
+      quaternion: 0
     });
   }
 
-  onConfigurationCharacteristicValueChanged(event) {
+  onImuDataCharacteristicValueChanged(event) {
     const dataView = event.target.value;
-    const configurationBitmask = dataView.getUint8(0);
-    const configuration = this.parseConfiguration(configurationBitmask);
-    const rate = dataView.getUint8(1);
-    this.dispatchEvent({
-      type: "configuration",
-      message: { configuration, rate }
-    });
-  }
 
-  parseConfiguration(configurationBitmask = 0) {
-    const configuration = {};
-    for (const bitFlag in this.bitFlags) {
-      configuration[bitFlag] = Boolean(
-        configurationBitmask & this.bitFlags[bitFlag]
-      );
-    }
-    return configuration;
-  }
-  createConfigurationBitmask(configuration = {}) {
-    let configurationBitmask = 0;
-    for (const bitFlag in configuration) {
-      if (bitFlag in this.bitFlags) {
-        const enabled = configuration[bitFlag];
-        if (enabled) {
-          configurationBitmask |= this.bitFlags[bitFlag];
-        } else {
-          configurationBitmask &= 0b11111111 ^ this.bitFlags[bitFlag];
-        }
-      }
-    }
-    return configurationBitmask;
-  }
-
-  onDataCharacteristicValueChanged(event) {
-    const dataView = event.target.value;
-    
     const dataBitmask = dataView.getUint8(0);
     const timestamp = dataView.getUint32(1, true);
 
     const dataTypes = [];
-    for (const dataType in this.bitFlags) {
-      if (dataBitmask & this.bitFlags[dataType]) {
+    for (const dataType in this.imuDataBitFlags) {
+      if (dataBitmask & this.imuDataBitFlags[dataType]) {
         dataTypes.push(dataType);
       }
     }
-    
+
     if (dataTypes.length) {
       let byteOffset = 5;
 
       dataTypes.forEach(dataType => {
         let vector, quaternion, euler;
-        const scalar = this.scalars[dataType];
+        const scalar = this.imuDataScalars[dataType];
         switch (dataType) {
           case "acceleration":
           case "gravity":
           case "linearAcceleration":
           case "magnetometer":
-            vector = this.getVector(dataView, byteOffset, scalar);
+            vector = this.parseImuVector(dataView, byteOffset, scalar);
             byteOffset += 6;
 
             this[dataType].copy(vector);
@@ -221,7 +282,7 @@ class SideMission {
             });
             break;
           case "rotationRate":
-            euler = this.getEuler(dataView, byteOffset, scalar);
+            euler = this.parseImuEuler(dataView, byteOffset, scalar);
             byteOffset += 6;
 
             this[dataType].copy(euler);
@@ -231,7 +292,7 @@ class SideMission {
             });
             break;
           case "quaternion":
-            quaternion = this.getQuaternion(dataView, byteOffset, scalar);
+            quaternion = this.parseImuQuaternion(dataView, byteOffset, scalar);
             byteOffset += 8;
 
             this[dataType].copy(quaternion);
@@ -253,7 +314,7 @@ class SideMission {
     }
   }
 
-  getVector(dataView, offset, scalar = 1) {
+  parseImuVector(dataView, offset, scalar = 1) {
     const vector = new THREE.Vector3();
     const x = dataView.getInt16(offset, true);
     const y = dataView.getInt16(offset + 2, true);
@@ -261,7 +322,7 @@ class SideMission {
     vector.set(-x, -z, y).multiplyScalar(scalar);
     return vector;
   }
-  getEuler(dataView, offset, scalar = 1) {
+  parseImuEuler(dataView, offset, scalar = 1) {
     const euler = new THREE.Euler();
     const x = THREE.Math.degToRad(dataView.getInt16(offset, true) * scalar);
     const y = THREE.Math.degToRad(dataView.getInt16(offset + 2, true) * scalar);
@@ -269,7 +330,7 @@ class SideMission {
     euler.set(-x, z, -y, "YXZ");
     return euler;
   }
-  getQuaternion(dataView, offset, scalar = 1) {
+  parseImuQuaternion(dataView, offset, scalar = 1) {
     const quaternion = new THREE.Quaternion();
     const w = dataView.getInt16(offset, true) * scalar;
     const x = dataView.getInt16(offset + 2, true) * scalar;
@@ -279,18 +340,20 @@ class SideMission {
     return quaternion;
   }
 
-  getBatteryLevel() {
-    return this.batteryLevelCharacteristic.readValue().then(dataView => {
-      return dataView.getUint8(0);
-    });
+  get imuCalibrationTypes() {
+    return this.constructor.imuCalibrationTypes;
   }
 
-  get bitFlags() {
-    return this.constructor.bitFlags;
+  get imuDataBitFlags() {
+    return this.constructor.imuDataBitFlags;
   }
 
-  get scalars() {
-    return this.constructor.scalars;
+  get imuDataScalars() {
+    return this.constructor.imuDataScalars;
+  }
+
+  get imuDataTypes() {
+    return this.constructor.imuDataTypes;
   }
 
   get dataTypes() {
@@ -299,7 +362,8 @@ class SideMission {
 }
 
 Object.assign(SideMission, {
-  bitFlags: {
+  imuCalibrationTypes: ["system", "gyroscope", "accelerometer", "magnetometer"],
+  imuDataBitFlags: {
     acceleration: 1 << 0,
     gravity: 1 << 1,
     linearAcceleration: 1 << 2,
@@ -307,7 +371,7 @@ Object.assign(SideMission, {
     magnetometer: 1 << 4,
     quaternion: 1 << 5
   },
-  scalars: {
+  imuDataScalars: {
     acceleration: 1 / 100,
     gravity: 1 / 100,
     linearAcceleration: 1 / 100,
@@ -315,7 +379,7 @@ Object.assign(SideMission, {
     magnetometer: 1 / 16,
     quaternion: 1 / (1 << 14)
   },
-  dataTypes: [
+  imuDataTypes: [
     "acceleration",
     "gravity",
     "linearAcceleration",
@@ -323,7 +387,10 @@ Object.assign(SideMission, {
     "magnetometer",
     "quaternion",
     "euler"
-  ]
+  ],
+  get dataTypes() {
+    return this.imuDataTypes;
+  }
 });
 
 Object.assign(SideMission.prototype, THREE.EventDispatcher.prototype);

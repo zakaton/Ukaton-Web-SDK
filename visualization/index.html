@@ -42,7 +42,7 @@
       }
     }
 
-    #connection label:not(:first-of-type)::before {
+    #connection label[data-type]:not(:first-of-type)::after {
       content: "|";
     }
 
@@ -92,7 +92,7 @@
   <body>
     <div id="container">
       <div id="connection">
-        <h1>
+        <h1 style="margin: 0;">
           Ukaton Side Mission
         </h1>
 
@@ -100,35 +100,101 @@
           connect
         </button>
 
-        <label class="rate">
-          Rate (ms)
-          <input
-            oninput="setRate(event)"
-            type="number"
-            min="20"
-            max="1000"
-            value="40"
-            step="10"
-          />
+        <span class="batteryLevel">battery: <span>0</span>%</span>
+        <br />
+
+        <span class="calibration">
+          calibration:
+          <span data-calibration="system">
+            system (<span>0</span>),
+          </span>
+          <span data-calibration="gyroscope">
+            gyroscope(<span>0</span>),</span
+          >
+          <span data-calibration="accelerometer">
+            accelerometer(<span>0</span>),
+          </span>
+          <span data-calibration="magnetometer">
+            magnetometer(<span>0</span>),
+          </span>
+          <span data-calibration="fully">
+            fully? (<span>false</span>)
+          </span>
+        </span>
+        <br />
+
+        <label class="name">
+          name <input type="text" maxlength="30" />
+          <input value="change name" type="button" onclick="setName(event)">
+          </input>
         </label>
+        <br />
 
         <label data-type="acceleration">
-          Acceleration<input type="checkbox" oninput="toggleData(event)" />
+          Acceleration (ms)
+          <input
+            value="0"
+            type="number"
+            oninput="setRate(event)"
+            min="0"
+            max="65535"
+            step="20"
+          />
         </label>
         <label data-type="gravity">
-          Gravity<input type="checkbox" oninput="toggleData(event)" />
+          Gravity (ms)
+          <input
+            value="0"
+            type="number"
+            oninput="setRate(event)"
+            min="0"
+            max="65535"
+            step="20"
+          />
         </label>
         <label data-type="linearAcceleration">
-          Linear Acceration<input type="checkbox" oninput="toggleData(event)" />
+          Linear Acceration (ms)
+          <input
+            value="0"
+            type="number"
+            oninput="setRate(event)"
+            min="0"
+            max="65535"
+            step="20"
+          />
         </label>
         <label data-type="rotationRate">
-          Rotation Rate<input type="checkbox" oninput="toggleData(event)" />
+          Rotation Rate (ms)
+          <input
+            value="0"
+            type="number"
+            oninput="setRate(event)"
+            min="0"
+            max="65535"
+            step="20"
+          />
         </label>
         <label data-type="magnetometer">
-          Magnetometer<input type="checkbox" oninput="toggleData(event)" />
+          Magnetometer (ms)
+          <input
+            value="0"
+            type="number"
+            oninput="setRate(event)"
+            min="0"
+            max="65535"
+            step="20"
+          />
         </label>
         <label data-type="quaternion">
-          Quaternion<input type="checkbox" oninput="toggleData(event)" />
+          Quaternion (ms)
+          <input
+            value="0"
+            type="number"
+            oninput="setRate(event)"
+            min="0"
+            max="65535"
+            step="20"
+          />
         </label>
       </div>
       <div id="acceleration">
@@ -191,23 +257,55 @@
   </body>
   <script>
     const sideMission = new SideMission();
+    window.sideMission = sideMission;
 
     function connect(event) {
-      sideMission.connect().then(() => event.target.remove());
+      sideMission.connect().then(() => {
+        event.target.remove();
+        sideMission.getName().then(name => {
+          document.querySelector(".name input").value = name;
+        });
+      });
+    }
+
+    sideMission.addEventListener("sensorConfiguration", event => {
+      const { sensorConfiguration, rate } = event.message;
+      document.querySelector(".rate input").value = rate;
+      for (const type in sensorConfiguration) {
+        const isEnabled = sensorConfiguration[type];
+        document.querySelector(
+          `[data-type="${type}"] input`
+        ).checked = isEnabled;
+      }
+    });
+
+    function setName(event) {
+      const name = document.querySelector(".name input").value;
+      event.target.disabled = true;
+      sideMission.setName(name).then(() => {
+        event.target.disabled = false;
+      });
     }
 
     function setRate(event) {
-      if (sideMission.isConnected) {
-        const rate = Number(event.target.value);
-        sideMission.setRate(rate);
-      }
-    }
-
-    function toggleData(event) {
       const dataType = event.target.closest("[data-type]").dataset.type;
-      const enabled = event.target.checked;
-      sideMission.configureSensors({ [dataType]: enabled });
+      const rate = Number(event.target.value);
+      sideMission.configureImu({ [dataType]: rate });
     }
+    
+    sideMission.addEventListener("batterylevel", event => {
+      document.querySelector(".batteryLevel span").innerText = sideMission.batteryLevel
+    })
+
+    sideMission.addEventListener("calibration", event => {
+      for (const type in sideMission.calibration) {
+        document.querySelector(`[data-calibration="${type}"] span`).innerText =
+          sideMission.calibration[type];
+      }
+      document.querySelector(
+        `[data-calibration="fully"] span`
+      ).innerText = sideMission.isFullyCalibrated ? "true" : "false";
+    });
 
     const sideMissionEntity = document.getElementById("sideMission");
     sideMission.addEventListener("quaternion", event => {
