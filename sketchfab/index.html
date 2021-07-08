@@ -70,8 +70,8 @@
       function connectToSideMission(event) {
         sideMission.connect().then(() => {
           event.target.remove();
-          sideMission.configureSensors({
-            quaternion: true
+          sideMission.configureImu({
+            quaternion: 20
           });
         });
       }

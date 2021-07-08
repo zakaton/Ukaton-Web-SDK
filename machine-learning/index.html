@@ -13,13 +13,26 @@
 
     <script src="/SideMission.js"></script>
 
-    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <script src="https://unpkg.com/js-untar@2.0.0/build/dist/untar.js"></script>
+    <script src="https://unpkg.com/pako@2.0.3/dist/pako.min.js"></script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
+
+    <script
+      src="https://unpkg.com/ml5@latest/dist/ml5.min.js"
+      type="text/javascript"
+    ></script>
   </head>
 
   <style>
     label {
       display: block;
       user-select: none;
+    }
+
+    iframe {
+      margin: auto;
+      display: block;
     }
 
     [data-results] h1 {
@@ -50,28 +63,34 @@
 
     <hr />
 
-    <div id="connect">
-      <h2>Connect</h2>
+    <div id="numberOfSideMissions">
+      <h2>
+        Number of Side Missions
+      </h2>
 
-      <label id="numberOfSideMissions">
-        Number of Side Missions:
+      <label>
+        number of side missions:
         <input
-          oninput="onInputNumberOfSideMissions(event)"
-          value="1"
           type="number"
           min="1"
           step="1"
+          value="1"
+          oninput="onInputNumberOfSideMissions(event)"
         />
       </label>
+    </div>
 
-      <ol id="connections">
-        <template>
-          <li class="connection">
-            <button onclick="onClickConnectButton(event)">connect</button>
-            <span class="connected">Connected</span>
-          </li>
-        </template>
-      </ol>
+    <hr />
+
+    <div id="iframes">
+      <template>
+        <div>
+          <h2 class="index">
+            1
+          </h2>
+          <iframe src="/visualization" width="90%" height="500"></iframe>
+        </div>
+      </template>
     </div>
 
     <hr />
@@ -205,7 +224,7 @@
             value="40"
             min="20"
             max="1000"
-            step="10"
+            step="20"
             data-options
             oninput="onInputSamplingRate(event)"
           />
@@ -245,46 +264,6 @@
           />
         </label>
       </div>
-
-      <hr />
-
-      <a-scene embedded vr-mode-ui="enabled: false">
-        <a-assets>
-          <a-asset-item
-            id="caseAsset"
-            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission.obj?v=1621228628422"
-          ></a-asset-item>
-          <a-asset-item
-            id="lidAsset"
-            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission%20lid.obj?v=1621228763857"
-          ></a-asset-item>
-          <img
-            id="logoAsset"
-            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fname_logo.PNG?v=1621230110826"
-          />
-        </a-assets>
-
-        <a-camera active zoom="60" position="0 0 120"></a-camera>
-
-        <template id="sideMissionTemplate">
-          <a-entity class="sideMission" position="0 0 0" rotation="0 -90 0">
-            <a-image
-              scale="1.8 1.8 1.8"
-              rotation="-90 0 0"
-              position="0 0.455 0"
-              id="logo"
-              src="#logoAsset"
-            ></a-image>
-            <a-entity scale="0.05 0.05 0.05" rotation="-90 -90 0">
-              <a-entity position="-20 -17.5 -10">
-                <a-entity id="case" obj-model="obj: #caseAsset;"></a-entity>
-                <a-entity id="lid" obj-model="obj: #lidAsset;"></a-entity>
-              </a-entity>
-            </a-entity>
-          </a-entity>
-        </template>
-        <a-sky color="darkgrey"></a-sky>
-      </a-scene>
 
       <hr />
 
@@ -381,79 +360,55 @@
       );
     }
 
-    const _sideMissions = [];
-    let sideMissions = _sideMissions.slice();
-
-    const connectionsContainer = document.getElementById("connections");
-    const connectionTemplate = connectionsContainer.querySelector("template");
-    const scene = document.querySelector("a-scene");
-    const sideMissionEntityTemplate = scene.querySelector(
-      "#sideMissionTemplate"
-    );
-    const camera = scene.querySelector("a-camera");
-
-    const numberOfSideMissionsInput = document.querySelector(
-      "#numberOfSideMissions input"
-    );
-    function onInputNumberOfSideMissions(event) {
-      const numberOfSideMissions = Number(event.target.value);
-
-      camera.object3D.position.x = ((numberOfSideMissions - 1) * 3.2) / 2;
-      scene.style.width = `${numberOfSideMissions * 200}px`;
-      window.dispatchEvent(new Event("resize"));
-
-      while (_sideMissions.length < numberOfSideMissions) {
-        const sideMission = new SideMission();
-        const index = _sideMissions.length;
-        const sideMissionEntity = sideMissionEntityTemplate.content
-          .cloneNode(true)
-          .querySelector(".sideMission");
-        sideMissionEntity.setAttribute("position", `${index * 3.2} 0 0`);
-        scene.appendChild(sideMissionEntity);
-        sideMission.addEventListener("quaternion", event => {
-          const { message } = event;
-          const { quaternion, timestamp } = message;
-          sideMissionEntity.object3D.quaternion.copy(quaternion);
-        });
-        _sideMissions.push(sideMission);
-      }
-      sideMissions = _sideMissions.slice(0, numberOfSideMissions);
-      console.log(`changed number of side missions to ${numberOfSideMissions}`);
-
-      const connectionContainers = Array.from(
-        connectionsContainer.querySelectorAll(".connection")
-      );
-      while (connectionContainers.length < numberOfSideMissions) {
-        const connectionContainer = connectionTemplate.content
-          .cloneNode(true)
-          .querySelector(".connection");
-        connectionsContainer.appendChild(connectionContainer);
-        connectionContainers.push(connectionContainer);
-      }
-
-      connectionContainers.forEach((connectionContainer, index) => {
-        const sideMissionEntity = scene.querySelectorAll(".sideMission")[index];
-        if (index >= numberOfSideMissions) {
-          connectionContainer.classList.add("hide");
-          sideMissionEntity.setAttribute("visible", "false");
-        } else {
-          connectionContainer.classList.remove("hide");
-          sideMissionEntity.setAttribute("visible", "true");
+    let iframes = [];
+    const iframePool = [];
+    let sideMissions = [];
+    const sideMissionPool = [];
+    function setNumberOfSideMissions(numberOfSideMissions) {
+      if (iframePool.length < numberOfSideMissions) {
+        while (iframePool.length < numberOfSideMissions) {
+          const container = document
+            .querySelector("#iframes template")
+            .content.cloneNode(true)
+            .querySelector("div");
+          const iframe = container.querySelector("iframe");
+          iframePool.push(iframe);
+          const index = iframePool.indexOf(iframe);
+          container.querySelector(".index").innerText = index + 1;
+          iframe.addEventListener("load", event => {
+            const sideMission = iframe.contentWindow.sideMission;
+            sideMissionPool[index] = sideMission;
+            iframe.contentDocument
+              .querySelectorAll("input")
+              .forEach(input => (input.disabled = true));
+            let allIframesHaveLoaded = true;
+            for (
+              let i = 0;
+              i < numberOfSideMissions && !allIframesHaveLoaded;
+              i++
+            ) {
+              allIframesHaveLoaded = sideMissionPool[i];
+            }
+            if (allIframesHaveLoaded) {
+              sideMissions = sideMissionPool.slice(0, numberOfSideMissions);
+            }
+          });
+          document.getElementById("iframes").appendChild(container);
         }
+      } else {
+        sideMissions = sideMissionPool.slice(0, numberOfSideMissions);
+      }
+
+      iframes = iframePool.slice(0, numberOfSideMissions);
+      iframePool.forEach(iframe => {
+        iframe.closest("div").style.display = iframes.includes(iframe)
+          ? ""
+          : "none";
       });
     }
-    numberOfSideMissionsInput.dispatchEvent(new Event("input"));
-
-    function onClickConnectButton(event) {
-      const connectionContainer = event.target.closest(".connection");
-      const index = Array.from(
-        connectionsContainer.querySelectorAll(".connection")
-      ).indexOf(connectionContainer);
-      const sideMission = sideMissions[index];
-      sideMission.connect().then(() => {
-        connectionContainer.classList.add("connected");
-        event.target.remove();
-      });
+    setNumberOfSideMissions(1);
+    function onInputNumberOfSideMissions(event) {
+      setNumberOfSideMissions(Number(event.target.value));
     }
 
     let task = "classification";
@@ -488,8 +443,6 @@
 
     let outputs;
     function getOutputs() {
-      if (outputs) return outputs;
-
       const outputElements = Array.from(
         document.querySelectorAll("#outputs .outputs .output")
       );
@@ -636,22 +589,16 @@
     function onClickCreateNeuralNetwork(event) {
       const outputs = getOutputs();
       if (
-        inputs.length &&
-        outputs.length &&
-        sideMissions.every(sideMission => sideMission.isConnected)
+        inputs.length && outputs.length > (task === "classification")
+          ? 1
+          : 0 && sideMission.isConnected
       ) {
+        const imuConfiguration = {};
+        inputs.forEach(imuDataType => {
+          imuConfiguration[imuDataType] = samplingRate;
+        });
         sideMissions.forEach(sideMission => {
-          sideMission.configureSensors(
-            {
-              acceleration: inputs.includes("acceleration"),
-              gravity: inputs.includes("gravity"),
-              linearAcceleration: inputs.includes("linearAcceleration"),
-              rotationRate: inputs.includes("rotationRate"),
-              magnetometer: inputs.includes("magnetometer"),
-              quaternion: inputs.includes("quaternion")
-            },
-            samplingRate
-          );
+          sideMission.configureImu(imuConfiguration);
         });
 
         neuralNetwork = ml5.neuralNetwork({
@@ -725,12 +672,12 @@
     let addDataButton = document.querySelector("[data-add]");
     function addData() {
       if (!isAddingData) {
+        const outputs = getOutputValues();
         console.log("Adding data");
         isAddingData = true;
         addDataButton.disabled = true;
         addDataButton.innerText = "collecting data";
         collectData(data => {
-          const outputs = getOutputValues();
           data.forEach((value, index) => {
             if (!value) {
               data[index] = 0.000001 * Math.random();
@@ -756,38 +703,30 @@
     }
 
     function collectData(callback) {
-      const datum = []; // [sideMissionIndex: [{type: value, isComplete: true|false}]]
+      const sideMissionsDatum = sideMissions.map(() => []); // [[{timestamp, [type]: value, isComplete: true|false}]]
 
       const checkData = data => {
         if (inputs.every(input => input in data)) {
           data.isComplete = true;
         }
 
-        if (
-          sideMissions.every(
-            (sideMission, index) =>
-              datum[index].filter(data => data.isComplete).length >=
+        const hasCollectedAllData = sideMissionsDatum.every(
+          sideMissionDatum => {
+            return (
+              sideMissionDatum.filter(data => data.isComplete).length >=
               numberOfSamples
-          )
-        ) {
+            );
+          }
+        );
+        if (hasCollectedAllData) {
           onCollectedData();
         }
       };
 
       const onCollectedData = () => {
-        console.log(datum);
-
-        datum.forEach((data, index) => {
-          datum[index] = data
-            .filter(_data => _data.isComplete)
-            .sort((a, b) => a.timestamp - b.timestamp);
-        });
-
-        let data = datum.flatMap(data =>
-          data
-            .slice(0, numberOfSamples)
-            .flatMap(values => inputs.flatMap(input => values[input]))
-        );
+        console.log(sideMissionsDatum);
+        sideMissionsDatum.map(sideMissionDatum => sideMissionDatum.filter(data => data.isComplete).sort((a, b) => a.timestamp - b.timestamp))
+        const data = sideMissionsDatum.flatMap(sideMissionDatum => sideMissionDatum.slice(0, numberOfSamples).flatMap(data => inputs.flatMap(input => data[input])));
         callback(data);
         sideMissions.forEach((sideMission, index) => {
           for (const input in eventListeners[index]) {
@@ -799,28 +738,28 @@
         });
       };
 
-      const eventListeners = []; // [sideMissionIndex: {type: eventListener}]
+      const eventListeners = []; // [{type: eventListener}]
       sideMissions.forEach((sideMission, index) => {
-        datum[index] = []; // [{type: value, isComplete: true|false}]
-        eventListeners[index] = {};
+        eventListeners[index] = {}
         inputs.forEach(input => {
           eventListeners[index][input] = event => {
             const { timestamp } = event.message;
+            const sideMissionDatum = sideMissionsDatum[index];
 
-            const data = datum[index].find(
-              data => data.timestamp == timestamp
-            ) || { timestamp };
-            if (!datum[index].includes(data)) {
-              datum[index].push(data);
+            const data = sideMissionDatum.find(data => data.timestamp == timestamp) || {
+              timestamp
+            };
+            if (!sideMissionDatum.includes(data)) {
+              sideMissionDatum.push(data);
             }
 
-            const _data = event.message[input];
-            const array = _data.toArray();
-            if (_data instanceof THREE.Euler) {
+            const value = event.message[input];
+            const array = value.toArray();
+            if (value.isEuler) {
               array.pop();
             }
             data[input] = array;
-            checkData(data, index);
+            checkData(data);
           };
           sideMission.addEventListener(input, eventListeners[index][input]);
         });
@@ -902,7 +841,9 @@
           resultsContainer.innerText += `${string}\n`;
         });
 
-        resultsContainer.innerHTML += `<h1>${results[0].label}</h1>`;
+        resultsContainer.innerHTML += `<h1>${results[0].label} ${
+          task == "regression" ? results[0].value.toFixed(4) : ""
+        }</h1>`;
 
         if (testContinuously) {
           test();
@@ -940,6 +881,159 @@
           console.log("loaded model");
         });
       }
+    }
+
+    // returns (model.weights.bin, model.json)
+    function getModel(callback) {
+      if (
+        sideMissions.length == 1 &&
+        neuralNetwork &&
+        neuralNetwork.neuralNetwork.isTrained
+      ) {
+        neuralNetwork.neuralNetwork.model.save(
+          ml5.tf.io.withSaveHandler(async data => {
+            const weightsManifest = {
+              modelTopology: data.modelTopology,
+              weightsManifest: [
+                {
+                  paths: [`./model.weights.bin`],
+                  weights: data.weightSpecs
+                }
+              ]
+            };
+            callback(data.weightData, weightsManifest);
+          })
+        );
+      }
+    }
+
+    const { seedrandom } = Math;
+    const SEED = "Hello";
+
+    function shuffleData(inputs, outputs) {
+      const rand = seedrandom(SEED);
+
+      const indexes = inputs.map((_, i) => i);
+      indexes.sort(() => rand() - 0.5);
+
+      const shuffledInputs = [];
+      const shuffledOutputs = [];
+
+      indexes.forEach((i, j) => {
+        shuffledInputs[j] = inputs[i];
+        shuffledOutputs[j] = outputs[i];
+      });
+
+      return [shuffledInputs, shuffledOutputs];
+    }
+
+    function splitArray(data, fract) {
+      const splitPoint = Math.round(data.length * fract);
+      const a = data.slice(0, splitPoint);
+      const b = data.slice(splitPoint, data.length);
+      return [a, b];
+    }
+
+    function shuffleAndSplitDataSet([X, Y], splitRatio = 0.8) {
+      const [shuffled_X, shuffled_Y] = shuffleData(X, Y);
+      const [train_X, test_X] = splitArray(shuffled_X, splitRatio);
+      const [train_Y, test_Y] = splitArray(shuffled_Y, splitRatio);
+
+      return [train_X, train_Y, test_X, test_Y];
+    }
+
+    function rescale(minIn, maxIn, minOut, maxOut, [X, Y]) {
+      const rescaledX = [];
+      const a = minOut - minIn;
+      const scaleRatio = (maxOut - minOut) / (maxIn - minIn);
+
+      X.forEach(row => {
+        rescaledX.push(row.map(v => (v + a) * scaleRatio));
+      });
+      return [rescaledX, Y];
+    }
+
+    function prepareDataSet() {
+      const inputs = [];
+      const outputs = [];
+
+      neuralNetwork.data.training.forEach(({ xs, ys }, index) => {
+        const input = [];
+        for (const key in xs) {
+          input.push(xs[key]);
+        }
+        inputs.push(input);
+
+        const output = [];
+        for (const key in ys) {
+          const value = ys[key];
+          if (value instanceof Array) {
+            output.push(...ys[key]);
+          } else {
+            output.push(ys[key]);
+          }
+        }
+        outputs.push(output);
+      });
+
+      return [inputs, outputs];
+    }
+
+    let trainTestSplit = 0.2;
+    function sendModel(quantize = false) {
+      if (neuralNetwork && neuralNetwork.neuralNetwork.isTrained) {
+        neuralNetwork.neuralNetwork.model
+          .save(
+            ml5.tf.io.browserHTTPRequest(
+              `https://tfjs-to-tflite.zakaton.repl.co/convert?${
+                quantize ? "quantize=true" : ""
+              }`,
+              {
+                fetchFunc: (url, req) => {
+                  if (quantize) {
+                    const [, , test_x] = shuffleAndSplitDataSet(
+                      prepareDataSet(),
+                      1 - trainTestSplit
+                    );
+                    req.body.append("quantize_data", JSON.stringify(test_x));
+                  }
+
+                  return fetch(url, req);
+                }
+              }
+            )
+          )
+          .then(result => {
+            console.log(result);
+            const res = result.responses[0];
+            res
+              .arrayBuffer() // Download gzipped tar file and get ArrayBuffer
+              .then(pako.inflate) // Decompress gzip using pako
+              .then(arr => arr.buffer) // Get ArrayBuffer from the Uint8Array pako returns
+              .then(untar) // Untar
+              .then(files => {
+                // js-untar returns a list of files (See https://github.com/InvokIT/js-untar#file-object for details)
+                console.log(files);
+                const model_h = files.find(file => file.name === "model.h");
+                const model_tflite = files.find(
+                  file => file.name === "model.tflite"
+                );
+                console.log(model_h, model_tflite);
+              });
+          })
+          .catch(error => console.log(error));
+      }
+    }
+
+    function downloadBlob(blob, fileName) {
+      const a = document.createElement("a");
+      document.body.appendChild(a);
+      a.style = "display: none";
+      const url = window.URL.createObjectURL(blob);
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      window.URL.revokeObjectURL(url);
     }
   </script>
 </html>

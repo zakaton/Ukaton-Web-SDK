@@ -126,40 +126,31 @@
     const sideMission = new SideMission();
 
     function connect(event) {
-      sideMission.connect().then(() => event.target.remove())
+      sideMission.connect().then(() => event.target.remove());
     }
-    
-    sideMission.addEventListener(
-      "connected",
-      event => {
-        sideMission.configureSensors({
-          acceleration: true,
-          linearAcceleration: true,
-          rotationRate: true,
-          quaternion: true
-        }, 20);
-      },
-      { once: true }
-    );
+
+    sideMission.addEventListener("connected", event => {
+      enable();
+    });
 
     function enable() {
       if (sideMission.isConnected) {
-        sideMission.configureSensors({
-          acceleration: true,
-          linearAcceleration: true,
-          rotationRate: true,
-          quaternion: true
-        }, 20);
+        sideMission.configureImu({
+          acceleration: 20,
+          linearAcceleration: 20,
+          rotationRate: 20,
+          quaternion: 80
+        });
       }
     }
 
     function disable() {
       if (sideMission.isConnected) {
-        sideMission.configureSensors({
-          acceleration: false,
-          linearAcceleration: false,
-          rotationRate: false,
-          quaternion: false
+        sideMission.configureImu({
+          acceleration: 0,
+          linearAcceleration: 0,
+          rotationRate: 0,
+          quaternion: 0
         });
       }
     }
