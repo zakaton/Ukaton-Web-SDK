@@ -589,9 +589,9 @@
     function onClickCreateNeuralNetwork(event) {
       const outputs = getOutputs();
       if (
-        inputs.length && outputs.length > (task === "classification")
-          ? 1
-          : 0 && sideMission.isConnected
+        inputs.length &&
+        outputs.length > (task === "classification" ? 1 : 0) &&
+        sideMissions.every(sideMission => sideMission.isConnected)
       ) {
         const imuConfiguration = {};
         inputs.forEach(imuDataType => {
@@ -703,30 +703,36 @@
     }
 
     function collectData(callback) {
-      const sideMissionsDatum = sideMissions.map(() => []); // [[{timestamp, [type]: value, isComplete: true|false}]]
+      const sideMissionsData = sideMissions.map(() => []); // [[{timestamp, [type]: value, isComplete: true|false}]]
 
       const checkData = data => {
         if (inputs.every(input => input in data)) {
           data.isComplete = true;
         }
 
-        const hasCollectedAllData = sideMissionsDatum.every(
-          sideMissionDatum => {
-            return (
-              sideMissionDatum.filter(data => data.isComplete).length >=
-              numberOfSamples
-            );
-          }
-        );
+        const hasCollectedAllData = sideMissionsData.every(sideMissionDatum => {
+          return (
+            sideMissionDatum.filter(data => data.isComplete).length >=
+            numberOfSamples
+          );
+        });
         if (hasCollectedAllData) {
           onCollectedData();
         }
       };
 
       const onCollectedData = () => {
-        console.log(sideMissionsDatum);
-        sideMissionsDatum.map(sideMissionDatum => sideMissionDatum.filter(data => data.isComplete).sort((a, b) => a.timestamp - b.timestamp))
-        const data = sideMissionsDatum.flatMap(sideMissionDatum => sideMissionDatum.slice(0, numberOfSamples).flatMap(data => inputs.flatMap(input => data[input])));
+        console.log(sideMissionsData);
+        sideMissionsData.map(sideMissionDatum =>
+          sideMissionDatum
+            .filter(data => data.isComplete)
+            .sort((a, b) => a.timestamp - b.timestamp)
+        );
+        const data = sideMissionsData.flatMap(sideMissionDatum =>
+          sideMissionDatum
+            .slice(0, numberOfSamples)
+            .flatMap(data => inputs.flatMap(input => data[input]))
+        );
         callback(data);
         sideMissions.forEach((sideMission, index) => {
           for (const input in eventListeners[index]) {
@@ -740,17 +746,19 @@
 
       const eventListeners = []; // [{type: eventListener}]
       sideMissions.forEach((sideMission, index) => {
-        eventListeners[index] = {}
+        eventListeners[index] = {};
         inputs.forEach(input => {
           eventListeners[index][input] = event => {
             const { timestamp } = event.message;
-            const sideMissionDatum = sideMissionsDatum[index];
+            const sideMissionData = sideMissionsData[index];
 
-            const data = sideMissionDatum.find(data => data.timestamp == timestamp) || {
+            const data = sideMissionData.find(
+              data => data.timestamp == timestamp
+            ) || {
               timestamp
             };
-            if (!sideMissionDatum.includes(data)) {
-              sideMissionDatum.push(data);
+            if (!sideMissionData.includes(data)) {
+              sideMissionData.push(data);
             }
 
             const value = event.message[input];

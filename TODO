@@ -1,4 +1,6 @@
-threshold triggers?
-
-file transfer
-https://github.com/googlecreativelab/tf4micro-motion-kit/blob/main/web/modules/bleFileTransfer.js
+MLKit
+    swap data/datum
+    use raw data
+    add tflite characteristics/callbacks
+    add threshold triggers
+    transfer model (with metadata)
