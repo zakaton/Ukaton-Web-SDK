@@ -53,8 +53,25 @@ class SideMission {
     this.FILE_TRANSFER_STATUS_CHARACTERISTIC_UUID = this.GENERATE_UUID("3006");
     this.FILE_ERROR_MESSAGE_CHARACTERISTIC_UUID = this.GENERATE_UUID("3007");
 
-    window.addEventListener("beforeunload", event => {
-      this.disableAllSensors();
+    this.HAS_TFLITE_MODEL_CHARACTERISTIC_UUID = this.GENERATE_UUID("4000");
+    this.TFLITE_ENABLED_CHARACTERISTIC_UUID = this.GENERATE_UUID("4001");
+    this.TFLITE_MODEL_TYPE_CHARACTERISTIC_UUID = this.GENERATE_UUID("4002");
+    this.TFLITE_NUMBER_OF_CLASSES_CHARACTERISTIC_UUID = this.GENERATE_UUID(
+      "4003"
+    );
+    this.TFLITE_DATA_TYPES_CHARACTERISTIC_UUID = this.GENERATE_UUID("4004");
+    this.TFLITE_SAMPLE_RATE_CHARACTERISTIC_UUID = this.GENERATE_UUID("4005");
+    this.TFLITE_NUMBER_OF_SAMPLES_CHARACTERISTIC_UUID = this.GENERATE_UUID(
+      "4006"
+    );
+    this.TFLITE_THRESHOLD_CHARACTERISTIC_UUID = this.GENERATE_UUID("4007");
+    this.TFLITE_CAPTURE_DELAY_CHARACTERISTIC_UUID = this.GENERATE_UUID("4008");
+    this.TFLITE_INFERENCE_CHARACTERISTIC_UUID = this.GENERATE_UUID("4009");
+    this.TFLITE_MAKE_INFERENCE_CHARACTERISTIC_UUID = this.GENERATE_UUID("4010");
+
+    window.addEventListener("beforeunload", async event => {
+      await this.disableAllSensors();
+      await this.disableTfLiteModel();
     });
   }
 
@@ -189,6 +206,87 @@ class SideMission {
     this.log("starting file error message notifications...");
     await this.fileErrorMessageCharacteristic.startNotifications();
     this.log("started file error message notifications");
+
+    // TFLITE CHARACTERISTICS
+    this.log("getting 'has tflite model loaded' characteristic...");
+    this.hasTfLiteModelLoadedCharacteristic = await this.service.getCharacteristic(
+      this.HAS_TFLITE_MODEL_CHARACTERISTIC_UUID
+    );
+    this.log("got 'has tflite model loaded' characteristic");
+    this.hasTfLiteModelLoadedCharacteristic.addEventListener(
+      "characteristicvaluechanged",
+      this.onHasTfLiteModelLoadedCharacteristicValueChanged.bind(this)
+    );
+    this.log("starting 'has tflite model loaded' notifications...");
+    await this.hasTfLiteModelLoadedCharacteristic.startNotifications();
+    this.log("started 'has tflite model loaded' notifications");
+
+    this.log("getting tflite enabled characteristic...");
+    this.tfLiteEnabledCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_ENABLED_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite enabled characteristic");
+
+    this.log("getting tflite model type characteristic...");
+    this.tfLiteModelTypeCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_MODEL_TYPE_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite model type characteristic");
+
+    this.log("getting tflite number of classes characteristic...");
+    this.tfLiteNumberOfClassesCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_NUMBER_OF_CLASSES_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite number of classes characteristic");
+
+    this.log("getting tflite data types characteristic...");
+    this.tfLiteDataTypesCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_DATA_TYPES_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite data types characteristic");
+
+    this.log("getting tflite sample rate characteristic...");
+    this.tfLiteSampleRateCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_SAMPLE_RATE_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite sample rate characteristic");
+
+    this.log("getting tflite number of samples characteristic...");
+    this.tfLiteNumberOfSamplesCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_NUMBER_OF_SAMPLES_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite number of samples characteristic");
+
+    this.log("getting tflite threshold characteristic...");
+    this.tfLiteThresholdCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_THRESHOLD_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite threshold characteristic");
+
+    this.log("getting tflite capture delay characteristic...");
+    this.tfLiteCaptureDelayCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_CAPTURE_DELAY_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite capture delay characteristic");
+
+    this.log("getting tflite inference characteristic...");
+    this.tfLiteInferenceCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_INFERENCE_CHARACTERISTIC_UUID
+    );
+    this.log("got tflite inference characteristic");
+    this.tfLiteInferenceCharacteristic.addEventListener(
+      "characteristicvaluechanged",
+      this.onTfLiteInferenceCharacteristicValueChanged.bind(this)
+    );
+    this.log("starting tflite inference notifications...");
+    await this.tfLiteInferenceCharacteristic.startNotifications();
+    this.log("started tflite inference notifications");
+
+    this.log("getting make tflite inference characteristic...");
+    this.tfLiteMakeInferenceCharacteristic = await this.service.getCharacteristic(
+      this.TFLITE_MAKE_INFERENCE_CHARACTERISTIC_UUID
+    );
+    this.log("got make tflite inference characteristic");
 
     // BATTERY CHARACTERITICS
     this.log("getting battery service...");
@@ -376,7 +474,7 @@ class SideMission {
   }
 
   getRawImuData(dataView, offset, size) {
-    return new Int16Array(dataView.buffer.slice(offset, size));
+    return Array.from(new Int16Array(dataView.buffer.slice(offset, size)));
   }
 
   parseImuVector(dataView, offset, scalar = 1) {
@@ -421,6 +519,10 @@ class SideMission {
     return this.constructor.imuDataTypes;
   }
 
+  get imuDataRanges() {
+    return this.constructor.imuDataRanges;
+  }
+
   get dataTypes() {
     return this.constructor.dataTypes;
   }
@@ -455,21 +557,92 @@ class SideMission {
     throw new Error(errorMessage);
   }
 
+  // TFLITE
+  async disableTfLiteModel() {
+    if (!this.isConnected) {
+      return;
+    }
+    return this.tfLiteEnabledCharacteristic.writeValue(Uint8Array.of([0]));
+  }
+  async enableTfLiteModel() {
+    if (!this.isConnected) {
+      return;
+    }
+    return this.tfLiteEnabledCharacteristic.writeValue(Uint8Array.of([1]));
+  }
+  async isTfLiteModelEnabled() {
+    const dataView = await this.tfLiteEnabledCharacteristic.readValue();
+    const isEnabled = dataView.getUint8(0) == 1;
+    return isEnabled;
+  }
+  async makeTfLiteInference() {
+    if (!this.isConnected) {
+      return;
+    }
+    return this.tfLiteMakeInferenceCharacteristic.writeValue(
+      Uint8Array.of([1])
+    );
+  }
+  async hasTfLiteModelLoaded() {
+    const dataView = await this.hasTfLiteModelLoadedCharacteristic.readValue();
+    const hasLoaded = dataView.getUint8(0) == 1;
+    return hasLoaded;
+  }
+
   // https://github.com/googlecreativelab/tiny-motion-trainer/blob/eb1f4bdefbeed0bf4b53463befdbba3b302747b8/frontend/src/tf4micro-motion-kit/modules/bleManager.js#L275
-  async transferTfliteModel({
+  async transferTfLiteModel({
     model,
+    type,
     numberOfClasses,
-    captureDelay,
-    threshold,
+    dataTypes,
+    sampleRate,
     numberOfSamples,
-    dataTypes
+    thresholds,
+    captureDelay
   }) {
-    // FILL
-    // numclasses
-    // numsamples
-    // threshold
-    // captureDelay
-    // sampleBitmask
+    if (!this.isConnected) {
+      return;
+    }
+
+    this.log("about to transfer TfLite model...");
+
+    await this.tfLiteModelTypeCharacteristic.writeValue(
+      Uint8Array.of(this.tfLiteModelTypes[type])
+    );
+
+    await this.tfLiteNumberOfClassesCharacteristic.writeValue(
+      Uint8Array.of(numberOfClasses)
+    );
+
+    let dataTypesBitmask = 0;
+    dataTypes.forEach(dataType => {
+      dataTypesBitmask |= this.imuDataBitFlags[dataType];
+    });
+    await this.tfLiteDataTypesCharacteristic.writeValue(
+      Uint8Array.of(dataTypesBitmask)
+    );
+
+    await this.tfLiteSampleRateCharacteristic.writeValue(
+      Uint16Array.of(sampleRate)
+    );
+    await this.tfLiteNumberOfSamplesCharacteristic.writeValue(
+      Uint16Array.of(numberOfSamples)
+    );
+
+    const thresholdsArray = [0, 0];
+    for (const thresholdName in thresholds) {
+      if (thresholdName in this.tfLiteThresholds) {
+        thresholdsArray[this.tfLiteThresholds[thresholdName]] =
+          thresholds[thresholdName];
+      }
+    }
+    await this.tfLiteThresholdCharacteristic.writeValue(
+      Float32Array.from(thresholdsArray)
+    );
+    await this.tfLiteCaptureDelayCharacteristic.writeValue(
+      Uint16Array.of(captureDelay)
+    );
+
     return this.transferFile(model, "TF_LITE_MODEL");
   }
 
@@ -478,9 +651,14 @@ class SideMission {
     let fileBuffer;
     if (file instanceof Array) {
       fileBuffer = file;
-    } else {
+    } else if (file.buffer) {
+      fileBuffer = file.buffer;
+    } else if (typeof file == "string") {
       const response = await fetch(file);
       fileBuffer = await response.arrayBuffer();
+    } else {
+      this.log(file, "is not a valid file type");
+      return;
     }
 
     const maximumFileLength = this.getMaximumFileLength();
@@ -504,7 +682,7 @@ class SideMission {
     const fileChecksumArray = Uint32Array.of(fileChecksum);
     await this.fileChecksumCharacteristic.writeValue(fileChecksumArray);
 
-    let commandArray = Int32Array.of(0);
+    let commandArray = Uint8Array.of(0);
     await this.fileCommandCharacteristic.writeValue(commandArray);
 
     return this.sendFileBlock(fileBuffer, 0);
@@ -535,6 +713,8 @@ class SideMission {
           message: bytesAlreadySent / fileContents.byteLength
         });
         return this.sendFileBlock(fileContents, bytesAlreadySent);
+      } else {
+        this.log("successfully written file");
       }
     } catch (error) {
       console.error(error);
@@ -581,6 +761,31 @@ class SideMission {
   get FILE_TRANSFER_TYPES() {
     return this.constructor.FILE_TRANSFER_TYPES;
   }
+
+  // TFLITE
+  onHasTfLiteModelLoadedCharacteristicValueChanged(event) {
+    const dataView = event.target.value;
+    const hasTfLiteModelLoaded = dataView.getUint8(0);
+    this.log(`TfLite Model has ${hasTfLiteModelLoaded ? "" : "not "}loaded`);
+    this.dispatchEvent({
+      type: "hasTfLiteModelLoaded",
+      message: { hasLoaded: hasTfLiteModelLoaded }
+    });
+  }
+  onTfLiteInferenceCharacteristicValueChanged(event) {
+    const dataView = event.target.value;
+    const index = dataView.getUint8(0);
+    const value = dataView.getFloat32(1, true);
+    this.log(`inference: class #${index} with value ${value}`);
+    this.dispatchEvent({ type: "inference", message: { index, value } });
+  }
+
+  get tfLiteThresholds() {
+    return this.constructor.tfLiteThresholds;
+  }
+  get tfLiteModelTypes() {
+    return this.constructor.tfLiteModelTypes;
+  }
 }
 
 Object.assign(SideMission, {
@@ -600,6 +805,18 @@ Object.assign(SideMission, {
     rotationRate: 1 / 16,
     magnetometer: 1 / 16,
     quaternion: 1 / (1 << 14)
+  },
+  imuDataRanges: {
+    acceleration: 4000 + 1000,
+    get gravity() {
+      return this.acceleration;
+    },
+    get linearAcceleration() {
+      return this.acceleration;
+    },
+    rotationRate: 32000 + 1000,
+    magnetometer: 6400 + 960,
+    quaternion: 1
   },
   imuDataTypes: [
     "acceleration",
@@ -621,6 +838,15 @@ Object.assign(SideMission, {
   },
   FILE_TRANSFER_TYPES: {
     TF_LITE_MODEL: 0
+  },
+
+  tfLiteThresholds: {
+    linearAcceleration: 0,
+    rotationRate: 1
+  },
+  tfLiteModelTypes: {
+    classification: 0,
+    regression: 1
   }
 });
 

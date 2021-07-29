@@ -1,6 +1,4 @@
-MLKit
-    swap data/datum
-    use raw data
-    add tflite characteristics/callbacks
-    add threshold triggers
-    transfer model (with metadata)
+test demos
+transfer to github
+update extensions
+record demo
