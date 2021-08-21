@@ -8,7 +8,7 @@ class SideMission {
       console.groupEnd();
     }
   }
-  
+
   GENERATE_UUID(val) {
     return `5691eddf-${val}-4420-b7a5-bb8751ab5181`;
   }
@@ -485,7 +485,7 @@ class SideMission {
     const x = dataView.getInt16(offset, true);
     const y = dataView.getInt16(offset + 2, true);
     const z = dataView.getInt16(offset + 4, true);
-    vector.set(-x, -z, y).multiplyScalar(scalar);
+    vector.set(x, -z, -y).multiplyScalar(scalar);
     return vector;
   }
   parseImuEuler(dataView, offset, scalar = 1) {
@@ -493,7 +493,7 @@ class SideMission {
     const x = THREE.Math.degToRad(dataView.getInt16(offset, true) * scalar);
     const y = THREE.Math.degToRad(dataView.getInt16(offset + 2, true) * scalar);
     const z = THREE.Math.degToRad(dataView.getInt16(offset + 4, true) * scalar);
-    euler.set(-x, z, -y, "YXZ");
+    euler.set(-x, z, y, "YXZ");
     return euler;
   }
   parseImuQuaternion(dataView, offset, scalar = 1) {
@@ -502,7 +502,7 @@ class SideMission {
     const x = dataView.getInt16(offset + 2, true) * scalar;
     const y = dataView.getInt16(offset + 4, true) * scalar;
     const z = dataView.getInt16(offset + 6, true) * scalar;
-    quaternion.set(x, z, -y, w);
+    quaternion.set(-y, -w, -x, z);
     return quaternion;
   }
 
