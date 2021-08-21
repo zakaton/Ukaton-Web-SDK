@@ -8,7 +8,7 @@ class SideMission {
       console.groupEnd();
     }
   }
-
+  
   GENERATE_UUID(val) {
     return `5691eddf-${val}-4420-b7a5-bb8751ab5181`;
   }
@@ -143,6 +143,9 @@ class SideMission {
     this.log("starting imu data notifications...");
     await this.imuDataCharacteristic.startNotifications();
     this.log("started imu data notifications");
+
+    this.log("connection complete!");
+    this.dispatchEvent({ type: "connected" });
 
     // FILE TRANSFER CHARACTERISTICS
     this.log("getting file block characteristic...");

@@ -763,13 +763,13 @@
       rotationRate: false
     };
     function hasReachedThresholds() {
-      let hasReachedThresholds = true;
+      let hasReachedThresholds = false;
       let hasAtLeastOneThreshold = false;
       for (const thresholdName in thresholds) {
         if (thresholds[thresholdName] > 0) {
           hasAtLeastOneThreshold = true;
           hasReachedThresholds =
-            hasReachedThresholds && reachedThresholds[thresholdName];
+            hasReachedThresholds || reachedThresholds[thresholdName];
         }
       }
       return hasAtLeastOneThreshold && hasReachedThresholds;
@@ -810,6 +810,7 @@
                 }
 
                 setTimeout(() => {
+                  console.log("delay ended");
                   waitingForCaptureDelayToEnd = false;
                 }, captureDelay);
               }
@@ -1047,7 +1048,7 @@
         neuralNetwork.train(
           {
             batchSize: 18,
-            epochs: 100
+            epochs: 200
           },
           () => {
             console.log("done training");

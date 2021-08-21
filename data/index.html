@@ -226,7 +226,7 @@
         components.forEach(component => {
           container.querySelector(`.${component} input`).value = message[
             dataType
-          ][component].toFixed(2);
+          ][component];
         });
         container.querySelector(`.timestamp input`).value = timestamp;
 
