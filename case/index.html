@@ -1,0 +1,63 @@
+<html>
+  <head>
+    <title>Ukaton Side Missions</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  </head>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color : transparent;
+    }
+    a-scene {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+  <body>
+    <a-scene
+      embedded
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <a-asset-item
+          id="caseAsset"
+          src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission.obj?v=1621228628422"
+        ></a-asset-item>
+        <a-asset-item
+          id="lidAsset"
+          src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission%20lid.obj?v=1621228763857"
+        ></a-asset-item>
+        <img
+          id="logoAsset"
+          src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fname_logo.PNG?v=1621230110826"
+        />
+      </a-assets>
+      <a-camera
+        active
+        position="0 3.5 0"
+        rotation="-90 0 0"
+        fov="50"
+        wasd-controls-enabled="false;"
+        look-controls="enabled: false;"
+      ></a-camera>
+      <a-entity id="sideMission" position="0 0 0" rotation="0 0 0">
+        <a-image
+          scale="1.8 1.8 1.8"
+          rotation="-90 0 0"
+          position="0 0.455 0"
+          id="logo"
+          src="#logoAsset"
+        ></a-image>
+        <a-entity scale="0.05 0.05 0.05" rotation="-90 -90 0">
+          <a-entity position="-20 -17.5 -10">
+            <a-entity id="case" obj-model="obj: #caseAsset;"></a-entity>
+            <a-entity id="lid" obj-model="obj: #lidAsset;"></a-entity>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+      <a-sky color="grey"></a-sky>
+    </a-scene>
+  </body>
+</html>

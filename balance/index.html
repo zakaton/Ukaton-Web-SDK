@@ -1,0 +1,167 @@
+<html>
+  <head>
+    <title>Balance | Ukaton Side Missions</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="/SideMission-WebSocket.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      position: relative;
+    }
+    #overlay {
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #overlay iframe {
+      pointer-events: all;
+    }
+
+    #case {
+      width: 200px;
+      height: 200px;
+      top: 0;
+      right: 4px;
+      position: absolute;
+      border: none;
+    }
+  </style>
+  <body>
+    <div id="overlay">
+      <iframe allowtransparency id="case" src="case/index.html"></iframe>
+    </div>
+
+    <a-scene embedded side-mission>
+      <a-assets timeout="1">
+        <video id="caseVideo" muted autoplay playsinline></video>
+      </a-assets>
+      <a-entity id="cameraPosition">
+        <a-camera active>
+          <a-video
+            width="0.5"
+            height="0.5"
+            visible="false"
+            id="caseVideoEntity"
+            src="#caseVideo"
+            position="0.65 0.6 -1"
+          ></a-video>
+        </a-camera>
+      </a-entity>
+      <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
+      <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+      <a-cylinder
+        position="1 0.75 -3"
+        radius="0.5"
+        height="1.5"
+        color="#FFC65D"
+      ></a-cylinder>
+      <a-plane
+        position="0 0 -4"
+        rotation="-90 0 0"
+        width="4"
+        height="4"
+        color="#7BC8A4"
+      ></a-plane>
+      <a-sky color="#ECECEC"></a-sky>
+    </a-scene>
+  </body>
+  <script>
+    const scene = document.querySelector("a-scene");
+    scene.addEventListener("enter-vr", event => {
+      caseVideoEntity.setAttribute("visible", "true");
+    });
+    scene.addEventListener("exit-vr", event => {
+      caseVideoEntity.setAttribute("visible", "false");
+    });
+    const camera = document.querySelector("a-camera");
+    const cameraPositionEntity = document.querySelector(
+      "a-entity#cameraPosition"
+    );
+    const casePlane = document.querySelector("a-plane#casePlane");
+    const caseIframe = document.querySelector("iframe#case");
+    const caseVideo = document.querySelector("a-assets video#caseVideo");
+    const caseVideoEntity = document.querySelector("a-video#caseVideoEntity");
+    let caseCanvas;
+    let caseEntity, caseScene;
+    caseIframe.addEventListener("load", event => {
+      caseEntity = caseIframe.contentDocument.getElementById("sideMission");
+      caseScene = caseIframe.contentDocument.querySelector("a-scene");
+      caseCanvas = caseIframe.contentDocument.querySelector("a-scene").canvas;
+      caseVideo.width = caseCanvas.width;
+      caseVideo.height = caseCanvas.height;
+      caseVideo.srcObject = caseCanvas.captureStream();
+      caseVideo.play();
+
+      caseCanvas.addEventListener("click", event => {
+        shouldCalibrate = true;
+      });
+    });
+
+    const sideMission = new SideMission();
+    sideMission.connect();
+    sideMission.addEventListener("connected", async event => {
+      await sideMission.configureImu({
+        quaternion: 40
+      });
+    });
+
+    const position = new THREE.Vector3(0, 0, 0);
+    const positionOffset = new THREE.Vector3();
+    const positionOffsetEuler = new THREE.Euler();
+    const calibrationEuler = new THREE.Euler();
+    const euler = new THREE.Euler();
+    let shouldCalibrate = true;
+    sideMission.addEventListener("quaternion", event => {
+      if (shouldCalibrate) {
+        calibrationEuler.copy(sideMission.euler);
+        shouldCalibrate = false;
+      }
+      const pitch = sideMission.euler.x - calibrationEuler.x;
+      const yaw = sideMission.euler.y - calibrationEuler.y;
+      const roll = sideMission.euler.z - calibrationEuler.z;
+      euler.set(pitch, yaw, roll, "YXZ");
+
+      let x = -pitch;
+      let z = -roll;
+      positionOffset.set(x, 0, z);
+      positionOffset.multiplyScalar(0.2);
+
+      positionOffsetEuler.y = yaw;
+      positionOffset.applyEuler(positionOffsetEuler);
+
+      position.add(positionOffset);
+
+      requestUpdate();
+    });
+
+    function update() {
+      cameraPositionEntity.object3D.position.copy(position);
+      if (caseEntity) {
+        caseEntity.object3D.rotation.copy(euler);
+      }
+      if (caseScene) {
+        caseScene.render();
+      }
+    }
+    const requestUpdate = () => {
+      requiresUpdate = true;
+    };
+    let requiresUpdate;
+
+    AFRAME.registerSystem("side-mission", {
+      tick: function(time, timeDelta) {
+        if (requiresUpdate) {
+          update();
+          requiresUpdate = false;
+        }
+      }
+    });
+  </script>
+</html>

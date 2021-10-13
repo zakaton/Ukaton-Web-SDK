@@ -408,7 +408,7 @@ class SideMission {
 
   onImuDataCharacteristicValueChanged(event) {
     const dataView = event.target.value;
-
+    
     const dataBitmask = dataView.getUint8(0);
     const timestamp = dataView.getUint32(1, true);
 
@@ -418,7 +418,7 @@ class SideMission {
         dataTypes.push(dataType);
       }
     }
-
+    
     if (dataTypes.length) {
       let byteOffset = 5;
       let byteSize = 0;
@@ -853,4 +853,23 @@ Object.assign(SideMission, {
   }
 });
 
+const eventDispatcherAddEventListener =
+  THREE.EventDispatcher.prototype.addEventListener;
+THREE.EventDispatcher.prototype.addEventListener = function(
+  type,
+  listener,
+  options
+) {
+  if (options) {
+    if (options.once) {
+      function onceCallback(event) {
+        listener.apply(this, arguments);
+        this.removeEventListener(type, onceCallback);
+      }
+      eventDispatcherAddEventListener.call(this, type, onceCallback);
+    }
+  } else {
+    eventDispatcherAddEventListener.apply(this, arguments);
+  }
+};
 Object.assign(SideMission.prototype, THREE.EventDispatcher.prototype);
