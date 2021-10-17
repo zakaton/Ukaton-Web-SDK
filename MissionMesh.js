@@ -24,6 +24,7 @@ class BaseMission {
   constructor() {
     this.isLoggingEnabled = true;
     this._messageMap = new Map();
+    this._messagePromiseMap = new Map();
   }
 
   log() {
@@ -362,7 +363,7 @@ class MissionMeshDevice extends BaseMission {
   }
 
   _onAvailability(dataView, byteOffset) {
-    const isAvailable = dataView.getUint8(byteOffset++);
+    const isAvailable = Boolean(dataView.getUint8(byteOffset++));
     this.log(
       `Got availability "${Boolean(isAvailable).toString()}" from device #${
         this.index
@@ -376,7 +377,7 @@ class MissionMeshDevice extends BaseMission {
     this._isAvailable = isAvailable;
     this.dispatchEvent({
       type: "availability",
-      isAvailable
+      message: {isAvailable}
     });
 
     if (isAvailable) {
@@ -394,7 +395,7 @@ class MissionMeshDevice extends BaseMission {
     this.batteryLevel = batteryLevel;
     this.dispatchEvent({
       type: "batterylevel",
-      batteryLevel
+      message: { batteryLevel }
     });
     return byteOffset;
   }
@@ -405,29 +406,36 @@ class MissionMeshDevice extends BaseMission {
     } else {
       this.log("requesting name...");
 
-      const promise = new Promise((resolve, reject) => {
-        this.addEventListener(
-          "name",
-          event => {
-            const { error, name } = event;
-            if (error) {
-              reject(error);
-            } else {
-              resolve(name);
-            }
-          },
-          { once: true }
-        );
-      });
+      if (this._messagePromiseMap.has(this.MessageTypes.GET_NAME)) {
+        return this._messagePromiseMap.get(this.MessageTypes.GET_NAME);
+      } else {
+        const promise = new Promise((resolve, reject) => {
+          this.addEventListener(
+            "name",
+            event => {
+              const { error, message } = event;
+              if (error) {
+                reject(error);
+              } else {
+                resolve(message.name);
+              }
 
-      if (!this._messageMap.has(this.MessageTypes.SET_NAME)) {
-        this._messageMap.set(this.MessageTypes.GET_NAME);
-      }
-      if (sendImmediately) {
-        this.send();
-      }
+              this._messagePromiseMap.delete(this.MessageTypes.GET_NAME);
+            },
+            { once: true }
+          );
+        });
 
-      return promise;
+        if (!this._messageMap.has(this.MessageTypes.SET_NAME)) {
+          this._messageMap.set(this.MessageTypes.GET_NAME);
+        }
+        if (sendImmediately) {
+          this.send();
+        }
+
+        this._messagePromiseMap.set(this.MessageTypes.GET_NAME, promise);
+        return promise;
+      }
     }
   }
   async setName(newName, sendImmediately = true) {
@@ -477,7 +485,7 @@ class MissionMeshDevice extends BaseMission {
       this._name = name;
       this.dispatchEvent({
         type: "name",
-        name
+        message: { name }
       });
     }
     return byteOffset;
@@ -489,27 +497,35 @@ class MissionMeshDevice extends BaseMission {
     } else {
       this.log("requesting type...");
 
-      const promise = new Promise((resolve, reject) => {
-        this.addEventListener(
-          "type",
-          event => {
-            const { error, type } = event;
-            if (error) {
-              reject(error);
-            } else {
-              resolve(type);
-            }
-          },
-          { once: true }
-        );
-      });
+      if (this._messagePromiseMap.has(this.MessageTypes.GET_TYPE)) {
+        return this._messagePromiseMap.get(this.MessageTypes.GET_TYPE);
+      } else {
+        const promise = new Promise((resolve, reject) => {
+          this.addEventListener(
+            "type",
+            event => {
+              const { error, message } = event;
+              if (error) {
+                reject(error);
+              } else {
+                resolve(message.type);
+              }
 
-      this._messageMap.set(this.MessageTypes.GET_TYPE);
-      if (sendImmediately) {
-        this.send();
+              this._messagePromiseMap.delete(this.MessageTypes.GET_TYPE);
+            },
+            { once: true }
+          );
+        });
+
+        this._messageMap.set(this.MessageTypes.GET_TYPE);
+        if (sendImmediately) {
+          this.send();
+        }
+
+        this._messagePromiseMap.set(this.MessageTypes.GET_TYPE, promise);
+
+        return promise;
       }
-
-      return promise;
     }
   }
   _onType(dataView, byteOffset) {
@@ -542,7 +558,7 @@ class MissionMeshDevice extends BaseMission {
       }
       this.dispatchEvent({
         type: "type",
-        type
+        message: { type }
       });
     }
     return byteOffset;
@@ -564,7 +580,7 @@ class MissionMeshDevice extends BaseMission {
     this.motion.calibration = motionCalibration;
     this.dispatchEvent({
       type: "motioncalibration",
-      motionCalibration
+      message: { motionCalibration }
     });
     if (isFullyCalibrated) {
       this.dispatchEvent({
@@ -580,27 +596,44 @@ class MissionMeshDevice extends BaseMission {
     } else {
       this.log("requesting motion configuration...");
 
-      const promise = new Promise((resolve, reject) => {
-        this.addEventListener(
-          "motionconfiguration",
-          event => {
-            const { error, motionConfiguration } = event;
-            if (error) {
-              reject(error);
-            } else {
-              resolve(motionConfiguration);
-            }
-          },
-          { once: true }
+      if (
+        this._messagePromiseMap.has(this.MessageTypes.GET_MOTION_CONFIGURATION)
+      ) {
+        return this._messagePromiseMap.get(
+          this.MessageTypes.GET_MOTION_CONFIGURATION
         );
-      });
+      } else {
+        const promise = new Promise((resolve, reject) => {
+          this.addEventListener(
+            "motionconfiguration",
+            event => {
+              const { error, message } = event;
+              if (error) {
+                reject(error);
+              } else {
+                resolve(message.motionConfiguration);
+              }
 
-      this._messageMap.set(this.MessageTypes.GET_MOTION_CONFIGURATION);
-      if (sendImmediately) {
-        this.send();
+              this._messagePromiseMap.delete(
+                this.MessageTypes.GET_MOTION_CONFIGURATION
+              );
+            },
+            { once: true }
+          );
+        });
+
+        this._messageMap.set(this.MessageTypes.GET_MOTION_CONFIGURATION);
+        if (sendImmediately) {
+          this.send();
+        }
+
+        this._messagePromiseMap.set(
+          this.MessageTypes.GET_MOTION_CONFIGURATION,
+          promise
+        );
+
+        return promise;
       }
-
-      return promise;
     }
   }
   async setMotionConfiguration(
@@ -608,6 +641,10 @@ class MissionMeshDevice extends BaseMission {
     sendImmediately = true
   ) {
     this.log("requesting to set motion configuration...");
+
+    if (this._type != this.Types.MOTION_MODULE) {
+      return Promise.reject("motion is not available for insoles");
+    }
 
     const promise = new Promise((resolve, reject) => {
       this.addEventListener(
@@ -631,6 +668,10 @@ class MissionMeshDevice extends BaseMission {
           if (Number.isInteger(rate) && rate >= 0) {
             rate -= rate % 20;
             return rate;
+          }
+        } else {
+          if (this.motion._configuration) {
+            return this.motion._configuration[motionDataType];
           }
         }
       })
@@ -670,7 +711,7 @@ class MissionMeshDevice extends BaseMission {
       );
       this.dispatchEvent({
         type: "motionconfiguration",
-        motionConfiguration
+        message: { motionConfiguration }
       });
     }
     return byteOffset;
@@ -732,7 +773,7 @@ class MissionMeshDevice extends BaseMission {
         message: {
           timestamp,
           [dataTypeString]:
-            dataType == "quaternion" ? quaternion : vector || euler,
+            dataTypeString == "quaternion" ? quaternion : vector || euler,
           rawData
         }
       });
@@ -777,27 +818,46 @@ class MissionMeshDevice extends BaseMission {
     } else {
       this.log("requesting pressure configuration...");
 
-      const promise = new Promise((resolve, reject) => {
-        this.addEventListener(
-          "pressureconfiguration",
-          event => {
-            const { error, pressureConfiguration } = event;
-            if (error) {
-              reject(error);
-            } else {
-              resolve(pressureConfiguration);
-            }
-          },
-          { once: true }
+      if (
+        this._messagePromiseMap.has(
+          this.MessageTypes.GET_PRESSURE_CONFIGURATION
+        )
+      ) {
+        return this._messagePromiseMap.get(
+          this.MessageTypes.GET_PRESSURE_CONFIGURATION
         );
-      });
+      } else {
+        const promise = new Promise((resolve, reject) => {
+          this.addEventListener(
+            "pressureconfiguration",
+            event => {
+              const { error, message } = event;
+              if (error) {
+                reject(error);
+              } else {
+                resolve(message.pressureConfiguration);
+              }
 
-      this._messageMap.set(this.MessageTypes.GET_PRESSURE_CONFIGURATION);
-      if (sendImmediately) {
-        this.send();
+              this._messagePromiseMap.delete(
+                this.MessageTypes.GET_PRESSURE_CONFIGURATION
+              );
+            },
+            { once: true }
+          );
+        });
+
+        this._messageMap.set(this.MessageTypes.GET_PRESSURE_CONFIGURATION);
+        if (sendImmediately) {
+          this.send();
+        }
+
+        this._messagePromiseMap.set(
+          this.MessageTypes.GET_PRESSURE_CONFIGURATION,
+          promise
+        );
+
+        return promise;
       }
-
-      return promise;
     }
   }
   async setPressureConfiguration(
@@ -805,6 +865,10 @@ class MissionMeshDevice extends BaseMission {
     sendImmediately = true
   ) {
     this.log("requesting to set pressure configuration...");
+
+    if (this._type == this.Types.MOTION_MODULE) {
+      return Promise.reject("pressure is not available for motion modules");
+    }
 
     const promise = new Promise((resolve, reject) => {
       this.addEventListener(
@@ -828,6 +892,10 @@ class MissionMeshDevice extends BaseMission {
           if (Number.isInteger(rate) && rate >= 0) {
             rate -= rate % 20;
             return rate;
+          }
+        } else {
+          if (this.pressure._configuration) {
+            return this.pressure._configuration[pressureDataType];
           }
         }
       })
@@ -892,7 +960,7 @@ class MissionMeshDevice extends BaseMission {
       );
       this.dispatchEvent({
         type: "pressureconfiguration",
-        pressureConfiguration
+        message: { pressureConfiguration }
       });
     }
     return byteOffset;
@@ -932,8 +1000,6 @@ class MissionMeshDevice extends BaseMission {
             pressure[index] = { x, y, value };
           }
 
-          this.log("pressure", pressure, byteOffset);
-
           const centerOfMass = pressure.reduce(
             (centerOfMass, sensor) => {
               const { value } = sensor;
@@ -966,6 +1032,14 @@ class MissionMeshDevice extends BaseMission {
             message: {
               timestamp,
               pressure
+            }
+          });
+
+          this.dispatchEvent({
+            type: dataTypeString,
+            message: {
+              timestamp,
+              [dataTypeString]: pressure
             }
           });
 
@@ -1013,7 +1087,8 @@ class MissionMeshDevice extends BaseMission {
           break;
         case this.PressureDataTypes.mass:
           {
-            const mass = dataView.getUint32(byteOffset, true) / scalar;
+            let mass = dataView.getUint32(byteOffset, true);
+            mass /= scalar;
             this.pressure.mass = mass;
             byteOffset += 4;
 
@@ -1078,7 +1153,7 @@ class MissionMesh extends BaseMission {
   // 0x4C, 0x11, 0xAE, 0x90, 0xE0, 0xC0
   // 192.168.5.193
   // 192.168.5.198
-  async connect(gateway = "ws://192.168.5.193/ws") {
+  async connect(gateway) {
     this.log("attempting to connect...");
     if (this.isConnected) {
       this.log("already connected");
@@ -1288,26 +1363,44 @@ class MissionMesh extends BaseMission {
   }
 
   async getNumberOfDevices(sendImmediately = true) {
-    const promise = new Promise((resolve, reject) => {
-      this.addEventListener(
-        "numberofdevices",
-        event => {
-          const { error, numberOfDevices } = event;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(numberOfDevices);
-          }
-        },
-        { once: true }
-      );
-    });
+    this.log("requesting number of devices...");
 
-    this._messageMap.set(this.MessageTypes.GET_NUMBER_OF_DEVICES);
-    if (sendImmediately) {
-      this.send();
+    if (this._messagePromiseMap.has(this.MessageTypes.GET_NUMBER_OF_DEVICES)) {
+      return this._messagePromiseMap.get(
+        this.MessageTypes.GET_NUMBER_OF_DEVICES
+      );
+    } else {
+      const promise = new Promise((resolve, reject) => {
+        this.addEventListener(
+          "numberofdevices",
+          event => {
+            const { error, message } = event;
+            if (error) {
+              reject(error);
+            } else {
+              resolve(message.numberOfDevices);
+            }
+
+            this._messagePromiseMap.delete(
+              this.MessageTypes.GET_NUMBER_OF_DEVICES
+            );
+          },
+          { once: true }
+        );
+      });
+
+      this._messageMap.set(this.MessageTypes.GET_NUMBER_OF_DEVICES);
+      if (sendImmediately) {
+        this.send();
+      }
+
+      this._messagePromiseMap.set(
+        this.MessageTypes.GET_NUMBER_OF_DEVICES,
+        promise
+      );
+
+      return promise;
     }
-    return promise;
   }
   _onNumberOfDevices(dataView, byteOffset) {
     const errorCode = dataView.getUint8(byteOffset++);
@@ -1386,6 +1479,7 @@ class MissionMesh extends BaseMission {
         type: "deviceremoved",
         device
       });
+      device.dispatchEvent({ type: "removed" });
     }
   }
 }

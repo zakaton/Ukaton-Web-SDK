@@ -4,13 +4,306 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
     <script src="./MissionMesh.js"></script>
   </head>
+
+  <style>
+    .device:not(.pressure) .pressure {
+      display: none;
+    }
+    .device:not(.motion) .motion {
+      display: none;
+    }
+    .calibration label,
+    .configuration label {
+      display: block;
+    }
+
+    .device {
+      margin-bottom: 20px;
+    }
+  </style>
+
   <body>
     <h1>
       Mission Mesh | Ukaton Missions
     </h1>
+
+    <div id="connection">
+      <label class="gateway">
+        <b>gateway:</b> <input value="ws://192.168.5.193/ws" />
+      </label>
+      <button class="connect">
+        connect
+      </button>
+    </div>
+
+    <br /><br />
+
+    <div id="devices">
+      <template id="deviceTemplate">
+        <div class="device">
+          <div class="name">
+            <label><b>name:</b> <input /> </label>
+            <button>
+              change name
+            </button>
+          </div>
+
+          <label class="availability"><b>availability:</b> <span></span></label>
+          <br />
+          <label class="type"><b>type:</b> <span></span></label>
+          <br />
+          <label class="batteryLevel"
+            ><b>battery level:</b> <span></span
+          ></label>
+          <br />
+          <div class="motion calibration">
+            <b>motion calibration</b>
+            <label data-calibration="system"> system: <span>0</span></label>
+            <label data-calibration="gyroscope">
+              gyroscope: <span>0</span></label
+            >
+            <label data-calibration="accelerometer">
+              accelerometer: <span>0</span></label
+            >
+            <label data-calibration="magnetometer">
+              magnetometer: <span>0</span></label
+            >
+            <label data-calibration="isFullyCalibrated">
+              fully calibrated: <span>0</span></label
+            >
+          </div>
+          <div class="motion configuration">
+            <b>motion configuration</b>
+            <label data-configuration="acceleration"
+              >acceleration:
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="gravity"
+              >gravity:
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="linearAcceleration"
+              >linear acceleration:
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="rotationRate"
+              >rotation rate:
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="magnetometer"
+              >magnetometer:
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="quaternion"
+              >quaternion:
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+          </div>
+          <div class="motion data">
+            <b>motion data</b>
+            <div data-type="acceleration">acceleration: <span></span></div>
+            <div data-type="gravity">gravity: <span></span></div>
+            <div data-type="linearAcceleration">
+              linear acceleration: <span></span>
+            </div>
+            <div data-type="rotationRate">rotation rate: <span></span></div>
+            <div data-type="magnetometer">magnetometer: <span></span></div>
+            <div data-type="quaternion">quaternion: <span></span></div>
+            <div data-type="euler">euler: <span></span></div>
+          </div>
+          <div class="pressure configuration">
+            <b>pressure configuration</b>
+            <label data-configuration="pressureSingleByte"
+              >pressure (single byte):
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="pressureDoubleByte"
+              >pressure (double byte):
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="centerOfMass"
+              >center of mass:
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="mass"
+              >mass: <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+            <label data-configuration="heelToToe"
+              >heel to toe:
+              <input type="number" value="0" step="20" min="0" max="1000"
+            /></label>
+          </div>
+          <div class="pressure data">
+            <b>pressure data</b>
+            <div data-type="pressureSingleByte">
+              pressure (single byte): <span></span>
+            </div>
+            <div data-type="pressureDoubleByte">
+              pressure (double byte): <span></span>
+            </div>
+            <div data-type="centerOfMass">center of mass: <span></span></div>
+            <div data-type="mass">mass: <span></span></div>
+            <div data-type="heelToToe">heel to toe: <span></span></div>
+          </div>
+        </div>
+      </template>
+    </div>
   </body>
 
   <script>
     const missionMesh = new MissionMesh();
+
+    missionMesh.addEventListener("connected", event => {
+      document.getElementById("connection").remove();
+    });
+    document
+      .querySelector("#connection .connect")
+      .addEventListener("click", event => {
+        connect();
+      });
+    function connect() {
+      const gateway = document.querySelector(".gateway input").value;
+      missionMesh.connect(gateway);
+    }
+
+    missionMesh.addEventListener("deviceadded", async event => {
+      const { device } = event;
+
+      const deviceContainer = deviceTemplate.content
+        .cloneNode(true)
+        .querySelector(".device");
+
+      device.addEventListener("batterylevel", event => {
+        const { batteryLevel } = event.message;
+        deviceContainer.querySelector(
+          ".batteryLevel span"
+        ).innerText = batteryLevel;
+      });
+
+      device.addEventListener("name", event => {
+        const { name } = event.message;
+        deviceContainer.querySelector(".name input").value = name;
+      });
+      deviceContainer
+        .querySelector(".name button")
+        .addEventListener("click", event => {
+          const name = deviceContainer.querySelector(".name input").value;
+          device.setName(name);
+        });
+
+      device.getType().then(type => {
+        if (type == missionMesh.Types.MOTION_MODULE) {
+          deviceContainer.classList.add("motion");
+        }
+        if (type != missionMesh.Types.MOTION_MODULE) {
+          deviceContainer.classList.add("pressure");
+        }
+        deviceContainer.querySelector(".type span").innerText =
+          missionMesh.TypeStrings[type];
+      });
+
+      deviceContainer.querySelector(
+        `.availability span`
+      ).innerText = device._isAvailable.toString();
+      device.addEventListener("availability", event => {
+        const { isAvailable } = event.message;
+        deviceContainer.querySelector(
+          `.availability span`
+        ).innerText = isAvailable.toString();
+      });
+
+      device.addEventListener("motioncalibration", event => {
+        const { motionCalibration } = event.message;
+        for (const type in motionCalibration) {
+          deviceContainer.querySelector(
+            `[data-calibration="${type}"] span`
+          ).innerText = motionCalibration[type];
+        }
+      });
+
+      deviceContainer
+        .querySelectorAll(".motion.configuration [data-configuration]")
+        .forEach(configurationContainer => {
+          const type = configurationContainer.dataset.configuration;
+          const input = configurationContainer.querySelector("input");
+          input.addEventListener("input", event => {
+            const rate = Number(event.target.value);
+            device.setMotionConfiguration({ [type]: rate });
+          });
+        });
+      device.addEventListener("motionconfiguration", event => {
+        const { motionConfiguration } = event.message;
+        for (const type in motionConfiguration) {
+          deviceContainer.querySelector(
+            `.motion.configuration [data-configuration="${type}"] input`
+          ).value = motionConfiguration[type];
+        }
+      });
+      deviceContainer
+        .querySelectorAll(".motion.data [data-type]")
+        .forEach(configurationContainer => {
+          const type = configurationContainer.dataset.type;
+          const span = configurationContainer.querySelector("span");
+          device.addEventListener(type, event => {
+            const value = event.message[type];
+            const { timestamp } = event.message;
+            span.innerText = value
+              .toArray()
+              .map(x => (x.toFixed ? x.toFixed(2) : x))
+              .toString();
+          });
+        });
+
+      deviceContainer
+        .querySelectorAll(".pressure.configuration [data-configuration]")
+        .forEach(configurationContainer => {
+          const type = configurationContainer.dataset.configuration;
+          const input = configurationContainer.querySelector("input");
+          input.addEventListener("input", event => {
+            const rate = Number(event.target.value);
+            device.setPressureConfiguration({ [type]: rate });
+          });
+        });
+      device.addEventListener("pressureconfiguration", event => {
+        const { pressureConfiguration } = event.message;
+        for (const type in pressureConfiguration) {
+          deviceContainer.querySelector(
+            `.pressure.configuration [data-configuration="${type}"] input`
+          ).value = pressureConfiguration[type];
+        }
+      });
+      deviceContainer
+        .querySelectorAll(".pressure.data [data-type]")
+        .forEach(configurationContainer => {
+          const type = configurationContainer.dataset.type;
+          const span = configurationContainer.querySelector("span");
+          device.addEventListener(type, event => {
+            const value = event.message[type];
+            const { timestamp } = event.message;
+            switch (type) {
+              case "pressureSingleByte":
+              case "pressureDoubleByte":
+                span.innerText = value.map(sensor => sensor.value).toString();
+                break;
+              case "mass":
+              case "heelToToe":
+                span.innerText = value.toFixed(2);
+                break;
+              case "centerOfMass":
+                span.innerText = [
+                  value.x.toFixed(2),
+                  value.y.toFixed(2)
+                ].toString();
+                break;
+            }
+          });
+        });
+
+      devices.appendChild(deviceContainer);
+
+      device.addEventListener("removed", event => {
+        deviceContainer.remove();
+      });
+    });
   </script>
 </html>
