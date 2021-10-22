@@ -79,11 +79,10 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       entities.upperTorso.appendChild(entities.head);
 
       entities.leftBicep = document.createElement("a-entity");
-      _euler.set(0, 0, Math.PI / 2);
+      _euler.set(0, -Math.PI / 2, 0);
       correctionQuaternions.leftBicep = new THREE.Quaternion().setFromEuler(
         _euler
       );
-      entities.leftBicep.object3D.rotation.copy(_euler);
       entities.upperTorso.appendChild(entities.leftBicep);
       entities.leftForearm = document.createElement("a-entity");
       entities.leftBicep.appendChild(entities.leftForearm);
@@ -91,11 +90,10 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       entities.leftForearm.appendChild(entities.leftHand);
 
       entities.rightBicep = document.createElement("a-entity");
-      _euler.set(0, 0, -Math.PI/2);
+      _euler.set(0, Math.PI / 2, 0);
       correctionQuaternions.rightBicep = new THREE.Quaternion().setFromEuler(
         _euler
       );
-      entities.rightBicep.object3D.rotation.copy(_euler);
       entities.upperTorso.appendChild(entities.rightBicep);
       entities.rightForearm = document.createElement("a-entity");
       entities.rightBicep.appendChild(entities.rightForearm);
@@ -152,17 +150,21 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       primitives.leftShoulder = document.createElement("a-sphere");
       entities.leftBicep.appendChild(primitives.leftShoulder);
       primitives.leftBicep = document.createElement("a-cylinder");
+      primitives.leftBicep.setAttribute("rotation", "0 0 90");
       primitives.leftElbow = document.createElement("a-sphere");
       entities.leftForearm.appendChild(primitives.leftElbow);
       primitives.leftForearm = document.createElement("a-cylinder");
+      primitives.leftForearm.setAttribute("rotation", "0 0 90");
       primitives.leftHand = document.createElement("a-box");
 
       primitives.rightShoulder = document.createElement("a-sphere");
       entities.rightBicep.appendChild(primitives.rightShoulder);
       primitives.rightBicep = document.createElement("a-cylinder");
+      primitives.rightBicep.setAttribute("rotation", "0 0 -90");
       primitives.rightElbow = document.createElement("a-sphere");
       entities.rightForearm.appendChild(primitives.rightElbow);
       primitives.rightForearm = document.createElement("a-cylinder");
+      primitives.rightForearm.setAttribute("rotation", "0 0 -90");
       primitives.rightHand = document.createElement("a-box");
 
       primitives.leftLegSocket = document.createElement("a-sphere");
@@ -254,9 +256,11 @@ AFRAME.registerComponent("ukaton-body-tracking", {
           if (entity) {
             const { quaternion } = event.message;
             if (name in this.correctionQuaternions) {
-              this.quaternions[name].multiplyQuaternions(quaternion, this.correctionQuaternions[name]);
-            }
-            else {
+              this.quaternions[name].multiplyQuaternions(
+                quaternion,
+                this.correctionQuaternions[name]
+              );
+            } else {
               this.quaternions[name].copy(quaternion);
             }
             this.updatedQuaternion[name] = true;
@@ -298,16 +302,16 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       this.data.torsoHeight / 2,
       0
     );
-    entities.leftForearm.object3D.position.y = this.data.bicepLength;
-    entities.leftHand.object3D.position.y = this.data.forearmLength;
+    entities.leftForearm.object3D.position.x = -this.data.bicepLength;
+    entities.leftHand.object3D.position.x = -this.data.forearmLength;
 
     entities.rightBicep.object3D.position.set(
       this.data.torsoWidth / 2,
       this.data.torsoHeight / 2,
       0
     );
-    entities.rightForearm.object3D.position.y = this.data.bicepLength;
-    entities.rightHand.object3D.position.y = this.data.forearmLength;
+    entities.rightForearm.object3D.position.x = this.data.bicepLength;
+    entities.rightHand.object3D.position.x = this.data.forearmLength;
 
     entities.leftThigh.object3D.position.x = this.data.torsoWidth / 2;
     entities.leftShin.object3D.position.y = -this.data.thighLength;
@@ -366,22 +370,22 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     primitives.leftBicep.setAttribute("radius", this.data.bicepRadius);
     primitives.leftBicep.setAttribute(
       "position",
-      `0 ${this.data.bicepLength / 2} 0`
+      `-${this.data.bicepLength / 2} 0 0`
     );
     primitives.leftElbow.setAttribute("radius", this.data.elbowRadius);
     primitives.leftForearm.setAttribute("height", this.data.forearmLength);
     primitives.leftForearm.setAttribute("radius", this.data.forearmRadius);
     primitives.leftForearm.setAttribute(
       "position",
-      `0 ${this.data.forearmLength / 2} 0`
+      `-${this.data.forearmLength / 2} 0 0`
     );
     primitives.leftHand.setAttribute(
       "scale",
-      `0.05 ${this.data.handLength} 0.1`
+      `${this.data.handLength} 0.05 0.1`
     );
     primitives.leftHand.setAttribute(
       "position",
-      `0 ${this.data.handLength / 2} 0`
+      `-${this.data.handLength / 2} 0 0`
     );
 
     primitives.rightShoulder.setAttribute("radius", this.data.shoulderRadius);
@@ -389,22 +393,22 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     primitives.rightBicep.setAttribute("radius", this.data.bicepRadius);
     primitives.rightBicep.setAttribute(
       "position",
-      `0 ${this.data.bicepLength / 2} 0`
+      `${this.data.bicepLength / 2} 0 0`
     );
     primitives.rightElbow.setAttribute("radius", this.data.elbowRadius);
     primitives.rightForearm.setAttribute("height", this.data.forearmLength);
     primitives.rightForearm.setAttribute("radius", this.data.forearmRadius);
     primitives.rightForearm.setAttribute(
       "position",
-      `0 ${this.data.forearmLength / 2} 0`
+      `${this.data.forearmLength / 2} 0 0`
     );
     primitives.rightHand.setAttribute(
       "scale",
-      `0.05 ${this.data.handLength} 0.1`
+      `${this.data.handLength} 0.05 0.1`
     );
     primitives.rightHand.setAttribute(
       "position",
-      `0 ${this.data.handLength / 2} 0`
+      `${this.data.handLength / 2} 0 0`
     );
 
     primitives.leftLegSocket.setAttribute("radius", this.data.legSocketRadius);
@@ -527,10 +531,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
   calibrate: function() {
     console.log("calibrating...");
     for (const name in this.entities) {
-      const quaternionOffset = this.quaternionOffsets[name];
-      if (quaternionOffset) {
-        quaternionOffset.copy(this.quaternions[name]).invert();
-      }
+      this.quaternionOffsets[name].copy(this.quaternions[name]).invert();
     }
   },
   tick: function() {
@@ -546,7 +547,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
           .invert()
           .multiply(this.el.object3D.quaternion)
           .multiply(quaternionOffset)
-          .multiply(quaternion)
+          .multiply(quaternion);
 
         entity.object3D.updateMatrix();
 
