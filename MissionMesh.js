@@ -22,7 +22,7 @@ THREE.EventDispatcher.prototype.addEventListener = function(
 
 class BaseMission {
   constructor() {
-    this.isLoggingEnabled = true;
+    this.isLoggingEnabled = !true;
     this._messageMap = new Map();
     this._messagePromiseMap = new Map();
   }
@@ -193,7 +193,7 @@ Object.assign(BaseMission, {
 
     "GET_TYPE",
 
-    "MOTION_CALLIBRATION",
+    "MOTION_CALIBRATION",
 
     "GET_MOTION_CONFIGURATION",
     "SET_MOTION_CONFIGURATION",
@@ -1153,7 +1153,7 @@ class MissionMesh extends BaseMission {
   // 0x4C, 0x11, 0xAE, 0x90, 0xE0, 0xC0
   // 192.168.5.193
   // 192.168.5.198
-  async connect(gateway) {
+  async connect(gateway = "ws://192.168.5.193/ws") {
     this.log("attempting to connect...");
     if (this.isConnected) {
       this.log("already connected");
@@ -1223,7 +1223,8 @@ class MissionMesh extends BaseMission {
     let timestamp;
     while (byteOffset < dataView.byteLength) {
       messageType = dataView.getUint8(byteOffset++);
-      this.log(`message type: ${this.MessageTypeStrings[messageType]}`);
+      const messageTypeString = this.MessageTypeStrings[messageType]
+      this.log(`message type: ${messageTypeString}`);
       switch (messageType) {
         case this.MessageTypes.TIMESTAMP:
           timestamp = dataView.getUint32(byteOffset, true);
@@ -1240,7 +1241,7 @@ class MissionMesh extends BaseMission {
             if (device) {
               byteOffset = device._onAvailability(dataView, byteOffset);
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
@@ -1257,7 +1258,7 @@ class MissionMesh extends BaseMission {
             if (device) {
               byteOffset = device._onBatteryLevel(dataView, byteOffset);
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
@@ -1269,7 +1270,7 @@ class MissionMesh extends BaseMission {
             if (device) {
               byteOffset = device._onName(dataView, byteOffset);
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
@@ -1280,18 +1281,18 @@ class MissionMesh extends BaseMission {
             if (device) {
               byteOffset = device._onType(dataView, byteOffset);
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
-        case this.MessageTypes.MOTION_CALLIBRATION:
+        case this.MessageTypes.MOTION_CALIBRATION:
           {
             const deviceIndex = dataView.getUint8(byteOffset++);
             const device = this.devices[deviceIndex];
             if (device) {
               byteOffset = device._onMotionCalibration(dataView, byteOffset);
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
@@ -1303,7 +1304,7 @@ class MissionMesh extends BaseMission {
             if (device) {
               byteOffset = device._onMotionConfiguration(dataView, byteOffset);
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
@@ -1318,7 +1319,7 @@ class MissionMesh extends BaseMission {
                 timestamp
               );
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
@@ -1333,7 +1334,7 @@ class MissionMesh extends BaseMission {
                 byteOffset
               );
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
@@ -1348,7 +1349,7 @@ class MissionMesh extends BaseMission {
                 timestamp
               );
             } else {
-              throw `device #${deviceIndex} not found!`;
+              throw `[${messageTypeString}] device #${deviceIndex} not found!`;
             }
           }
           break;
@@ -1453,7 +1454,7 @@ class MissionMesh extends BaseMission {
     }
     this.dispatchEvent({
       type: "deviceadded",
-      device
+      message: {device}
     });
   }
 
@@ -1477,7 +1478,7 @@ class MissionMesh extends BaseMission {
       this.log(`removed device #${deviceIndex}:`);
       this.dispatchEvent({
         type: "deviceremoved",
-        device
+        message: {device}
       });
       device.dispatchEvent({ type: "removed" });
     }

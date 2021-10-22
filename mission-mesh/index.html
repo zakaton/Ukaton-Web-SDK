@@ -167,7 +167,7 @@
     }
 
     missionMesh.addEventListener("deviceadded", async event => {
-      const { device } = event;
+      const { device } = event.message;
 
       const deviceContainer = deviceTemplate.content
         .cloneNode(true)
