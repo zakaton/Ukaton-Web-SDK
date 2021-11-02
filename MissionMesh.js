@@ -172,6 +172,15 @@ class BaseMission {
     }
     return { x, y };
   }
+
+  get InsoleCorrectionQuaternions() {
+    return this.constructor.InsoleCorrectionQuaternions;
+  }
+  get insoleCorrectionQuaternion() {
+    return this.InsoleCorrectionQuaternions[
+      this.isRightInsole ? "right" : "left"
+    ];
+  }
 }
 Object.assign(BaseMission, {
   textEncoder: new TextEncoder(),
@@ -301,7 +310,12 @@ Object.assign(BaseMission, {
     x /= 93.257; // width (mm)
     y /= 265.069; // height (mm)
     return { x, y };
-  })
+  }),
+
+  InsoleCorrectionQuaternions: {
+    left: new THREE.Quaternion(),
+    right: new THREE.Quaternion()
+  }
 });
 
 [
@@ -321,6 +335,26 @@ Object.assign(BaseMission, {
   );
 });
 Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
+
+{
+  const insoleCorrectionEuler = new THREE.Euler();
+  insoleCorrectionEuler.set(0, Math.PI / 2, -Math.PI / 2);
+  BaseMission.InsoleCorrectionQuaternions.right.setFromEuler(
+    insoleCorrectionEuler
+  );
+
+  insoleCorrectionEuler.set(-Math.PI / 2, -Math.PI / 2, 0);
+  BaseMission.InsoleCorrectionQuaternions.left.setFromEuler(
+    insoleCorrectionEuler
+  );
+
+  window.updateCorrectionEuler = (x, y, z, order) => {
+    insoleCorrectionEuler.set(x, y, z, order);
+    BaseMission.InsoleCorrectionQuaternions.left.setFromEuler(
+      insoleCorrectionEuler
+    );
+  };
+}
 
 class MissionMeshDevice extends BaseMission {
   constructor() {
@@ -364,20 +398,26 @@ class MissionMeshDevice extends BaseMission {
 
   _onAvailability(dataView, byteOffset) {
     const isAvailable = Boolean(dataView.getUint8(byteOffset++));
+
     this.log(
       `Got availability "${Boolean(isAvailable).toString()}" from device #${
         this.index
       }`
     );
-    if (!isAvailable) {
+    if (isAvailable) {
+      this.getName(false);
+      this.getType(false);
+    } else {
       this._name = null;
       this._type = null;
       this.motion._configuration = null;
+      delete this.pressure;
     }
+
     this._isAvailable = isAvailable;
     this.dispatchEvent({
       type: "availability",
-      message: {isAvailable}
+      message: { isAvailable }
     });
 
     if (isAvailable) {
@@ -642,9 +682,11 @@ class MissionMeshDevice extends BaseMission {
   ) {
     this.log("requesting to set motion configuration...");
 
+    /*
     if (this._type != this.Types.MOTION_MODULE) {
       return Promise.reject("motion is not available for insoles");
     }
+    */
 
     const promise = new Promise((resolve, reject) => {
       this.addEventListener(
@@ -791,7 +833,18 @@ class MissionMeshDevice extends BaseMission {
     const x = dataView.getInt16(offset, true);
     const y = dataView.getInt16(offset + 2, true);
     const z = dataView.getInt16(offset + 4, true);
-    vector.set(x, -z, -y).multiplyScalar(scalar);
+
+    if (this.isInsole) {
+      if (this.isRightInsole) {
+        vector.set(z, y, x);
+      } else {
+        vector.set(-z, y, -x);
+      }
+    } else {
+      vector.set(x, -z, -y);
+    }
+
+    vector.multiplyScalar(scalar);
     return vector;
   }
   _parseMotionEuler(dataView, offset, scalar = 1) {
@@ -799,7 +852,15 @@ class MissionMeshDevice extends BaseMission {
     const x = THREE.Math.degToRad(dataView.getInt16(offset, true) * scalar);
     const y = THREE.Math.degToRad(dataView.getInt16(offset + 2, true) * scalar);
     const z = THREE.Math.degToRad(dataView.getInt16(offset + 4, true) * scalar);
-    euler.set(-x, z, y, "YXZ");
+    if (this.isInsole) {
+      if (this.isRightInsole) {
+        euler.set(-z, -y, -x, "YXZ");
+      } else {
+        euler.set(z, -y, x, "YXZ");
+      }
+    } else {
+      euler.set(-x, z, y, "YXZ");
+    }
     return euler;
   }
   _parseMotionQuaternion(dataView, offset, scalar = 1) {
@@ -809,6 +870,10 @@ class MissionMeshDevice extends BaseMission {
     const y = dataView.getInt16(offset + 4, true) * scalar;
     const z = dataView.getInt16(offset + 6, true) * scalar;
     quaternion.set(-y, -w, -x, z);
+
+    if (this.isInsole) {
+      quaternion.multiply(this.insoleCorrectionQuaternion);
+    }
     return quaternion;
   }
 
@@ -1150,10 +1215,8 @@ class MissionMesh extends BaseMission {
       throw "Not connected";
     }
   }
-  // 0x4C, 0x11, 0xAE, 0x90, 0xE0, 0xC0
-  // 192.168.5.193
-  // 192.168.5.198
-  async connect(gateway = "ws://192.168.5.193/ws") {
+
+  async connect(gateway) {
     this.log("attempting to connect...");
     if (this.isConnected) {
       this.log("already connected");
@@ -1223,7 +1286,7 @@ class MissionMesh extends BaseMission {
     let timestamp;
     while (byteOffset < dataView.byteLength) {
       messageType = dataView.getUint8(byteOffset++);
-      const messageTypeString = this.MessageTypeStrings[messageType]
+      const messageTypeString = this.MessageTypeStrings[messageType];
       this.log(`message type: ${messageTypeString}`);
       switch (messageType) {
         case this.MessageTypes.TIMESTAMP:
@@ -1454,7 +1517,7 @@ class MissionMesh extends BaseMission {
     }
     this.dispatchEvent({
       type: "deviceadded",
-      message: {device}
+      message: { device }
     });
   }
 
@@ -1478,7 +1541,7 @@ class MissionMesh extends BaseMission {
       this.log(`removed device #${deviceIndex}:`);
       this.dispatchEvent({
         type: "deviceremoved",
-        message: {device}
+        message: { device }
       });
       device.dispatchEvent({ type: "removed" });
     }

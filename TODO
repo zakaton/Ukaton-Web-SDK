@@ -1,4 +1,12 @@
-test
-  arms
-  legs
-  pressure (tick pressure stuff)
+demo w/Android
+  fix stuttering
+  test walking without rounding
+demo w/Oculus (mirror + piano)
+cybershoes demo (same tracking but with lower body)
+bluetooth web sdk (same api as "device")
+demo w/iPhone
+drawing on iPad Pro
+
+edge impulse weight detection
+
+weight-related demos (dumbell detection, squats, etc)

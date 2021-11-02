@@ -196,7 +196,7 @@
           deviceContainer.classList.add("motion");
         }
         if (type != missionMesh.Types.MOTION_MODULE) {
-          deviceContainer.classList.add("pressure");
+          deviceContainer.classList.add("pressure", "motion");
         }
         deviceContainer.querySelector(".type span").innerText =
           missionMesh.TypeStrings[type];
