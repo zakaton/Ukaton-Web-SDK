@@ -1,0 +1,55 @@
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    a-scene {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+  <body>
+    <a-scene
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      embedded
+    >
+      <a-assets>
+        <a-asset-item
+          id="monkeyAsset"
+          src="https://cdn.glitch.com/7aee52f8-8780-408a-9381-d76a09b01778%2Fmonkey.gltf?v=1601761372036"
+        ></a-asset-item>
+      </a-assets>
+
+      <a-camera
+        position="0 0 0"
+        fov="23"
+        look-controls="enabled: false;"
+        wasd-controls-enabled="false;"
+      ></a-camera>
+      
+      <a-entity id="monkeyPosition" position="0 0 -3">
+        <a-entity id="monkeyRotation" position="0 0 0" rotation="0 180 0">
+          <a-entity
+            id="monkeyOffset"
+            position="0 -0.4 0"
+            scale="0.05 0.05 0.05"
+          >
+            <a-entity
+              id="monkey"
+              position="0 0 0"
+              rotation="0 180 0"
+              scale="0.4 0.4 0.4"
+              gltf-model="#monkeyAsset"
+            ></a-entity>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>

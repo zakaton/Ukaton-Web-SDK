@@ -144,6 +144,9 @@ class SideMission {
     await this.imuDataCharacteristic.startNotifications();
     this.log("started imu data notifications");
 
+    this.log("connection complete!");
+    this.dispatchEvent({ type: "connected" });
+
     // FILE TRANSFER CHARACTERISTICS
     this.log("getting file block characteristic...");
     this.fileBlockCharacteristic = await this.service.getCharacteristic(
@@ -405,7 +408,7 @@ class SideMission {
 
   onImuDataCharacteristicValueChanged(event) {
     const dataView = event.target.value;
-
+    
     const dataBitmask = dataView.getUint8(0);
     const timestamp = dataView.getUint32(1, true);
 
@@ -415,7 +418,7 @@ class SideMission {
         dataTypes.push(dataType);
       }
     }
-
+    
     if (dataTypes.length) {
       let byteOffset = 5;
       let byteSize = 0;
@@ -482,7 +485,7 @@ class SideMission {
     const x = dataView.getInt16(offset, true);
     const y = dataView.getInt16(offset + 2, true);
     const z = dataView.getInt16(offset + 4, true);
-    vector.set(-x, -z, y).multiplyScalar(scalar);
+    vector.set(x, -z, -y).multiplyScalar(scalar);
     return vector;
   }
   parseImuEuler(dataView, offset, scalar = 1) {
@@ -490,7 +493,7 @@ class SideMission {
     const x = THREE.Math.degToRad(dataView.getInt16(offset, true) * scalar);
     const y = THREE.Math.degToRad(dataView.getInt16(offset + 2, true) * scalar);
     const z = THREE.Math.degToRad(dataView.getInt16(offset + 4, true) * scalar);
-    euler.set(-x, z, -y, "YXZ");
+    euler.set(-x, z, y, "YXZ");
     return euler;
   }
   parseImuQuaternion(dataView, offset, scalar = 1) {
@@ -499,7 +502,7 @@ class SideMission {
     const x = dataView.getInt16(offset + 2, true) * scalar;
     const y = dataView.getInt16(offset + 4, true) * scalar;
     const z = dataView.getInt16(offset + 6, true) * scalar;
-    quaternion.set(x, z, -y, w);
+    quaternion.set(-y, -w, -x, z);
     return quaternion;
   }
 
@@ -850,4 +853,23 @@ Object.assign(SideMission, {
   }
 });
 
+const eventDispatcherAddEventListener =
+  THREE.EventDispatcher.prototype.addEventListener;
+THREE.EventDispatcher.prototype.addEventListener = function(
+  type,
+  listener,
+  options
+) {
+  if (options) {
+    if (options.once) {
+      function onceCallback(event) {
+        listener.apply(this, arguments);
+        this.removeEventListener(type, onceCallback);
+      }
+      eventDispatcherAddEventListener.call(this, type, onceCallback);
+    }
+  } else {
+    eventDispatcherAddEventListener.apply(this, arguments);
+  }
+};
 Object.assign(SideMission.prototype, THREE.EventDispatcher.prototype);

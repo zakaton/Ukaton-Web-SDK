@@ -219,7 +219,7 @@
         <canvas></canvas>
       </div>
       <div id="scene">
-        <a-scene embedded vr-mode-ui="enabled: false">
+        <a-scene embedded vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
           <a-assets>
             <a-asset-item
               id="caseAsset"
@@ -234,7 +234,7 @@
               src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fname_logo.PNG?v=1621230110826"
             />
           </a-assets>
-          <a-camera active position="0 0 3.5" rotation="0 0 0"></a-camera>
+          <a-camera active position="0 0 3.5" rotation="0 0 0" look-controls="enabled: true;"></a-camera>
           <a-entity id="sideMission" position="0 0 0" rotation="0 -90 0">
             <a-image
               scale="1.8 1.8 1.8"
