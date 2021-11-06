@@ -350,7 +350,7 @@ Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
 
   window.updateCorrectionEuler = (x, y, z, order) => {
     insoleCorrectionEuler.set(x, y, z, order);
-    BaseMission.InsoleCorrectionQuaternions.left.setFromEuler(
+    BaseMission.InsoleCorrectionQuaternions.right.setFromEuler(
       insoleCorrectionEuler
     );
   };
@@ -584,8 +584,8 @@ class MissionMeshDevice extends BaseMission {
       this._type = type;
       this.isInsole =
         type == this.Types.LEFT_INSOLE || type == this.Types.RIGHT_INSOLE;
-      this.isRightInsole = type == this.Types.RIGHT_INSOLE;
       if (this.isInsole) {
+        this.isRightInsole = type == this.Types.RIGHT_INSOLE;
         this.pressure = Object.assign([], {
           sum: 0,
           mass: 0,

@@ -1,7 +1,9 @@
-demo w/Android
-  fix stuttering
-  test walking without rounding
 demo w/Oculus (mirror + piano)
+  tap shoes
+    add sounds
+    append resonance audio attribute to foot entities
+    trigger sound based on initial contact + mass
+  
 cybershoes demo (same tracking but with lower body)
 bluetooth web sdk (same api as "device")
 demo w/iPhone

@@ -19,9 +19,13 @@ AFRAME.registerSystem("ukaton-body-tracking", {
 
 AFRAME.registerComponent("ukaton-body-tracking", {
   schema: {
+    hideExtremities: { type: "boolean", default: false },
     gateway: { type: "array", default: [] },
     autoConnect: { type: "boolean", default: false },
     manualArticulation: { type: "boolean", default: false },
+
+    pressureAnchoringEnabled: { type: "boolean", default: true },
+    anchorToCamera: { type: "boolean", default: false },
 
     hatColor: { type: "color", default: "#171717" },
 
@@ -59,7 +63,56 @@ AFRAME.registerComponent("ukaton-body-tracking", {
   },
   init: function() {
     window._rig = this;
-    
+
+    this.isOculusBrowser = AFRAME.utils.device.isOculusBrowser();
+    if (this.isOculusBrowser) {
+      this.handContainers = {};
+      this.hands = {};
+      ["left", "right"].forEach(side => {
+        const handContainerEl = document.createElement("a-entity");
+        const handEl = document.createElement("a-entity");
+        handEl.setAttribute("hand-tracking-controls", {
+          hand: side,
+          modelColor: this.data.skinColor
+        });
+        handEl.setAttribute("shadow", "");
+
+        this.hands[side] = handEl;
+        this.handContainers[side] = handContainerEl;
+
+        this.el.sceneEl.appendChild(handContainerEl);
+        handContainerEl.appendChild(handEl);
+      });
+
+      let pinchTimeoutHandle;
+      let pinchCounter;
+      this.hands.right.addEventListener("pinchstarted", event => {
+        clearTimeout(pinchTimeoutHandle);
+
+        pinchCounter++;
+        if (pinchCounter >= 2) {
+          this.calibrate(2000);
+          this._setHandColor("right", "red");
+          setTimeout(() => {
+            this._setHandColor("right", this.data.skinColor);
+          }, 2000);
+          pinchCounter = 0;
+        } else {
+          pinchTimeoutHandle = setTimeout(() => {
+            pinchCounter = 0;
+          }, 1000);
+        }
+      });
+
+      setInterval(() => {
+        this._updateHandPositions();
+      }, 1000 / 60);
+    }
+    this.cameraEl = document.querySelector("a-camera");
+
+    this.headsetQuaternionOffset = new THREE.Quaternion();
+    this.headsetQuaternionYawOffset = new THREE.Quaternion();
+
     this.missionMeshes = {};
 
     const entities = (this.entities = {});
@@ -242,6 +295,12 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       primitives.rightAnchor.setAttribute("color", "red");
     }
 
+    this._updateExtremities();
+    if (this.isOculusBrowser) {
+      this.primitives.leftHand.object3D.visible = false;
+      this.primitives.rightHand.object3D.visible = false;
+    }
+
     for (const name in entities) {
       const entity = entities[name];
       entity.id = name;
@@ -282,6 +341,45 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     if (this.data.autoConnect) {
       this.connect();
     }
+  },
+  _setHandColor: function(side, color) {
+    if (this.hands && side in this.hands) {
+      const hand = this.hands[side];
+      const setColor = () => {
+        const mesh = this.hands[side].getObject3D("mesh");
+        if (mesh) {
+          mesh.children[30].material.color = new THREE.Color(color);
+        }
+      };
+      if (hand.hasLoaded) {
+        setColor();
+      } else {
+        hand.addEventListener("loaded", () => setColor());
+      }
+    }
+  },
+  _updateExtremities: function() {
+    [
+      "head",
+      "hatBrim",
+      "hatCrown",
+      "leftEye",
+      "rightEye",
+      "leftHand",
+      "rightHand"
+    ].forEach(primitiveToHide => {
+      const primitive = this.primitives[primitiveToHide];
+      const onLoaded = () => {
+        primitive
+          .getObject3D("mesh")
+          .layers.set(this.data.hideExtremities ? 3 : 0);
+      };
+      if (primitive.hasLoaded) {
+        onLoaded();
+      } else {
+        primitive.addEventListener("loaded", () => onLoaded());
+      }
+    });
   },
   _createMissionMesh: function() {
     const missionMesh = new MissionMesh();
@@ -329,6 +427,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
               side
             ] = mass >= threshold);
             anchorConfiguration.updatedThresholds[side] =
+              anchorConfiguration.updatedThresholds[side] ||
               exceededThreshold != previouslyExceededThreshold;
 
             if (anchorConfiguration.isAnchored) {
@@ -384,11 +483,10 @@ AFRAME.registerComponent("ukaton-body-tracking", {
   connect: function() {
     this.data.gateway.forEach(_gateway => {
       const gateway = `ws://192.168.5.${_gateway}/ws`;
-      let missionMesh = this.missionMeshes[gateway]
+      let missionMesh = this.missionMeshes[gateway];
       if (missionMesh) {
-        missionMesh.connect();
-      }
-      else {
+        missionMesh.connect(gateway);
+      } else {
         missionMesh = this._createMissionMesh();
         missionMesh.connect(gateway);
         this.missionMeshes[gateway] = missionMesh;
@@ -589,6 +687,9 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     primitives.leftHand.setAttribute("color", this.data.skinColor);
     primitives.rightHand.setAttribute("color", this.data.skinColor);
 
+    this._setHandColor("left", this.data.skinColor);
+    this._setHandColor("right", this.data.skinColor);
+
     primitives.upperTorso.setAttribute("color", this.data.shirtColor);
     primitives.lowerTorso.setAttribute("color", this.data.shirtColor);
 
@@ -650,6 +751,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
 
     primitives.leftShoe1.setAttribute("color", this.data.shoeColor1);
     primitives.leftShoe2.setAttribute("color", this.data.shoeColor2);
+
     primitives.rightShoe1.setAttribute("color", this.data.shoeColor1);
     primitives.rightShoe2.setAttribute("color", this.data.shoeColor2);
   },
@@ -657,7 +759,18 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     setTimeout(() => this._calibrate(), delay);
   },
   _calibrate: function() {
-    console.log("calibrating...");
+    console.log("calibrating");
+    if (this.isOculusBrowser) {
+      this.headsetQuaternionOffset.copy(this.cameraEl.object3D.quaternion);
+
+      const euler = new THREE.Euler();
+      euler.order = "YXZ";
+
+      euler.setFromQuaternion(this.headsetQuaternionOffset);
+      euler.x = euler.z = 0;
+      this.headsetQuaternionYawOffset.setFromEuler(euler);
+    }
+
     for (const name in this.entities) {
       this.quaternionOffsets[name].copy(this.quaternions[name]).invert();
 
@@ -694,6 +807,105 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       this._tick();
       delete this._tickFlag;
     }
+
+    if (this.data.anchorToCamera) {
+      this._anchorToCamera();
+    }
+  },
+  _anchorToCamera: function() {
+    const cameraPosition = this.cameraEl.object3D.position.clone();
+
+    const lowerTorsoEntity = this.entities.lowerTorso;
+    const lowerTorsoPosition = new THREE.Vector3();
+    lowerTorsoEntity.object3D.getWorldPosition(lowerTorsoPosition);
+
+    const headEntity = this.entities.head;
+    const headPosition = new THREE.Vector3();
+    headEntity.object3D.getWorldPosition(headPosition);
+    headPosition.z -= 0.1;
+
+    const headToTorso = new THREE.Vector3()
+      .subVectors(lowerTorsoPosition, headPosition)
+      .sub(this.primitives.head.object3D.position);
+
+    lowerTorsoEntity.object3D.position.addVectors(cameraPosition, headToTorso);
+    lowerTorsoEntity.object3D.updateMatrix();
+
+    const headQuaternion = this.cameraEl.object3D.quaternion.clone();
+    headEntity.object3D.quaternion.copy(headQuaternion);
+    const headParentEntityQuaternion = new THREE.Quaternion();
+    headEntity.parentEl.object3D
+      .getWorldQuaternion(headParentEntityQuaternion)
+      .invert();
+    headEntity.object3D.quaternion.premultiply(headParentEntityQuaternion);
+    headEntity.object3D.updateMatrix();
+
+    if (this.isOculusBrowser) {
+      for (const side in this.hands) {
+        const hand = this.hands[side];
+        const { mesh, skinnedMesh } = hand.components["hand-tracking-controls"];
+        if (skinnedMesh && mesh) {
+          const wristBone = skinnedMesh.skeleton.getBoneByName(
+            `b_${side == "left" ? "l" : "r"}_wrist`
+          );
+          if (wristBone) {
+            let wristPosition = new THREE.Vector3();
+            wristBone.getWorldPosition(wristPosition);
+
+            let handPosition = new THREE.Vector3();
+            this.entities[`${side}Hand`].object3D.getWorldPosition(
+              handPosition
+            );
+
+            const meshPosition = new THREE.Vector3();
+            meshPosition.copy(wristPosition).multiplyScalar(-1);
+
+            if (window.offset) {
+              meshPosition.add(window.offset);
+            } else {
+              window.offset = new THREE.Vector3();
+            }
+            mesh.position.copy(meshPosition);
+
+            /*
+            const handEntityPosition = new THREE.Vector3();
+            this.entities[`${side}Hand`].object3D.getWorldPosition(
+              handEntityPosition
+            );
+
+            this.handContainers[side].object3D.position.copy(
+              handEntityPosition
+            );
+            this.handContainers[side].object3D.position.y -= 1.5;
+            */
+          }
+        }
+      }
+    }
+  },
+  _updateHandPositions: function() {
+    if (this.isOculusBrowser) {
+      for (const side in this.hands) {
+        const hand = this.hands[side];
+        const { mesh, skinnedMesh } = hand.components["hand-tracking-controls"];
+        if (skinnedMesh && mesh) {
+          const wristBone = skinnedMesh.skeleton.getBoneByName(
+            `b_${side == "left" ? "l" : "r"}_wrist`
+          );
+          if (wristBone) {
+            const handEntityPosition = new THREE.Vector3();
+            this.entities[`${side}Hand`].object3D.getWorldPosition(
+              handEntityPosition
+            );
+
+            this.handContainers[side].object3D.position.copy(
+              handEntityPosition
+            );
+            this.handContainers[side].object3D.position.y -= 1.5;
+          }
+        }
+      }
+    }
   },
   _tick: function() {
     const { entities, primitives, anchorConfiguration } = this;
@@ -711,7 +923,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         yawEuler.x = yawEuler.z = 0;
         const yawQuaternion = new THREE.Quaternion().setFromEuler(yawEuler);
         const inverseYawQuaternion = yawQuaternion.clone().invert();
-        
+
         const modifiedQuaternion = quaternion
           .clone()
           .premultiply(inverseYawQuaternion)
@@ -722,6 +934,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         entity.parentEl.object3D
           .getWorldQuaternion(entity.object3D.quaternion)
           .invert()
+          .multiply(this.headsetQuaternionYawOffset)
           .multiply(this.el.object3D.quaternion)
           .multiply(modifiedQuaternion);
       }
@@ -746,40 +959,12 @@ AFRAME.registerComponent("ukaton-body-tracking", {
           THREE.Math.lerp(0, 0.5, mass)
         );
 
-        if (side in this.anchorConfiguration.updatedThresholds) {
-          const exceededThreshold = this.anchorConfiguration.exceededThresholds[
-            side
-          ];
-          if (!exceededThreshold) {
-            const footStep = document.createElement("a-ring");
-            footStep.setAttribute("rotation", "-90 0 0");
-            footStep.object3D.position.copy(anchorEntity.object3D.position);
-            footStep.object3D.position.y += 0.001;
-            footStep.setAttribute("color", side == "left" ? "blue" : "red");
-            footStep.setAttribute("radius-inner", 0);
-            footStep.setAttribute("radius-outer", 0.15);
-            footStep.setAttribute("animation__fade", {
-              property: "material.opacity",
-              from: 1,
-              to: 0,
-              dur: 4000,
-              easing: "easeOutExpo"
-            });
-            footStep.addEventListener("animationcomplete__fade", event => {
-              footStep.remove();
-            });
-            this.el.appendChild(footStep);
-          }
-        }
+        const exceededThreshold = this.anchorConfiguration.exceededThresholds[
+          side
+        ];
 
-        const exceededThreshold = mass >= anchorConfiguration.thresholds[side];
-        anchorEntity.object3D.visible = exceededThreshold;
-        if (exceededThreshold) {
-          if (
-            !anchorConfiguration.isAnchored ||
-            anchorConfiguration.side != side ||
-            anchorConfiguration.updatedAnchor
-          ) {
+        if (side in this.anchorConfiguration.updatedThresholds) {
+          if (exceededThreshold) {
             const rootPosition = new THREE.Vector3();
             this.el.object3D.getWorldPosition(rootPosition);
 
@@ -789,7 +974,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
               .getWorldPosition(footPosition)
               .sub(rootPosition);
 
-            const obstacleHeight = 0.4318; // bench height
+            const obstacleHeight = 0.4318; // gym bench height
             const allowSteppingOnObstacle = true;
             if (allowSteppingOnObstacle) {
               footPosition.y =
@@ -800,15 +985,41 @@ AFRAME.registerComponent("ukaton-body-tracking", {
             const anchorEntity = entities[`${side}Anchor`];
             anchorEntity.object3D.position.copy(footPosition);
             anchorEntity.object3D.updateMatrix();
-
-            if (
-              anchorConfiguration.isAnchored &&
-              anchorConfiguration.side == side &&
-              anchorConfiguration.updatedAnchor
-            ) {
-              anchorConfiguration.position.copy(footPosition);
-              delete anchorConfiguration.updatedAnchor;
+          } else {
+            if (!this.isOculusBrowser) {
+              const footStep = document.createElement("a-ring");
+              footStep.setAttribute("rotation", "-90 0 0");
+              footStep.object3D.position.copy(anchorEntity.object3D.position);
+              footStep.object3D.position.y += 0.001;
+              footStep.setAttribute("color", side == "left" ? "blue" : "red");
+              footStep.setAttribute("radius-inner", 0);
+              footStep.setAttribute("radius-outer", 0.15);
+              footStep.setAttribute("animation__fade", {
+                property: "material.opacity",
+                from: 1,
+                to: 0,
+                dur: 4000,
+                easing: "easeOutExpo"
+              });
+              footStep.addEventListener("animationcomplete__fade", event => {
+                footStep.remove();
+              });
+              this.el.appendChild(footStep);
             }
+          }
+
+          delete this.anchorConfiguration.updatedThresholds[side];
+        }
+
+        anchorEntity.object3D.visible = this.isOculusBrowser || exceededThreshold;
+        if (exceededThreshold) {
+          if (
+            anchorConfiguration.isAnchored &&
+            anchorConfiguration.side == side &&
+            anchorConfiguration.updatedAnchor
+          ) {
+            anchorConfiguration.position.copy(anchorEntity.object3D.position);
+            delete anchorConfiguration.updatedAnchor;
           }
         }
 
@@ -816,7 +1027,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       }
     }
 
-    if (anchorConfiguration.isAnchored) {
+    if (this.data.pressureAnchoringEnabled && anchorConfiguration.isAnchored) {
       const anchorPosition = anchorConfiguration.position;
 
       const rootPosition = new THREE.Vector3();
@@ -861,6 +1072,10 @@ AFRAME.registerComponent("ukaton-body-tracking", {
 
     if (diffKeys.includes("manualArticulation")) {
       this.updateEntityAutoUpdate();
+    }
+
+    if (diffKeys.includes("hideExtremities")) {
+      this._updateExtremities();
     }
   },
   updateEntityAutoUpdate() {
