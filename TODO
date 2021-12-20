@@ -1,14 +1,20 @@
-demo w/Oculus (mirror + piano)
-  tap shoes
-    add sounds
-    append resonance audio attribute to foot entities
-    trigger sound based on initial contact + mass
-  
-cybershoes demo (same tracking but with lower body)
-bluetooth web sdk (same api as "device")
-demo w/iPhone
-drawing on iPad Pro
+ble mocap
+iPad Pro drawing
+SlimeVR
+Edge Impulse
 
-edge impulse weight detection
-
-weight-related demos (dumbell detection, squats, etc)
+next Web SDK
+  use (byteOffset, sensorType) pradigm throughtout (easier for WebSocket implementation)
+  don't parse pressure if not an insole?
+  isValidSensorType
+  use ble notifications and promises to make things cleaner and easier for websocket-based stuff
+  events for ("namechange", "typechange", "debugchange", "configurationchange")
+  make all keys lowercase (motion, pressure)
+  messages camelcase or lowercase (can't do event.message[type])
+  isValidSensorDataType(sensorDataType, motionSensorType)
+  index DataType by SensorType to sensorType abstraction easier
+  while BLE can read characteristics, WebSockets needs an explicit message
+    abstract get/set, so BLE can return after characteristic read/write
+    but WebSocket can respond after the WebSocket response
+  Message Type is for WebSockets, but BLE doesn't need it
+  Error enum (no strings to make WebSockets easier to parse)

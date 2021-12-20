@@ -1,24 +1,26 @@
 /* global THREE */
 
-const eventDispatcherAddEventListener =
-  THREE.EventDispatcher.prototype.addEventListener;
-THREE.EventDispatcher.prototype.addEventListener = function(
-  type,
-  listener,
-  options
-) {
-  if (options) {
-    if (options.once) {
-      function onceCallback(event) {
-        listener.apply(this, arguments);
-        this.removeEventListener(type, onceCallback);
+{
+  const eventDispatcherAddEventListener =
+    THREE.EventDispatcher.prototype.addEventListener;
+  THREE.EventDispatcher.prototype.addEventListener = function(
+    type,
+    listener,
+    options
+  ) {
+    if (options) {
+      if (options.once) {
+        function onceCallback(event) {
+          listener.apply(this, arguments);
+          this.removeEventListener(type, onceCallback);
+        }
+        eventDispatcherAddEventListener.call(this, type, onceCallback);
       }
-      eventDispatcherAddEventListener.call(this, type, onceCallback);
+    } else {
+      eventDispatcherAddEventListener.apply(this, arguments);
     }
-  } else {
-    eventDispatcherAddEventListener.apply(this, arguments);
-  }
-};
+  };
+}
 
 class BaseMission {
   constructor() {
@@ -822,59 +824,6 @@ class MissionMeshDevice extends BaseMission {
       byteOffset += byteSize;
     }
     return byteOffset;
-  }
-
-  _getRawMotionData(dataView, offset, size) {
-    return Array.from(new Int16Array(dataView.buffer.slice(offset, size)));
-  }
-
-  _parseMotionVector(dataView, offset, scalar = 1) {
-    const vector = new THREE.Vector3();
-    const x = dataView.getInt16(offset, true);
-    const y = dataView.getInt16(offset + 2, true);
-    const z = dataView.getInt16(offset + 4, true);
-
-    if (this.isInsole) {
-      if (this.isRightInsole) {
-        vector.set(z, y, x);
-      } else {
-        vector.set(-z, y, -x);
-      }
-    } else {
-      vector.set(x, -z, -y);
-    }
-
-    vector.multiplyScalar(scalar);
-    return vector;
-  }
-  _parseMotionEuler(dataView, offset, scalar = 1) {
-    const euler = new THREE.Euler();
-    const x = THREE.Math.degToRad(dataView.getInt16(offset, true) * scalar);
-    const y = THREE.Math.degToRad(dataView.getInt16(offset + 2, true) * scalar);
-    const z = THREE.Math.degToRad(dataView.getInt16(offset + 4, true) * scalar);
-    if (this.isInsole) {
-      if (this.isRightInsole) {
-        euler.set(-z, -y, -x, "YXZ");
-      } else {
-        euler.set(z, -y, x, "YXZ");
-      }
-    } else {
-      euler.set(-x, z, y, "YXZ");
-    }
-    return euler;
-  }
-  _parseMotionQuaternion(dataView, offset, scalar = 1) {
-    const quaternion = new THREE.Quaternion();
-    const w = dataView.getInt16(offset, true) * scalar;
-    const x = dataView.getInt16(offset + 2, true) * scalar;
-    const y = dataView.getInt16(offset + 4, true) * scalar;
-    const z = dataView.getInt16(offset + 6, true) * scalar;
-    quaternion.set(-y, -w, -x, z);
-
-    if (this.isInsole) {
-      quaternion.multiply(this.insoleCorrectionQuaternion);
-    }
-    return quaternion;
   }
 
   async getPressureConfiguration(sendImmediately = true) {
