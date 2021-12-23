@@ -24,7 +24,7 @@
 
 class BaseMission {
   constructor() {
-    this.isLoggingEnabled = !true;
+    this.isLoggingEnabled = true;
     this._messageMap = new Map();
     this._messagePromiseMap = new Map();
     

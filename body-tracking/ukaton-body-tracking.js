@@ -1180,7 +1180,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
               .sub(rootPosition);
 
             const obstacleHeight = 0.4318; // gym bench height
-            const allowSteppingOnObstacle = false;
+            const allowSteppingOnObstacle = true;
             if (allowSteppingOnObstacle) {
               footPosition.y =
                 footPosition.y >= obstacleHeight / 2 ? obstacleHeight : 0;

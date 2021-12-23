@@ -4,15 +4,19 @@ SlimeVR
 Edge Impulse
 
 next Web SDK
+  errors
+    warnings when not connected (nothing happens) or will fail silently (setting pressure configuration)
+    errors when something that should never happen happens
+  BaseMissionDevice methods will provide quaternion corrections, types
+    WebSockets will implement own error messages and stuff
   use (byteOffset, sensorType) pradigm throughtout (easier for WebSocket implementation)
-  don't parse pressure if not an insole?
-  isValidSensorType
   use ble notifications and promises to make things cleaner and easier for websocket-based stuff
-  events for ("namechange", "typechange", "debugchange", "configurationchange")
+    events for ("namechange", "typechange", "debugchange", "configurationchange")
   make all keys lowercase (motion, pressure)
-  messages camelcase or lowercase (can't do event.message[type])
+  make eventDispatcher messages camelCase to make event.message[type] easier
   isValidSensorDataType(sensorDataType, motionSensorType)
   index DataType by SensorType to sensorType abstraction easier
+  enabledSensorType(); // if an insole or not
   while BLE can read characteristics, WebSockets needs an explicit message
     abstract get/set, so BLE can return after characteristic read/write
     but WebSocket can respond after the WebSocket response

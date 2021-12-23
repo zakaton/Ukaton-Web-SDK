@@ -200,7 +200,7 @@ class BluetoothMissionDevice extends BaseMission {
     this.dispatchEvent({ type: "disconnected" });
     if (this._reconnectOnDisconnection) {
       this.log("attempting to reconnect...");
-      this.device.gatt.connect();
+      this._device.gatt.connect();
     }
   }
 
@@ -377,10 +377,6 @@ class BluetoothMissionDevice extends BaseMission {
     });
 
     const lowerCaseSensorTypeString = sensorTypeString.toLowerCase();
-    console.log(
-      `got ${lowerCaseSensorTypeString} sensor data configuration`,
-      sensorDataConfiguration
-    );
     this._sensorDataConfigurations[
       lowerCaseSensorTypeString
     ] = sensorDataConfiguration;
@@ -468,8 +464,9 @@ class BluetoothMissionDevice extends BaseMission {
     this._parseSensorData(dataView);
   }
   _parseSensorData(dataView, byteOffset = 0) {
-    const timestamp = dataView.getUint32(byteOffset, true);
-    byteOffset += 4;
+    const timestamp = dataView.getUint16(byteOffset, true);
+    console.log(timestamp);
+    byteOffset += 2;
 
     while (byteOffset < dataView.byteLength) {
       const sensorType = dataView.getUint8(byteOffset++);

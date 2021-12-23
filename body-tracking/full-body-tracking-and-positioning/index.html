@@ -62,7 +62,7 @@
 
       <a-camera
         look-controls="enabled: false;"
-        orbit-controls="target: 0 0.5 0; minDistance: 0.1; maxDistance: 8; initialPosition: 0 0.2 -2"
+        orbit-controls="target: 0 0 0; minDistance: 0.1; maxDistance: 8; initialPosition: 0 0.2 -2"
       ></a-camera>
 
       <a-light type="ambient" light="intensity: 0.6;"></a-light>
@@ -86,7 +86,7 @@
       <a-entity
         id="rig"
         position="0 0 0"
-        ukaton-body-tracking="auto-connect: false; gateway: 193, 194, 241, 242, 201, 200, 243, 244, 240, 238, 236, 202, 239, 237, 204"
+        ukaton-body-tracking="hide-entities: upperTorso; hide-primitives: lowerTorso; auto-connect: false; gateway: 193, 194, 241, 242, 201, 200, 243, 244, 240, 238, 236, 202, 239, 237, 204"
         shadow
       ></a-entity>
 
