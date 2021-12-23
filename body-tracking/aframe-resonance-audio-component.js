@@ -12,12 +12,12 @@ AFRAME.registerSystem("resonance-audio", {
     width: { type: "number", default: 2 },
     height: { type: "number", default: 2 },
     depth: { type: "number", default: 2 },
-    "left-wall": { default: "sheet-rock", oneOf: RESONANCE_MATERIAL },
-    "right-wall": { default: "sheet-rock", oneOf: RESONANCE_MATERIAL },
-    "front-wall": { default: "sheet-rock", oneOf: RESONANCE_MATERIAL },
-    "back-wall": { default: "sheet-rock", oneOf: RESONANCE_MATERIAL },
-    "down-wall": { default: "wood-panel", oneOf: RESONANCE_MATERIAL },
-    "up-wall": { default: "wood-ceiling", oneOf: RESONANCE_MATERIAL }
+    leftWall: { default: "sheet-rock", oneOf: RESONANCE_MATERIAL },
+    rightWall: { default: "sheet-rock", oneOf: RESONANCE_MATERIAL },
+    frontWall: { default: "sheet-rock", oneOf: RESONANCE_MATERIAL },
+    backWall: { default: "sheet-rock", oneOf: RESONANCE_MATERIAL },
+    downWall: { default: "wood-panel", oneOf: RESONANCE_MATERIAL },
+    upWall: { default: "wood-ceiling", oneOf: RESONANCE_MATERIAL }
   },
   init: function() {
     this.audioContext = THREE.AudioContext.getContext();
@@ -29,12 +29,12 @@ AFRAME.registerSystem("resonance-audio", {
       depth: this.data.depth
     };
     const roomMaterials = {
-      left: this.data["left-wall"],
-      right: this.data["right-wall"],
-      front: this.data["front-wall"],
-      back: this.data["back-wall"],
-      down: this.data["down-wall"],
-      up: this.data["up-wall"]
+      left: this.data.leftWall,
+      right: this.data.rightWall,
+      front: this.data.frontWall,
+      back: this.data.backWall,
+      down: this.data.downWall,
+      up: this.data.upWall
     };
     this.resonanceAudioScene.output.gain.value = this.data.gain;
     this.resonanceAudioScene.setRoomProperties(roomDimensions, roomMaterials);
@@ -47,12 +47,14 @@ AFRAME.registerSystem("resonance-audio", {
           "click",
           event => {
             this.audioContext.resume();
+            this.resonanceAudioScene.output.gain.value = 1;
           },
           { once: true }
         );
       }
     });
     this.audioContext.dispatchEvent(new Event("statechange"));
+    this.el.emit("loadedresonanceaudio");
   },
   tick: function() {
     this.resonanceAudioScene.setListenerFromMatrix(
@@ -71,6 +73,8 @@ AFRAME.registerComponent("resonance-audio", {
     if (!this.data.src) {
       return;
     }
+
+    this.oldPosition = new THREE.Vector3();
 
     this.audioElement = document.createElement("audio");
     this.el.addEventListener("playaudio", () => {
@@ -96,13 +100,20 @@ AFRAME.registerComponent("resonance-audio", {
       this.audioElement
     );
     this.source = this.system.resonanceAudioScene.createSource();
+    //this.source.setDirectivityPattern(1, Infinity);
     this.source.setGain(this.data.gain);
     this.audioElementSource.connect(this.source.input);
     this.audioElement.loop = this.data.loop;
   },
   tick: function() {
     if (this.source) {
-      this.source.setFromMatrix(this.el.object3D.matrixWorld);
+      const position = new THREE.Vector3();
+      this.el.object3D.getWorldPosition(position);
+      if (this.oldPosition.distanceTo(position) > 0) {
+        //this.source.setPosition(...position.toArray());
+        this.source.setFromMatrix(this.el.object3D.matrixWorld);
+        this.oldPosition.copy(position);
+      }
     }
   }
 });

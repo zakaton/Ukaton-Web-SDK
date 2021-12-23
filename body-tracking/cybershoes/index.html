@@ -1,15 +1,11 @@
 <html>
   <head>
-    <title>Mirror | Ukaton</title>
+    <title>Cybershoes | Ukaton</title>
     <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@b78a9f4552e01d2cd933f26b07a223c43007a97c/dist/aframe-master.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
 
     <script src="/MissionMesh.js"></script>
     <script src="/body-tracking/ukaton-body-tracking.js"></script>
-    <script src="/body-tracking/aframe-webcam-component.js"></script>
-    <!-- https://glitch.com/edit/#!/aframe-threejs-reflector?path=aframe-mirror.js%3A258%3A32 -->
-    <!-- https://github.com/aframevr/aframe/issues/4806#issuecomment-861114767 -->
-    <script src="/body-tracking/aframe-mirror-component.js"></script>
     <script src="/body-tracking/aframe-resonance-audio-component.js"></script>
   </head>
   <style>
@@ -55,8 +51,14 @@
       <a-assets>
         <canvas id="floorTexture"></canvas>
       </a-assets>
+      
+      <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
+      <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+      <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
 
-      <a-camera></a-camera>
+      <a-entity id="cameraRig">
+        <a-camera></a-camera>
+      </a-entity>
 
       <a-light type="ambient" light="intensity: 0.6;"></a-light>
       <a-light
@@ -65,15 +67,6 @@
         light="castShadow: true; intensity: 0.6;"
         target="#rig"
       ></a-light>
-
-      <a-entity
-        id="mirror"
-        rotation="0 0 0"
-        position="0.0 1.5 -1"
-        geometry="primitive:plane; width:1.6; height:3.0"
-        aframe-mirror="color:#777; textureWidth:1024; textureHeight:1024;"
-      >
-      </a-entity>
 
       <a-plane
         id="floor"
@@ -88,7 +81,7 @@
       <a-entity
         id="rig"
         position="0 0 0"
-        ukaton-body-tracking="move-hands: false; pressure-anchoring-enabled: false; anchor-to-camera: true; hide-extremities: true; auto-connect: false; gateway: 193, 194, 241, 242, 201, 200, 243, 244, 240, 238, 236, 202, 239, 237, 204; forearm-radius: 0.030; elbow-radius: 0.030"
+        ukaton-body-tracking="cybershoes: true; move-hands: false; hide-entities: upperTorso; hide-primitives: lowerTorso; hide-extremities: true; auto-connect: false; gateway: 238, 236, 202, 239, 237, 204, 240; forearm-radius: 0.030; elbow-radius: 0.030"
         shadow
       ></a-entity>
 
@@ -126,10 +119,14 @@
       rig.emit("connect");
     }
     function calibrate() {
-      rig.emit("calibrate", { delay: 2000 });
+      rig.emit("calibrate", { delay: 0 });
     }
 
     const scene = document.querySelector("a-scene");
     const overlay = document.getElementById("overlay");
+  </script>
+
+  <script>
+    const cameraRig = document.getElementById("cameraRig");
   </script>
 </html>

@@ -21,7 +21,10 @@ AFRAME.registerComponent("webcam", {
   schema: {
     width: { type: "number", default: 300 },
     height: { type: "number", default: 300 },
-    fps: { type: "number", default: 24 }
+    fps: { type: "number", default: 24 },
+    position: {type: "array", default: [0, 0, 0]},
+    rotation: {type: "array", default: [0, 0, 0]},
+    fov: {type: "number", default: 50}
   },
   init: function() {
     window.webcam = this;
@@ -42,7 +45,6 @@ AFRAME.registerComponent("webcam", {
     this.canvas = this.renderer.domElement;
     this.canvas.id = `canvas${this.identifier}`;
     this.context = this.canvas.getContext("2d");
-    this.el.sceneEl.querySelector("a-assets").appendChild(this.canvas);
 
     this.assetsEl = this.el.sceneEl.querySelector("a-assets");
     if (!this.assetsEl) {
@@ -51,26 +53,14 @@ AFRAME.registerComponent("webcam", {
     }
     this.assetsEl.appendChild(this.canvas);
 
-    this.cameraEl = document.createElement("a-camera");
-    this.cameraBoxEl = document.createElement("a-box");
-    this.cameraBoxEl.setAttribute("scale", "0.1 0.1 0.1");
-    this.cameraBoxEl.setAttribute("color", "green");
-    this.cameraBoxEl.object3D.visible = false;
-    this.cameraEl.appendChild(this.cameraBoxEl);
-    this.cameraEl.setAttribute("camera", { spectator: true, active: false });
-    this.cameraEl.setAttribute("rotation", "0 180 0");
-    this.cameraEl.setAttribute("position", "0 0 0");
-    this.cameraEl.setAttribute("look-controls-enabled", "false");
-    this.cameraEl.setAttribute("wasd-controls-enabled", "false");
-    this.cameraEl.addEventListener("loaded", event => {
-      this.cameraEl.components.camera.camera.aspect = 1;
-      //this.cameraEl.components.camera.camera.aspect = screen.width/screen.height;
-      this.cameraEl.components.camera.camera.updateProjectionMatrix();
-    });
-    this.el.appendChild(this.cameraEl);
+    this.camera = new THREE.PerspectiveCamera();
+    this.camera.layers.enable(3);
 
     this.planeEl = document.createElement("a-plane");
-    this.planeEl.setAttribute("material", { src: `#${this.canvas.id}`, shader: "flat"});
+    this.planeEl.setAttribute("material", {
+      src: `#${this.canvas.id}`,
+      shader: "flat"
+    });
     this.planeEl.setAttribute("scale", "-1 1 1");
     this.planeEl.addEventListener("loaded", event => {
       //this.planeEl.components.material.material.colorWrite = false;
@@ -97,23 +87,9 @@ AFRAME.registerComponent("webcam", {
     }
   },
   _render: function() {
-    /*
-    const cameraPosition = this.el.object3D.worldToLocal(
-      this.el.sceneEl.camera.getWorldPosition()
-    );
-    cameraPosition.z *= -1;
-    this.cameraEl.object3D.position.copy(cameraPosition);
-    
-    const cameraQuaternion = this.el.sceneEl.camera.getWorldQuaternion();
-    this.cameraEl.object3D.quaternion.copy(cameraQuaternion);
-    this.cameraEl.object3D.rotation.y *= -1;
-    this.cameraEl.object3D.rotation.y += Math.PI;
-    this.cameraEl.object3D.quaternion.multiply(this.el.object3D.getWorldQuaternion());
-    */
-
     this.renderer.render(
       this.el.sceneEl.object3D,
-      this.cameraEl.object3DMap.camera
+      this.camera
     );
     this.planeEl.components.material.material.map.needsUpdate = true;
   },
@@ -127,6 +103,16 @@ AFRAME.registerComponent("webcam", {
     }
     if (diffKeys.includes("fps")) {
       this._updateFps();
+    }
+    if (diffKeys.includes("fov")) {
+      this.camera.fov = this.data.fov;
+      this.camera.updateProjectionMatrix();
+    }
+    if (diffKeys.includes("position")) {
+      this.camera.position.set(...this.data.position.map(n => Number(n)))
+    }
+    if (diffKeys.includes("rotation")) {
+      this.camera.rotation.set(...this.data.rotation.map(n => THREE.Math.degToRad(Number(n))))
     }
   },
   _updateCanvas: function() {

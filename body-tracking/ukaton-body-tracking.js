@@ -1,8 +1,22 @@
-/* global AFRAME, THREE, MissionMesh */
+/* global AFRAME, THREE, MissionMesh, BluetoothMissionDevice */
 
 AFRAME.registerSystem("ukaton-body-tracking", {
   init: function() {
     this.entities = [];
+
+    this.assetsEl = this.el.sceneEl.querySelector("a-assets");
+    if (!this.assetsEl) {
+      this.assetsEl = document.createElement("a-assets");
+      this.el.sceneEl.appendChild(this.assetsEl);
+    }
+
+    this.footstepAudio = document.createElement("audio");
+    this.footstepAudio.id = "footstepSound";
+    this.footstepAudio.setAttribute(
+      "src",
+      "https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Ffootstep.mp3?v=1638758108070"
+    );
+    this.assetsEl.appendChild(this.footstepAudio);
   },
 
   addEntity: function(entity) {
@@ -19,6 +33,13 @@ AFRAME.registerSystem("ukaton-body-tracking", {
 
 AFRAME.registerComponent("ukaton-body-tracking", {
   schema: {
+    footstepSounds: { type: "boolean", default: false },
+    physics: { type: "boolean", default: true },
+    hidePressure: { type: "boolean", default: false },
+    hidePrimitives: { type: "array", default: [] },
+    hideEntities: { type: "array", default: [] },
+    cybershoes: { type: "boolean", default: false },
+    moveHands: { type: "boolean", default: false },
     hideExtremities: { type: "boolean", default: false },
     gateway: { type: "array", default: [] },
     autoConnect: { type: "boolean", default: false },
@@ -64,6 +85,10 @@ AFRAME.registerComponent("ukaton-body-tracking", {
   init: function() {
     window._rig = this;
 
+    if (this.data.cybershoes) {
+      this.cameraRigEl = document.getElementById("cameraRig");
+    }
+
     this.isOculusBrowser = AFRAME.utils.device.isOculusBrowser();
     if (this.isOculusBrowser) {
       this.handContainers = {};
@@ -80,29 +105,40 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         this.hands[side] = handEl;
         this.handContainers[side] = handContainerEl;
 
-        this.el.sceneEl.appendChild(handContainerEl);
+        if (this.data.cybershoes) {
+          this.cameraRigEl.appendChild(handContainerEl);
+        } else {
+          this.el.sceneEl.appendChild(handContainerEl);
+        }
         handContainerEl.appendChild(handEl);
       });
 
-      let pinchTimeoutHandle;
-      let pinchCounter;
-      this.hands.right.addEventListener("pinchstarted", event => {
-        clearTimeout(pinchTimeoutHandle);
+      for (const side in this.hands) {
+        let pinchTimeoutHandle;
+        let pinchCounter;
+        this.hands[side].addEventListener("pinchstarted", event => {
+          clearTimeout(pinchTimeoutHandle);
 
-        pinchCounter++;
-        if (pinchCounter >= 2) {
-          this.calibrate(2000);
-          this._setHandColor("right", "red");
-          setTimeout(() => {
-            this._setHandColor("right", this.data.skinColor);
-          }, 2000);
-          pinchCounter = 0;
-        } else {
-          pinchTimeoutHandle = setTimeout(() => {
+          pinchCounter++;
+          if (pinchCounter >= 2) {
+            this.hands[side].emit("doublepinch");
+            this.el.emit(`${side}doublepinch`);
             pinchCounter = 0;
-          }, 1000);
-        }
-      });
+          } else {
+            pinchTimeoutHandle = setTimeout(() => {
+              pinchCounter = 0;
+            }, 1000);
+          }
+        });
+
+        this.hands.right.addEventListener("doublepinch", event => {
+          this.calibrate(2000);
+          this._setHandColor(side, "red");
+          setTimeout(() => {
+            this._setHandColor(side, this.data.skinColor);
+          }, 2000);
+        });
+      }
 
       setInterval(() => {
         this._updateHandPositions();
@@ -183,6 +219,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       );
       entities.lowerTorso.appendChild(entities.leftThigh);
       entities.leftShin = document.createElement("a-entity");
+      _euler.set(-Math.PI / 2, Math.PI, -Math.PI / 2);
       correctionQuaternions.leftShin = new THREE.Quaternion().setFromEuler(
         _euler
       );
@@ -190,11 +227,13 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       entities.leftFoot = document.createElement("a-entity");
       entities.leftShin.appendChild(entities.leftFoot);
 
+      _euler.set(-Math.PI / 2, Math.PI, -Math.PI / 2);
       entities.rightThigh = document.createElement("a-entity");
       correctionQuaternions.rightThigh = new THREE.Quaternion().setFromEuler(
         _euler
       );
       entities.lowerTorso.appendChild(entities.rightThigh);
+      _euler.set(-Math.PI / 2, Math.PI, -Math.PI / 2);
       entities.rightShin = document.createElement("a-entity");
       correctionQuaternions.rightShin = new THREE.Quaternion().setFromEuler(
         _euler
@@ -268,6 +307,15 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       entities.leftFoot.appendChild(primitives.leftShoe1);
       primitives.leftShoe2 = document.createElement("a-box");
       entities.leftFoot.appendChild(primitives.leftShoe2);
+      if (this.data.footstepSounds) {
+        primitives.leftShoe1.setAttribute(
+          "resonance-audio",
+          "src: #footstepSound;"
+        );
+        this.el.addEventListener("leftfootdown", () => {
+          this.primitives.leftShoe1.emit("playaudio");
+        });
+      }
 
       primitives.rightLegSocket = document.createElement("a-sphere");
       entities.rightThigh.appendChild(primitives.rightLegSocket);
@@ -279,20 +327,41 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       entities.rightFoot.appendChild(primitives.rightShoe1);
       primitives.rightShoe2 = document.createElement("a-box");
       entities.rightFoot.appendChild(primitives.rightShoe2);
+      if (this.data.footstepSounds) {
+        primitives.rightShoe1.setAttribute(
+          "resonance-audio",
+          "src: #footstepSound;"
+        );
+        this.el.addEventListener("rightfootdown", () => {
+          this.primitives.rightShoe1.emit("playaudio");
+        });
+      }
 
       primitives.leftAnchor = document.createElement("a-ring");
-      primitives.leftAnchor.setAttribute("position", "0 0.001 0");
+      primitives.leftAnchor.setAttribute(
+        "position",
+        `0 0.001 ${-this.data.footLength / 2}`
+      );
       primitives.leftAnchor.setAttribute("rotation", "-90 0 0");
       primitives.leftAnchor.setAttribute("radius-inner", 0);
       primitives.leftAnchor.setAttribute("radius-outer", 0.2);
       primitives.leftAnchor.setAttribute("color", "blue");
+      if (this.data.hidePressure) {
+        primitives.leftAnchor.setAttribute("visible", "false");
+      }
 
       primitives.rightAnchor = document.createElement("a-ring");
-      primitives.rightAnchor.setAttribute("position", "0 0.001 0");
+      primitives.rightAnchor.setAttribute(
+        "position",
+        `0 0.001 ${-this.data.footLength / 2}`
+      );
       primitives.rightAnchor.setAttribute("rotation", "-90 0 0");
       primitives.rightAnchor.setAttribute("radius-inner", 0);
       primitives.rightAnchor.setAttribute("radius-outer", 0.2);
       primitives.rightAnchor.setAttribute("color", "red");
+      if (this.data.hidePressure) {
+        primitives.rightAnchor.setAttribute("visible", "false");
+      }
     }
 
     this._updateExtremities();
@@ -321,7 +390,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
 
     const anchorConfiguration = (this.anchorConfiguration = {
       masses: { left: 0, right: 0 },
-      thresholds: { left: 0.1, right: 0.1 },
+      thresholds: { left: 0.05, right: 0.05 }, // goback
       updatedMass: {},
       updatedAnchor: false,
       isAnchored: false,
@@ -331,7 +400,17 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       updatedThresholds: { left: false, right: false }
     });
 
+    if (this.data.cybershoes) {
+      Object.assign(anchorConfiguration.thresholds, {
+        left: 0.02,
+        right: 0.02
+      });
+    }
+
     this.el.addEventListener("connect", event => this.connect());
+    this.el.addEventListener("addbluetoothdevice", event =>
+      this.addBluetoothDevice()
+    );
     this.el.addEventListener("calibrate", event =>
       this.calibrate(event.detail.delay)
     );
@@ -340,6 +419,27 @@ AFRAME.registerComponent("ukaton-body-tracking", {
 
     if (this.data.autoConnect) {
       this.connect();
+    }
+
+    this.updateEntityLengths();
+    this.updatePrimitiveLengths();
+    if (this.data.physics) {
+      const sides = ["left", "right"];
+      const parts = [1, 2];
+      sides.forEach(side => {
+        parts.forEach(part => {
+          const name = `${side}Shoe${part}`;
+          const primitive = this.primitives[name];
+          primitive.addEventListener("loaded", event => {
+            primitive.setAttribute(
+              "physics",
+              `mass: 0; name: ${name}; shape: box; scale: ${primitive.object3D.scale
+                .toArray()
+                .join(",")};`
+            );
+          });
+        });
+      });
     }
   },
   _setHandColor: function(side, color) {
@@ -381,6 +481,20 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       }
     });
   },
+  _updatePrimitiveVisibility: function() {
+    for (const name in this.primitives) {
+      this.primitives[
+        name
+      ].object3D.visible = !this.data.hidePrimitives.includes(name);
+    }
+  },
+  _updateEntityVisibility: function() {
+    for (const name in this.entities) {
+      this.entities[name].object3D.visible = !this.data.hideEntities.includes(
+        name
+      );
+    }
+  },
   _createMissionMesh: function() {
     const missionMesh = new MissionMesh();
     missionMesh.addEventListener("numberofdevices", async event => {
@@ -410,6 +524,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     const { anchorConfiguration, entities } = this;
 
     const name = await device.getName(sendImmediately);
+    console.log(`connected to ${name}`);
     const deviceType = await device.getType(sendImmediately);
     if (device.isInsole) {
       if (addEventListeners) {
@@ -423,12 +538,12 @@ AFRAME.registerComponent("ukaton-body-tracking", {
             const threshold = anchorConfiguration.thresholds[side];
             const previouslyExceededThreshold =
               anchorConfiguration.exceededThresholds[side];
-            const exceededThreshold = (anchorConfiguration.exceededThresholds[
-              side
-            ] = mass >= threshold);
-            anchorConfiguration.updatedThresholds[side] =
+            const exceededThreshold = mass >= threshold;
+            anchorConfiguration.exceededThresholds[side] = exceededThreshold;
+            const updatedThreshold =
               anchorConfiguration.updatedThresholds[side] ||
               exceededThreshold != previouslyExceededThreshold;
+            anchorConfiguration.updatedThresholds[side] = updatedThreshold;
 
             if (anchorConfiguration.isAnchored) {
               if (side == anchorConfiguration.side) {
@@ -450,7 +565,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         });
       }
 
-      device.setPressureConfiguration({ mass: 60 }, false);
+      device.setPressureConfiguration({ mass: 40 }, false);
     }
 
     if (addEventListeners) {
@@ -472,7 +587,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         }
       });
     }
-    device.setMotionConfiguration({ quaternion: 60 }, sendImmediately);
+    device.setMotionConfiguration({ quaternion: 40 }, sendImmediately);
 
     if (addEventListeners) {
       device.addEventListener("available", async event => {
@@ -482,7 +597,15 @@ AFRAME.registerComponent("ukaton-body-tracking", {
   },
   connect: function() {
     this.data.gateway.forEach(_gateway => {
-      const gateway = `ws://192.168.5.${_gateway}/ws`;
+      let gateway = `ws://192.168.5.${_gateway}/ws`;
+      if (_gateway.includes(".")) {
+        if (_gateway.split(".").length > 2) {
+          gateway = `ws://${_gateway}/ws`;
+        } else {
+          gateway = `ws://192.168.${_gateway}/ws`;
+        }
+      }
+
       let missionMesh = this.missionMeshes[gateway];
       if (missionMesh) {
         missionMesh.connect(gateway);
@@ -492,6 +615,81 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         this.missionMeshes[gateway] = missionMesh;
       }
     });
+  },
+  addBluetoothDevice: async function() {
+    console.log("getting device")
+    const device = new BluetoothMissionDevice();
+    await device.connect();
+    console.log("got device")
+    
+    const sensorDataConfigurations = {
+      motion: {quaternion: 40}
+    };
+
+    const { anchorConfiguration, entities } = this;
+
+    const name = await device.getName();
+    console.log(`connected to ${name}`);
+    const deviceType = await device.getType();
+    if (device.isInsole) {
+      device.addEventListener("mass", event => {
+        if (this._hasCalibratedAtLeastOnce) {
+          this._tickFlag = true;
+
+          const side = name.includes("left") ? "left" : "right";
+          const { mass } = event.message;
+          anchorConfiguration.masses[side] = mass;
+          const threshold = anchorConfiguration.thresholds[side];
+          const previouslyExceededThreshold =
+            anchorConfiguration.exceededThresholds[side];
+          const exceededThreshold = mass >= threshold;
+          anchorConfiguration.exceededThresholds[side] = exceededThreshold;
+          const updatedThreshold =
+            anchorConfiguration.updatedThresholds[side] ||
+            exceededThreshold != previouslyExceededThreshold;
+          anchorConfiguration.updatedThresholds[side] = updatedThreshold;
+
+          if (anchorConfiguration.isAnchored) {
+            if (side == anchorConfiguration.side) {
+              if (!exceededThreshold) {
+                anchorConfiguration.isAnchored = false;
+                delete anchorConfiguration.updatedAnchor;
+              }
+            }
+          } else {
+            if (exceededThreshold) {
+              anchorConfiguration.isAnchored = true;
+              anchorConfiguration.side = side;
+              anchorConfiguration.updatedAnchor = true;
+            }
+          }
+
+          anchorConfiguration.updatedMass[side] = true;
+        }
+      });
+
+      sensorDataConfigurations.pressure = {mass: 40}
+    }
+
+    device.addEventListener("quaternion", event => {
+      const entity = entities[name];
+      if (entity) {
+        this._tickFlag = true;
+
+        const { quaternion } = event.message;
+        if (name in this.correctionQuaternions) {
+          this.quaternions[name].multiplyQuaternions(
+            quaternion,
+            this.correctionQuaternions[name]
+          );
+        } else {
+          this.quaternions[name].copy(quaternion);
+        }
+        this.updatedQuaternion[name] = true;
+      }
+    });
+
+    device.setSensorDataConfigurations(sensorDataConfigurations);
   },
   updateEntityLengths: function() {
     const { entities } = this;
@@ -829,6 +1027,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       .sub(this.primitives.head.object3D.position);
 
     lowerTorsoEntity.object3D.position.addVectors(cameraPosition, headToTorso);
+    lowerTorsoEntity.object3D.position.y += 0.1;
     lowerTorsoEntity.object3D.updateMatrix();
 
     const headQuaternion = this.cameraEl.object3D.quaternion.clone();
@@ -840,7 +1039,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     headEntity.object3D.quaternion.premultiply(headParentEntityQuaternion);
     headEntity.object3D.updateMatrix();
 
-    if (this.isOculusBrowser) {
+    if (this.isOculusBrowser && this.data.moveHands) {
       for (const side in this.hands) {
         const hand = this.hands[side];
         const { mesh, skinnedMesh } = hand.components["hand-tracking-controls"];
@@ -884,7 +1083,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     }
   },
   _updateHandPositions: function() {
-    if (this.isOculusBrowser) {
+    if (this.isOculusBrowser && this.data.moveHands) {
       for (const side in this.hands) {
         const hand = this.hands[side];
         const { mesh, skinnedMesh } = hand.components["hand-tracking-controls"];
@@ -956,14 +1155,20 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         const anchorPrimitive = primitives[`${side}Anchor`];
         anchorPrimitive.setAttribute(
           "radius-outer",
-          THREE.Math.lerp(0, 0.5, mass)
+          this.data.cybershoes
+            ? THREE.Math.lerp(0, 4, mass)
+            : THREE.Math.lerp(0, 0.5, mass)
         );
 
-        const exceededThreshold = this.anchorConfiguration.exceededThresholds[
-          side
-        ];
+        const exceededThreshold = anchorConfiguration.exceededThresholds[side];
+        const updatedThreshold = anchorConfiguration.updatedThresholds[side];
 
-        if (side in this.anchorConfiguration.updatedThresholds) {
+        if (updatedThreshold) {
+          /*
+          console.log(
+            `${side}: ${exceededThreshold ? "above" : "below"} threshold`
+          );
+          */
           if (exceededThreshold) {
             const rootPosition = new THREE.Vector3();
             this.el.object3D.getWorldPosition(rootPosition);
@@ -986,7 +1191,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
             anchorEntity.object3D.position.copy(footPosition);
             anchorEntity.object3D.updateMatrix();
           } else {
-            if (!this.isOculusBrowser) {
+            if (!this.isOculusBrowser && !this.data.hidePressure) {
               const footStep = document.createElement("a-ring");
               footStep.setAttribute("rotation", "-90 0 0");
               footStep.object3D.position.copy(anchorEntity.object3D.position);
@@ -1008,10 +1213,24 @@ AFRAME.registerComponent("ukaton-body-tracking", {
             }
           }
 
-          delete this.anchorConfiguration.updatedThresholds[side];
+          delete anchorConfiguration.updatedThresholds[side];
+
+          if (exceededThreshold) {
+            this.el.emit(`${side}footdown`);
+            this.el.emit("footdown", { side });
+          } else {
+            this.el.emit(`${side}footup`);
+            this.el.emit("footup", { side });
+          }
+        } else {
+          if (exceededThreshold) {
+            this.el.emit(`${side}footdrag`);
+            this.el.emit("footdrag", { side });
+          }
         }
 
-        anchorEntity.object3D.visible = this.isOculusBrowser || exceededThreshold;
+        anchorEntity.object3D.visible =
+          this.isOculusBrowser || exceededThreshold;
         if (exceededThreshold) {
           if (
             anchorConfiguration.isAnchored &&
@@ -1047,6 +1266,12 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       );
 
       lowerTorsoEntity.object3D.updateMatrix();
+
+      if (this.data.cybershoes) {
+        const { x, y, z } = lowerTorsoEntity.object3D.position;
+        this.cameraRigEl.object3D.position.x = x;
+        this.cameraRigEl.object3D.position.z = z - 0.1;
+      }
     }
   },
   update: function(oldData) {
@@ -1076,6 +1301,13 @@ AFRAME.registerComponent("ukaton-body-tracking", {
 
     if (diffKeys.includes("hideExtremities")) {
       this._updateExtremities();
+    }
+
+    if (diffKeys.includes("hidePrimitives")) {
+      this._updatePrimitiveVisibility();
+    }
+    if (diffKeys.includes("hideEntities")) {
+      this._updateEntityVisibility();
     }
   },
   updateEntityAutoUpdate() {

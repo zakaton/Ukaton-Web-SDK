@@ -1,11 +1,17 @@
-<html>
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>Full Body Tracking and Positioning | Ukaton</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script>
 
-    <script src="/MissionMesh.js"></script>
+    <script srcc="/MissionMesh.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
     <script src="/body-tracking/ukaton-body-tracking.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="google" content="notranslate" />
+    <meta http-equiv="Content-Language" content="en" />
   </head>
   <style>
     html,
@@ -23,34 +29,49 @@
     #overlay .clickable {
       pointer-events: all;
     }
+    #overlay .hidden {
+      display: none;
+    }
   </style>
   <body>
     <div id="overlay">
-      <button class="clickable" onclick="connect()">
+      <button class="clickable hidden" onclick="connect()">
         connect
       </button>
       <button class="clickable" onclick="calibrate()">
-        calibrate
+        Calibrate
       </button>
-      <!--
-      <button class="clickable" onclick="navigator.clipboard.writeText('ws://192.168.5.193,ws://192.168.5.194,ws://192.168.5.241,ws://192.168.5.242,ws://192.168.5.201,ws://192.168.5.200,ws://192.168.5.243,ws://192.168.5.244,ws://192.168.5.240,ws://192.168.5.238,ws://192.168.5.236,ws://192.168.5.202,ws://192.168.5.239,ws://192.168.5.237,ws://192.168.5.204')">
+      <button class="clickable" onclick="addBluetoothDevice()">
+        add device
+      </button>
+      <button
+        class="clickable hidden"
+        onclick="navigator.clipboard.writeText('ws://192.168.5.193,ws://192.168.5.194,ws://192.168.5.241,ws://192.168.5.242,ws://192.168.5.201,ws://192.168.5.200,ws://192.168.5.243,ws://192.168.5.244,ws://192.168.5.240,ws://192.168.5.238,ws://192.168.5.236,ws://192.168.5.202,ws://192.168.5.239,ws://192.168.5.237,ws://192.168.5.204')"
+      >
         copy gateways
       </button>
-      -->
     </div>
 
-    <a-scene device-orientation-permission-ui="enabled: false" vr-mode-ui="enabled: false">
+    <a-scene
+      device-orientation-permission-ui="enabled: false"
+      vr-mode-ui="enabled: false"
+    >
       <a-assets>
         <canvas id="floorTexture"></canvas>
       </a-assets>
-      
+
       <a-camera
         look-controls="enabled: false;"
-        orbit-controls="target: 0 0.5 0; minDistance: 0.1; maxDistance: 8; initialPosition: 0 0.2 -2"
+        orbit-controls="target: 0 0 0; minDistance: 0.1; maxDistance: 8; initialPosition: 0 0.2 -2"
       ></a-camera>
 
       <a-light type="ambient" light="intensity: 0.6;"></a-light>
-      <a-light type="directional" position="2 2 -2" light="castShadow: true; intensity: 0.6;" target="#rig" ></a-light>
+      <a-light
+        type="directional"
+        position="2 2 -2"
+        light="castShadow: true; intensity: 0.6;"
+        target="#rig"
+      ></a-light>
 
       <a-plane
         id="floor"
@@ -65,10 +86,10 @@
       <a-entity
         id="rig"
         position="0 0 0"
-        ukaton-body-tracking="auto-connect: false; gateway: 193, 194, 241, 242, 201, 200, 243, 244, 240, 238, 236, 202, 239, 237, 204"
+        ukaton-body-tracking="hide-entities: upperTorso; hide-primitives: lowerTorso; auto-connect: false; gateway: 193, 194, 241, 242, 201, 200, 243, 244, 240, 238, 236, 202, 239, 237, 204"
         shadow
       ></a-entity>
-      
+
       <a-sky color="#ECECEC"></a-sky>
     </a-scene>
   </body>
@@ -104,6 +125,9 @@
     }
     function calibrate() {
       rig.emit("calibrate", { delay: 2000 });
+    }
+    function addBluetoothDevice() {
+      rig.emit("addbluetoothdevice");
     }
 
     const scene = document.querySelector("a-scene");

@@ -169,12 +169,12 @@
   </body>
 
   <script>
-    const sideMission = new SideMission();
+    const missionDevice = new MissionDevice();
 
     function connect(event) {
-      sideMission.connect().then(() => {
+      missionDevice.connect().then(() => {
         event.target.remove();
-        sideMission.getName().then(name => {
+        missionDevice.getName().then(name => {
           document.querySelector(".name input").value = name;
         });
       });
@@ -182,38 +182,38 @@
 
     function setRate(event) {
       const rate = Number(event.target.value);
-      sideMission.setRate(rate);
+      missionDevice.setRate(rate);
     }
 
     function setRate(event) {
       const dataType = event.target.closest("[data-type]").dataset.type;
       const rate = Number(event.target.value);
-      sideMission.configureImu({ [dataType]: rate });
+      missionDevice.configureImu({ [dataType]: rate });
     }
 
     function setName(event) {
       const name = document.querySelector(".name input").value;
       event.target.disabled = true;
-      sideMission.setName(name).then(() => {
+      missionDevice.setName(name).then(() => {
         event.target.disabled = false;
       });
     }
 
-    sideMission.addEventListener("calibration", event => {
-      for (const type in sideMission.calibration) {
+    missionDevice.addEventListener("calibration", event => {
+      for (const type in missionDevice.calibration) {
         document.querySelector(`[data-calibration="${type}"] span`).innerText =
-          sideMission.calibration[type];
+          missionDevice.calibration[type];
       }
-      document.querySelector(`[data-calibration="fully"] span`).innerText = sideMission.isFullyCalibrated? "true":"false";
+      document.querySelector(`[data-calibration="fully"] span`).innerText = missionDevice.isFullyCalibrated? "true":"false";
     });
     
-    sideMission.addEventListener("batterylevel", event => {
-      document.querySelector(".batteryLevel span").innerText = sideMission.batteryLevel
+    missionDevice.addEventListener("batterylevel", event => {
+      document.querySelector(".batteryLevel span").innerText = missionDevice.batteryLevel
     })
 
     const timestamps = {};
-    sideMission.dataTypes.forEach(dataType => {
-      sideMission.addEventListener(dataType, event => {
+    missionDevice.dataTypes.forEach(dataType => {
+      missionDevice.addEventListener(dataType, event => {
         const { message } = event;
         const { timestamp } = message;
 
