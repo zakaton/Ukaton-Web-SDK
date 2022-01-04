@@ -5,6 +5,7 @@
     <script src="https://cdn.rawgit.com/tizzle/aframe-orbit-controls-component/v0.1.14/dist/aframe-orbit-controls-component.min.js"></script>
     <script src="/BaseMission.js"></script>
     <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
   </head>
   <style>
     body {
@@ -22,7 +23,7 @@
       grid-template-areas:
         "connection scene quaternion euler"
         "acceleration linearAcceleration gravity rotationRate"
-        "mass heelAndToe heelToToe magnetometer"
+        "mass heelAndToe heelToToe magnetometer";
     }
 
     .unstyledList {
@@ -110,6 +111,18 @@
         <h1 style="margin: 0;">
           Ukaton Mission
         </h1>
+
+        <label class="connectionType">
+          connection type:
+          <select>
+            <option>bluetooth</option>
+            <option>websocket</option>
+          </select>
+        </label>
+
+        <br />
+        <label class="gateway"> gateway: <input /> </label>
+        <br />
 
         <button>
           connect
@@ -328,13 +341,63 @@
     // to remove that stupid THREE.js warning
     THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 
+    const url = new URL(location);
+
     // our device
-    const missionDevice = new BluetoothMissionDevice();
+    let connectionType = url.searchParams.get("connectionType") || "bluetooth";
+    const missionDevice =
+      connectionType == "bluetooth"
+        ? new BluetoothMissionDevice()
+        : new WebSocketMissionDevice();
+
+    const connectionTypeSelect = document.querySelector("#connection select");
+    connectionTypeSelect.addEventListener("input", event => {
+      connectionType = event.target.value;
+      console.log("connection type", connectionType);
+      url.searchParams.set("connectionType", connectionType);
+      location = url.href;
+    });
+    connectionTypeSelect.value = connectionType;
+
+    function insertUrlParam(key, value) {
+      if (history.pushState) {
+        let searchParams = new URLSearchParams(window.location.search);
+        searchParams.set(key, value);
+        let newurl =
+          window.location.protocol +
+          "//" +
+          window.location.host +
+          window.location.pathname +
+          "?" +
+          searchParams.toString();
+        window.history.pushState({ path: newurl }, "", newurl);
+      }
+    }
+
+    let gateway = url.searchParams.get("gateway") || "0.0.0.0";
+    console.log("gateway", gateway);
+    const gatewayInput = document.querySelector("#connection input");
+    gatewayInput.addEventListener("input", event => {
+      gateway = event.target.value;
+      console.log("new gateway", gateway);
+      url.searchParams.set("gateway", gateway);
+      insertUrlParam("gateway", gateway);
+    });
+    gatewayInput.value = gateway;
+    if (connectionType != "websocket") {
+      gatewayInput.closest("label").setAttribute("hidden", "");
+    } else {
+      gatewayInput.closest("label").removeAttribute("hidden");
+    }
 
     // interface
     const connectButton = document.querySelector("#connection button");
     connectButton.addEventListener("click", event => {
-      missionDevice.connect();
+      if (connectionType == "bluetooth") {
+        missionDevice.connect();
+      } else {
+        missionDevice.connect(gateway);
+      }
     });
     missionDevice.addEventListener("connected", event => {
       connectButton.remove();
@@ -381,7 +444,7 @@
 
     const nameInput = document.querySelector("#connection .name input");
     const nameButton = document.querySelector("#connection .name button");
-    missionDevice.addEventListener("nameupdate", async event => {
+    missionDevice.addEventListener("name", async event => {
       const name = await missionDevice.getName();
       nameInput.value = name;
     });
@@ -398,7 +461,7 @@
     };
     const targetEntity = scene.querySelector("#target");
     scene.addEventListener("loaded", event => {
-      missionDevice.addEventListener("typeupdate", async event => {
+      missionDevice.addEventListener("type", async event => {
         const type = await missionDevice.getType();
         for (const typeString in entities) {
           const entity = entities[typeString];
@@ -431,7 +494,7 @@
       }
     }
 
-    missionDevice.addEventListener("sensordataconfigurationsupdate", event => {
+    missionDevice.addEventListener("sensordataconfigurations", event => {
       const { sensorDataConfigurations } = event.message;
       for (const sensorType in sensorDataConfigurations) {
         for (const sensorDataType in sensorDataConfigurations[sensorType]) {

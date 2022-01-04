@@ -1,4 +1,4 @@
-/* global AFRAME, THREE, MissionMesh, BluetoothMissionDevice */
+/* global AFRAME, THREE, WebSocketMissionDevice, BluetoothMissionDevice */
 
 AFRAME.registerSystem("ukaton-body-tracking", {
   init: function() {
@@ -149,7 +149,8 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     this.headsetQuaternionOffset = new THREE.Quaternion();
     this.headsetQuaternionYawOffset = new THREE.Quaternion();
 
-    this.missionMeshes = {};
+    this.webSocketMissionDevices = {};
+    this.devices = []
 
     const entities = (this.entities = {});
     this.positions = {};
@@ -409,7 +410,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
 
     this.el.addEventListener("connect", event => this.connect());
     this.el.addEventListener("addbluetoothdevice", event =>
-      this.addBluetoothDevice()
+      this._addBluetoothDevice()
     );
     this.el.addEventListener("calibrate", event =>
       this.calibrate(event.detail.delay)
@@ -495,138 +496,23 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       );
     }
   },
-  _createMissionMesh: function() {
-    const missionMesh = new MissionMesh();
-    missionMesh.addEventListener("numberofdevices", async event => {
-      missionMesh.devices.forEach(device => {
-        this._handleDevice(device, false);
-      });
-      missionMesh.send();
-
-      missionMesh.addEventListener("deviceadded", async event => {
-        const { device } = event.message;
-        await this._handleDevice(device, true);
-      });
-    });
-    missionMesh.addEventListener("disconnected", event => {
-      return;
-      setTimeout(() => {
-        missionMesh.connect(missionMesh._webSocket.url);
-      }, 3000);
-    });
-    return missionMesh;
-  },
-  _handleDevice: async function(
-    device,
-    sendImmediately,
-    addEventListeners = true
-  ) {
-    const { anchorConfiguration, entities } = this;
-
-    const name = await device.getName(sendImmediately);
-    console.log(`connected to ${name}`);
-    const deviceType = await device.getType(sendImmediately);
-    if (device.isInsole) {
-      if (addEventListeners) {
-        device.addEventListener("mass", event => {
-          if (this._hasCalibratedAtLeastOnce) {
-            this._tickFlag = true;
-
-            const side = name.includes("left") ? "left" : "right";
-            const { mass } = event.message;
-            anchorConfiguration.masses[side] = mass;
-            const threshold = anchorConfiguration.thresholds[side];
-            const previouslyExceededThreshold =
-              anchorConfiguration.exceededThresholds[side];
-            const exceededThreshold = mass >= threshold;
-            anchorConfiguration.exceededThresholds[side] = exceededThreshold;
-            const updatedThreshold =
-              anchorConfiguration.updatedThresholds[side] ||
-              exceededThreshold != previouslyExceededThreshold;
-            anchorConfiguration.updatedThresholds[side] = updatedThreshold;
-
-            if (anchorConfiguration.isAnchored) {
-              if (side == anchorConfiguration.side) {
-                if (!exceededThreshold) {
-                  anchorConfiguration.isAnchored = false;
-                  delete anchorConfiguration.updatedAnchor;
-                }
-              }
-            } else {
-              if (exceededThreshold) {
-                anchorConfiguration.isAnchored = true;
-                anchorConfiguration.side = side;
-                anchorConfiguration.updatedAnchor = true;
-              }
-            }
-
-            anchorConfiguration.updatedMass[side] = true;
-          }
-        });
-      }
-
-      device.setPressureConfiguration({ mass: 40 }, false);
-    }
-
-    if (addEventListeners) {
-      device.addEventListener("quaternion", event => {
-        const entity = entities[name];
-        if (entity) {
-          this._tickFlag = true;
-
-          const { quaternion } = event.message;
-          if (name in this.correctionQuaternions) {
-            this.quaternions[name].multiplyQuaternions(
-              quaternion,
-              this.correctionQuaternions[name]
-            );
-          } else {
-            this.quaternions[name].copy(quaternion);
-          }
-          this.updatedQuaternion[name] = true;
-        }
-      });
-    }
-    device.setMotionConfiguration({ quaternion: 40 }, sendImmediately);
-
-    if (addEventListeners) {
-      device.addEventListener("available", async event => {
-        this._handleDevice(device, true, false);
-      });
-    }
-  },
-  connect: function() {
-    this.data.gateway.forEach(_gateway => {
-      let gateway = `ws://192.168.5.${_gateway}/ws`;
-      if (_gateway.includes(".")) {
-        if (_gateway.split(".").length > 2) {
-          gateway = `ws://${_gateway}/ws`;
-        } else {
-          gateway = `ws://192.168.${_gateway}/ws`;
-        }
-      }
-
-      let missionMesh = this.missionMeshes[gateway];
-      if (missionMesh) {
-        missionMesh.connect(gateway);
+  connect: async function() {
+    this.data.gateway.forEach(async gateway => {
+      let websocketMissionDevice = this.webSocketMissionDevices[gateway];
+      if (websocketMissionDevice) {
+        await websocketMissionDevice.connect(gateway);
       } else {
-        missionMesh = this._createMissionMesh();
-        missionMesh.connect(gateway);
-        this.missionMeshes[gateway] = missionMesh;
+        websocketMissionDevice = await this._addWebSocketDevice(gateway);
+        this.webSocketMissionDevices[gateway] = websocketMissionDevice;
       }
     });
   },
-  addBluetoothDevice: async function() {
-    console.log("getting device")
-    const device = new BluetoothMissionDevice();
-    await device.connect();
-    console.log("got device")
-    
-    const sensorDataConfigurations = {
-      motion: {quaternion: 40}
-    };
-
+  _setupDevice: async function(device) {
     const { anchorConfiguration, entities } = this;
+    
+    this.devices.push(device);
+
+    const sensorDataConfigurations = { motion: {}, pressure: {} };
 
     const name = await device.getName();
     console.log(`connected to ${name}`);
@@ -668,7 +554,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         }
       });
 
-      sensorDataConfigurations.pressure = {mass: 40}
+      sensorDataConfigurations.pressure.mass = 40;
     }
 
     device.addEventListener("quaternion", event => {
@@ -689,7 +575,24 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       }
     });
 
+    sensorDataConfigurations.motion.quaternion = 40;
+
     device.setSensorDataConfigurations(sensorDataConfigurations);
+  },
+  _addBluetoothDevice: async function() {
+    console.log("getting device");
+    const bluetoothMissionDevice = new BluetoothMissionDevice();
+    await bluetoothMissionDevice.connect();
+    console.log("got bluetooth mission device", bluetoothMissionDevice);
+
+    this._setupDevice(bluetoothMissionDevice);
+  },
+  _addWebSocketDevice: async function(gateway) {
+    const webSocketMissionDevice = new WebSocketMissionDevice();
+    await webSocketMissionDevice.connect(gateway);
+    console.log("got websocket mission device", webSocketMissionDevice);
+
+    this._setupDevice(webSocketMissionDevice);
   },
   updateEntityLengths: function() {
     const { entities } = this;

@@ -1,0 +1,48 @@
+next Web SDK
+  make euler a data type you can configure (just enables quaternion)
+  errors
+    warnings when not connected (nothing happens) or will fail silently (setting pressure configuration)
+    errors when something that should never happen happens
+  BaseMissionDevice methods will provide quaternion corrections, types
+    WebSockets will implement own error messages and stuff
+  use (byteOffset, sensorType) pradigm throughtout (easier for WebSocket implementation)
+  use ble notifications and promises to make things cleaner and easier for websocket-based stuff
+    events for ("namechange", "typechange", "debugchange", "configurationchange")
+  make all keys lowercase (motion, pressure)
+  make eventDispatcher messages camelCase to make event.message[type] easier
+  isValidSensorDataType(sensorDataType, motionSensorType)
+  index DataType by SensorType to sensorType abstraction easier
+  enabledSensorType(); // if an insole or not
+  while BLE can read characteristics, WebSockets needs an explicit message
+    abstract get/set, so BLE can return after characteristic read/write
+    but WebSocket can respond after the WebSocket response
+    ble notifications to verify updates (and listen to events, along with a central promise queue for stuff like this)
+  Message Type is for WebSockets, but BLE doesn't need it
+  Error enum (no strings to make WebSockets easier to parse)
+  Multiple BLE characteristics for each peer (can reuse code for interfacing, like they're separate devices)
+    abstract interface (get/set name, type, config) to include a peerIndex (undefined assume the central device)
+    can make an abstract class so you can rip-off a "peer" like it's a separate device (device.peers[index].getType() vs _device.getType)
+  4 Classes
+    1) Central Bluetooth Device
+    2) Peripheral Bluetooth Device (centralBluetoothDevice.peers[peerIndex])
+    3) Central WebSocket Device
+    4) Peripheral WebSocket device (centralWebSocketDevice.peers[peerIndex])
+    use the same Base class for data parsing and interfacing
+    only difference is how you connect (BLE or WiFi, directly or indirectly)
+    Can use localStorage to connect via BLE, setup WiFi, save MAC address to localStorage, then refresh and use MAC
+    Can also use localStorage to connect to peers via BLE, specifying type (BLE/WiFi), and name (scan and find it)
+    Base class has deviceType (motion module, insole), connectionType (WiFi, BLE), and isCentral
+    Base class also provides get/set, eventListeners, and data parsing
+    Insoles inherit from Base Class
+    issues come from the "connect" method, differing in the options (can't scan networks for WebSockets)
+    Import a single SDK, where the central classes use peripheral classes
+    Wrapper class allows connection type upon .connect(options = {type:}) method (can also specify )
+    Peripherals can be treated identically to Central devices (Base class also implements "Central" and "Peripheral")
+    Base => BaseCentral => BLE Central | WebSocket Central || BasePeripheral => BLE Peripheral | WebSocket Peripheral
+  ble connect() can specify name and type as well
+  ble missions.connect() can specify type (in advertising?), or find out type and assign to missions.left or missions.right
+  ble missions[side].connect() can look for type or set the type after connection (for new devices?)
+  modular data parsing for ble/websocket/peers
+  ble helper functions for creating characteristics (type+subtype [type, 0, 0, subtype], notifications, etc)
+  websocket helper functions for get/set (assert connection, promise hub, )
+  promise hub for async get/set

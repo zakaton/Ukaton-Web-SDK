@@ -7,6 +7,7 @@
     <script srcc="/MissionMesh.js"></script>
     <script src="/BaseMission.js"></script>
     <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
     <script src="/body-tracking/ukaton-body-tracking.js"></script>
 
     <meta charset="UTF-8" />
@@ -35,7 +36,7 @@
   </style>
   <body>
     <div id="overlay">
-      <button class="clickable hidden" onclick="connect()">
+      <button class="clickable" onclick="connect()">
         connect
       </button>
       <button class="clickable" onclick="calibrate()">
@@ -46,7 +47,7 @@
       </button>
       <button
         class="clickable hidden"
-        onclick="navigator.clipboard.writeText('ws://192.168.5.193,ws://192.168.5.194,ws://192.168.5.241,ws://192.168.5.242,ws://192.168.5.201,ws://192.168.5.200,ws://192.168.5.243,ws://192.168.5.244,ws://192.168.5.240,ws://192.168.5.238,ws://192.168.5.236,ws://192.168.5.202,ws://192.168.5.239,ws://192.168.5.237,ws://192.168.5.204')"
+        onclick="navigator.clipboard.writeText('')"
       >
         copy gateways
       </button>
@@ -62,7 +63,7 @@
 
       <a-camera
         look-controls="enabled: false;"
-        orbit-controls="target: 0 0 0; minDistance: 0.1; maxDistance: 8; initialPosition: 0 0.2 -2"
+        orbit-controls="target: 0 1 0; minDistance: 0.1; maxDistance: 8; initialPosition: 0 0.2 -2"
       ></a-camera>
 
       <a-light type="ambient" light="intensity: 0.6;"></a-light>
@@ -86,7 +87,7 @@
       <a-entity
         id="rig"
         position="0 0 0"
-        ukaton-body-tracking="hide-entities: upperTorso; hide-primitives: lowerTorso; auto-connect: false; gateway: 193, 194, 241, 242, 201, 200, 243, 244, 240, 238, 236, 202, 239, 237, 204"
+        ukaton-body-tracking="auto-connect: false; gateway: 192.168.6.45"
         shadow
       ></a-entity>
 

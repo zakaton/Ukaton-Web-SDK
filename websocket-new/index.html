@@ -1,9 +1,9 @@
 <html>
   <head>
-    <title>Bluetooth Mission Device | Ukaton Missions</title>
+    <title>WebSocket Mission Device | Ukaton Missions</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
     <script src="./BaseMission.js"></script>
-    <script src="./BluetoothMissionDevice.js"></script>
+    <script src="./WebSocketMissionDevice.js"></script>
   </head>
 
   <style>
@@ -25,10 +25,13 @@
 
   <body>
     <h1>
-      Bluetooth Mission Device | Ukaton Missions
+      WebSocket Mission Device | Ukaton Missions
     </h1>
 
     <div id="connection">
+      <label class="ip">
+        <b>ip address:</b> <input value="192.168.6.45" />
+      </label>
       <button class="connect">
         connect
       </button>
@@ -53,47 +56,6 @@
             <option value="2">right insole</option>
           </select>
         </label>
-      </div>
-
-      <div class="wifi ssid">
-        <label><b>wifi ssid:</b> <input /> </label>
-        <button>
-          change wifi ssid
-        </button>
-      </div>
-
-      <div class="wifi password">
-        <label><b>wifi password:</b> <input type="password" /> </label>
-        <button
-          onclick="const input = document.querySelector('.wifi.password input'); input.type = input.type == 'password'? 'text':'password'"
-        >
-          toggle visibility
-        </button>
-        <button class="submit">
-          change wifi password
-        </button>
-      </div>
-
-      <div class="wifi connect">
-        <label><b>connect to wifi:</b> <input type="checkbox" /> </label>
-      </div>
-
-      <div>
-        <label class="wifi connected"
-          ><b>is wifi connected:</b> <span></span
-        ></label>
-      </div>
-
-      <div class="wifi ip">
-        <label><b>wifi IP address:</b> <span></span></label>
-        <button onclick="copyWifiIpToClipboard()">
-          copy
-        </button>
-        <input hidden />
-      </div>
-
-      <div>
-        <label class="wifi mac"><b>wifi MAC address:</b> <span></span></label>
       </div>
 
       <div class="batteryLevel">
@@ -192,7 +154,7 @@
   </body>
 
   <script>
-    const missionDevice = new BluetoothMissionDevice();
+    const missionDevice = new WebSocketMissionDevice();
     const deviceContainer = document.getElementById("device");
 
     missionDevice.addEventListener("connected", event => {
@@ -205,7 +167,8 @@
         connect();
       });
     async function connect() {
-      await missionDevice.connect();
+      const ipAddress = document.querySelector(".ip input").value;
+      await missionDevice.connect(ipAddress);
     }
 
     missionDevice.addEventListener("batterylevel", event => {
@@ -242,71 +205,6 @@
         const type = event.target.value;
         missionDevice.setType(type);
       });
-
-    // WIFI stuff
-    missionDevice.addEventListener("wifissid", event => {
-      const { wifiSSID } = event.message;
-      deviceContainer.querySelector(".wifi.ssid input").value = wifiSSID;
-    });
-    deviceContainer
-      .querySelector(".wifi.ssid button")
-      .addEventListener("click", event => {
-        const ssid = document.querySelector(".wifi.ssid input").value;
-        missionDevice.setWifiSSID(ssid);
-      });
-
-    missionDevice.addEventListener("wifipassword", event => {
-      const { wifiPassword } = event.message;
-      deviceContainer.querySelector(
-        ".wifi.password input"
-      ).value = wifiPassword;
-    });
-    deviceContainer
-      .querySelector(".wifi.password button.submit")
-      .addEventListener("click", event => {
-        const password = document.querySelector(".wifi.password input").value;
-        missionDevice.setWifiPassword(password);
-      });
-
-    missionDevice.addEventListener("wificonnect", event => {
-      const { wifiConnect } = event.message;
-      deviceContainer.querySelector(
-        ".wifi.connect input"
-      ).checked = wifiConnect;
-    });
-    deviceContainer
-      .querySelector(".wifi.connect input")
-      .addEventListener("input", event => {
-        const connect = event.target.checked;
-        if (connect) {
-          missionDevice.connectToWifi();
-        } else {
-          missionDevice.disconnectFromWifi();
-        }
-      });
-
-    missionDevice.addEventListener("iswificonnected", event => {
-      const { isWifiConnected } = event.message;
-      deviceContainer.querySelector(
-        ".wifi.connected span"
-      ).innerText = isWifiConnected;
-    });
-
-    missionDevice.addEventListener("wifiipaddress", event => {
-      const { wifiIPAddress } = event.message;
-      deviceContainer.querySelector(".wifi.ip span").innerText = wifiIPAddress;      
-    });
-    missionDevice.addEventListener("wifimacaddress", event => {
-      const { wifiMACAddress } = event.message;
-      deviceContainer.querySelector(
-        ".wifi.mac span"
-      ).innerText = wifiMACAddress;
-    });
-    
-    async function copyWifiIpToClipboard() {
-      const ipAddress = await missionDevice.getWifiIPAddress();
-      navigator.clipboard.writeText(ipAddress);
-    }
 
     missionDevice.addEventListener("motioncalibration", event => {
       const { motionCalibration } = event.message;
