@@ -1,0 +1,1026 @@
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Drawing | Ukaton</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script
+      srcc="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"
+    ></script>
+    <script src="/body-tracking/OrbitControls.js"></script>
+    <script src="/body-tracking/aframe-orbit-controls.js"></script>
+
+    <script srcc="/MissionMesh.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
+    <script src="/body-tracking/ukaton-body-tracking.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="google" content="notranslate" />
+    <meta http-equiv="Content-Language" content="en" />
+    <meta name="viewport" content="user-scalable=no"/>
+  </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #overlay {
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #overlay .clickable {
+      pointer-events: all;
+    }
+
+    #overlay .hidden {
+      display: none;
+    }
+
+    #overlay:not(.recording) .record::before {
+      content: "Start Recording";
+    }
+    #overlay.recording .record::before {
+      content: "Stop Recording";
+    }
+
+    #overlay:not(.cameraLock) .toggleCameraLock::before {
+      content: "lock camera";
+    }
+    #overlay.cameraLock .toggleCameraLock::before {
+      content: "unlock camera";
+    }
+
+    #overlay:not(.recorded) .togglePlayback {
+      display: none;
+    }
+    #overlay:not(.playing) .togglePlayback::before {
+      content: "play";
+    }
+    #overlay.playing .togglePlayback::before {
+      content: "pause";
+    }
+
+    #overlay.drawing .snapshot,
+    #overlay.drawing .record {
+      display: none;
+    }
+
+    #overlay:not(.drawing) #opacity {
+      display: none;
+    }
+
+    #overlay:not(.drawing.recorded) #timeline {
+      display: none;
+    }
+
+    #overlay:not(.drawing) .doneDrawing {
+      display: none;
+    }
+
+    #overlay:not(.drawing) .drawing {
+      display: none;
+    }
+
+    #timeline {
+      bottom: 20px;
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      width: calc(100% - 100px);
+      left: 50px;
+      align-items: center;
+    }
+
+    #timeline input {
+      width: 100%;
+      position: relative;
+    }
+
+    #timeline .keyframes {
+      width: calc(100% - 18px);
+      height: 20px;
+      display: flex;
+      flex-direction: row;
+    }
+    #timeline .keyframes .keyframe {
+      background-color: yellow;
+      border: black inset 2px;
+      flex: 1;
+    }
+    #timeline .keyframes .keyframe.selected {
+      background-color: orange;
+    }
+
+    #opacity {
+      height: 100%;
+      right: 0;
+      top: 0;
+      position: absolute;
+    }
+
+    #opacity input {
+      -webkit-appearance: slider-vertical;
+      right: -40px;
+      position: relative;
+      height: calc(100% - 200px);
+      top: 100px;
+    }
+
+    #countdown {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-areas: center;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #countdown [data-second] {
+      height: 100%;
+      width: fit-content;
+      font-size: 100vh;
+      color: red;
+      background-color: hsla(0, 0%, 100%, 0.75);
+      opacity: 0;
+      grid-area: center;
+      top: -130px;
+      position: relative;
+    }
+
+    #countdown [data-second].flash {
+      animation: flash 1s;
+    }
+
+    #overlay:not(.recorded) .recorded {
+      display: none;
+    }
+
+    @keyframes flash {
+      0% {
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 1;
+      }
+
+      30% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+      }
+    }
+
+    #overlay:not(.counting) #countdown {
+      display: none;
+    }
+
+    #overlay:not(.drawing) #canvas {
+      display: none;
+    }
+
+    #canvas {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+
+    #overlay.drawing:not(.orbit) #canvas {
+      pointer-events: all;
+    }
+
+    #overlay:not(.orbit) .toggleDrawMode::before {
+      content: "move camera";
+    }
+    #overlay.orbit .toggleDrawMode::before {
+      content: "draw";
+    }
+  </style>
+
+  <body>
+    <div id="overlay" class="">
+      <div id="countdown">
+        <div data-second="3">3</div>
+        <div data-second="2">2</div>
+        <div data-second="1">1</div>
+      </div>
+
+      <button class="clickable" onclick="connect()">
+        connect via WebSocket
+      </button>
+      <button class="clickable" onclick="calibrate()">Calibrate</button>
+      <button class="clickable" onclick="addBluetoothDevice()">
+        add bluetooth device
+      </button>
+      <button
+        class="clickable hidden"
+        onclick="navigator.clipboard.writeText('')"
+      >
+        copy gateways
+      </button>
+      <button
+        class="toggleCameraLock drawing clickable"
+        onclick="toggleCameraLock()"
+      ></button>
+      <button class="record clickable" onclick="toggleRecording()"></button>
+      <button class="snapshot clickable" onclick="takeSnapshot()">
+        Take Snapshot
+      </button>
+      <button class="doneDrawing clickable" onclick="doneDrawing()">
+        done drawing
+      </button>
+      <button class="drawing recorded clickable" onclick="recordCamera()">
+        record camera
+      </button>
+      <button
+        class="togglePlayback recorded clickable"
+        onclick="togglePlayback()"
+      ></button>
+      <button class="recorded clickable" onclick="resetPlayback()">
+        reset time
+      </button>
+      <button class="drawing clickable" onclick="undoDraw()">undo</button>
+      <button class="drawing clickable" onclick="clearStrokeHistory()">
+        clear
+      </button>
+      <button class="drawing recorded clickable" onclick="addKeyframe(event)">
+        add keyframe
+      </button>
+      <button class="drawing recorded clickable" onclick="removeKeyframe(true)">
+        remove keyframe (fill left)
+      </button>
+      <button
+        class="drawing recorded clickable"
+        onclick="removeKeyframe(false)"
+      >
+        remove keyframe (fill right)
+      </button>
+
+      <button
+        class="drawing clickable toggleDrawMode"
+        onclick="toggleDrawMode()"
+      ></button>
+
+      <div id="opacity">
+        <input
+          oninput="setOpacity(event.target.value)"
+          class="clickable"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value="1"
+        />
+      </div>
+
+      <div id="timeline">
+        <input
+          oninput="setTimeline(event)"
+          class="clickable"
+          type="range"
+          min="0"
+          max="1"
+          step="1"
+          value="0"
+        />
+        <div class="keyframes clickable"></div>
+      </div>
+
+      <canvas id="canvas"> </canvas>
+    </div>
+
+    <a-scene
+      device-orientation-permission-ui="enabled: false"
+      vr-mode-ui="enabled: false"
+    >
+      <a-assets>
+        <canvas id="floorTexture"></canvas>
+      </a-assets>
+
+      <a-camera
+        look-controls="enabled: false;"
+        orbit-controls="target: 0 1 0; minDistance: 0.1; maxDistance: 8; initialPosition: 0 0.2 -2"
+      ></a-camera>
+
+      <a-light type="ambient" light="intensity: 0.6;"></a-light>
+      <a-light
+        type="directional"
+        position="2 2 -2"
+        light="castShadow: true; intensity: 0.6;"
+        target="#rig"
+      ></a-light>
+
+      <a-plane
+        id="floor"
+        shadow="cast: false; receive: true;"
+        material="src: #floorTexture; repeat: 20 20;"
+        position="0 0 0"
+        rotation="-90 0 0"
+        width="10"
+        height="10"
+      ></a-plane>
+
+      <a-entity
+        id="rig"
+        position="0 0 0"
+        ukaton-body-tracking="auto-connect: false; gateway: 192.168.5.193, 192.168.5.194, 192.168.5.240, 192.168.5.241, 192.168.5.200, 192.168.5.242, 192.168.5.243, 192.168.5.201, 192.168.5.244, 192.168.5.238, 192.168.5.239, 192.168.5.236, 192.168.5.237, 192.168.5.202, 192.168.5.204"
+        shadow
+      ></a-entity>
+
+      <a-sky color="#ECECEC"></a-sky>
+    </a-scene>
+  </body>
+  <script>
+    {
+      const canvas = document.getElementById("floorTexture");
+      const context = canvas.getContext("2d");
+
+      const checkeredColors = ["white", "grey"];
+
+      const { width, height } = canvas;
+      const cellWidth = width / 2;
+      const cellHeight = height / 2;
+
+      context.clearRect(0, 0, width, height);
+
+      checkeredColors.forEach((color, index) => {
+        context.fillStyle = checkeredColors[index];
+        context.fillRect(index * cellWidth, 0, cellWidth, cellHeight);
+        context.fillRect(
+          ((index + 1) * cellWidth) % width,
+          cellHeight,
+          cellWidth,
+          cellHeight
+        );
+      });
+    }
+  </script>
+  <script>
+    const rig = document.getElementById("rig");
+    function connect() {
+      rig.emit("connect");
+    }
+    function calibrate() {
+      rig.emit("calibrate", { delay: 2000 });
+    }
+    function addBluetoothDevice() {
+      rig.emit("addbluetoothdevice");
+    }
+
+    const scene = document.querySelector("a-scene");
+    const overlay = document.getElementById("overlay");
+  </script>
+
+  <script>
+    async function enableAllDevices() {
+      const promises = _rig.devices.map((device) => {
+        return device.setSensorDataConfigurations({
+          motion: { quaternion: 60 },
+          pressure: { mass: 60 },
+        });
+      });
+      await Promise.all(promises);
+    }
+    async function disableAllDevices() {
+      const promises = _rig.devices.map((device) => {
+        device.setSensorDataConfigurations({
+          motion: { quaternion: 0 },
+          pressure: { mass: 0 },
+        });
+      });
+      await Promise.all(promises);
+    }
+
+    async function takeSnapshot() {
+      await countdown();
+      await disableAllDevices();
+      overlay.classList.add("drawing");
+      opacityInput.value = 0.25;
+      opacityInput.dispatchEvent(new Event("input"));
+      strokeHistory = snapshotStrokeHistory;
+    }
+
+    function asyncTimeout(delay) {
+      return new Promise((resolve) => setTimeout(resolve, delay));
+    }
+
+    isCameraLocked = false;
+    function toggleCameraLock() {
+      isCameraLocked = !isCameraLocked;
+      if (isCameraLocked) {
+        overlay.classList.add("cameraLock");
+      } else {
+        overlay.classList.remove("cameraLock");
+      }
+    }
+
+    const audioContext = THREE.AudioContext.getContext();
+    audioContext.addEventListener("statechange", (event) => {
+      console.log("audioContext state", audioContext.state);
+      if (audioContext.state !== "running") {
+        document.addEventListener(
+          "click",
+          (event) => {
+            audioContext.resume();
+          },
+          { once: true }
+        );
+      }
+    });
+    audioContext.dispatchEvent(new Event("statechange"));
+
+    function createCountdownOscillator(options = {}) {
+      const oscillator = audioContext.createOscillator();
+      oscillator.type = options.type || "triangle";
+      oscillator.frequency.value = options.frequency || 440;
+      gain = audioContext.createGain();
+      gain.gain.value = 0;
+      oscillator.connect(gain).connect(audioContext.destination);
+      oscillator.start();
+
+      return {
+        oscillator,
+        gain,
+        setFrequency(frequency) {
+          this.oscillator.frequency.value = frequency;
+        },
+        play(delay) {
+          this.asdf();
+        },
+        asdf(attack = 0.05, sustain = 0.8, decay = 0.2, release = 0.1) {
+          this.gain.gain.setTargetAtTime(1, audioContext.currentTime, attack);
+          this.gain.gain.setTargetAtTime(
+            sustain,
+            audioContext.currentTime + attack,
+            decay
+          );
+          this.gain.gain.setTargetAtTime(
+            0,
+            audioContext.currentTime + attack + decay,
+            release
+          );
+        },
+      };
+    }
+
+    const oscillators = [
+      createCountdownOscillator({ frequency: 698.46 }),
+      createCountdownOscillator({ frequency: 1046.5 }),
+    ];
+
+    const countdownContainer = document.getElementById("countdown");
+    async function countdown(seconds = 3) {
+      overlay.classList.add("counting");
+      do {
+        countdownContainer.querySelectorAll("[data-second]").forEach((div) => {
+          if (div.dataset.second == seconds) {
+            div.classList.add("flash");
+          } else {
+            div.classList.remove("flash");
+          }
+        });
+        oscillators[0].play();
+        await asyncTimeout(1000);
+      } while (--seconds > 0);
+      oscillators[1].play();
+      overlay.classList.remove("counting");
+    }
+
+    let isRecording = false;
+    function toggleRecording() {
+      isRecording = !isRecording;
+      if (isRecording) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    }
+
+    async function startRecording() {
+      overlay.classList.add("recording");
+      await countdown();
+      _rig.startRecording();
+    }
+    async function stopRecording() {
+      _rig.stopRecording();
+      disableAllDevices();
+      overlay.classList.remove("recording");
+      overlay.classList.add("drawing", "recorded");
+      timelineInput.max = _rig.recordedData.duration;
+
+      opacityInput.value = 0.4;
+      opacityInput.dispatchEvent(new Event("input"));
+
+      recordedStrokeHistories.length = 0;
+      addKeyframe();
+    }
+
+    let isPlaying = false;
+    let basePlaybackTime;
+    let playbackTime = 0;
+    function togglePlayback() {
+      if (!isPlaying) {
+        this.startPlaying();
+      } else {
+        this.stopPlaying();
+      }
+    }
+    function startPlaying() {
+      console.log("starting playback");
+      if (playbackTime >= _rig.recordedData.duration) {
+        resetPlayback();
+      }
+      isPlaying = true;
+      overlay.classList.add("playing");
+    }
+    function stopPlaying() {
+      console.log("stopping playback");
+      isPlaying = false;
+      basePlaybackTime = undefined;
+      overlay.classList.remove("playing");
+    }
+    function resetPlayback() {
+      console.log("resetting playback");
+      playbackTime = 0;
+      basePlaybackTime = undefined;
+      isPlaying = false;
+      timelineInput.value = 0;
+    }
+
+    const keyframesContainer = document.querySelector("#timeline .keyframes");
+    function setupFrameAtTime(time) {
+      const rigDatum = _rig.getRecordingDatumByTime(time);
+      if (rigDatum) {
+        const { position, quaternions } = rigDatum;
+        if (position) {
+          const lowerTorsoEntity = _rig.entities.lowerTorso;
+          lowerTorsoEntity.object3D.position.set(...position);
+          lowerTorsoEntity.object3D.updateMatrix();
+        }
+        for (const name in quaternions) {
+          const entity = _rig.entities[name];
+          const quaternion = quaternions[name];
+          entity.object3D.quaternion.set(...quaternion);
+          entity.object3D.updateMatrix();
+        }
+      }
+
+      if (!isRecordingCamera) {
+        const cameraDatum = getRecordedCameraDatumByTime(time);
+        if (cameraDatum) {
+          camera.components.camera.camera.position.set(...cameraDatum.position);
+        }
+      }
+
+      const _strokeHistory = getStrokeHistoryByTime(time);
+      if (_strokeHistory && strokeHistory != _strokeHistory) {
+        strokeHistory = _strokeHistory;
+        drawAllOnCanvas();
+      }
+
+      const selectedKeyframe =
+        keyframesContainer.querySelector(".keyframe.selected");
+      if (selectedKeyframe) {
+        selectedKeyframe.classList.remove("selected");
+      }
+      const keyframe = getKeyframeAtTime(time);
+      if (keyframe) {
+        keyframe.classList.add("selected");
+      }
+    }
+
+    let isRecordingCamera = false;
+    const recordedCameraData = [];
+    function getRecordedCameraDuration() {
+      let { duration } = recordedCameraData;
+      if (duration == undefined && recordedCameraData.length) {
+        duration = recordedCameraData[recordedCameraData.length - 1].timestamp;
+        recordedCameraData.duration = duration;
+      }
+      return duration;
+    }
+    const camera = document.querySelector("a-camera");
+    async function recordCamera() {
+      await countdown(3);
+      recordedCameraData.length = 0;
+      playbackTime = 0;
+      startPlaying();
+      isRecordingCamera = true;
+    }
+    function getRecordedCameraDatumByTime(time) {
+      return recordedCameraData.find((_, index) => {
+        const nextRecordedCameraDatum = recordedCameraData[index + 1];
+        return (
+          !nextRecordedCameraDatum || nextRecordedCameraDatum.timestamp > time
+        );
+      });
+    }
+
+    function recordCameraAnimationFrame(time) {
+      if (isRecordingCamera) {
+        const recordedCameraDatum = {
+          position: camera.components.camera.camera.position.toArray(),
+        };
+        if (recordedCameraData.length == 0) {
+          recordedCameraDatum.timestamp = 0;
+          recordedCameraData.baseTime = time;
+        } else {
+          recordedCameraDatum.timestamp = time - recordedCameraData.baseTime;
+        }
+        recordedCameraData.push(recordedCameraDatum);
+        if (recordedCameraDatum.timestamp >= _rig.recordedData.duration) {
+          isRecordingCamera = false;
+        }
+      }
+      requestAnimationFrame(recordCameraAnimationFrame);
+    }
+    requestAnimationFrame(recordCameraAnimationFrame);
+
+    function timelinePlaybackAnimationFrame(time) {
+      if (isPlaying) {
+        if (basePlaybackTime == undefined) {
+          basePlaybackTime = time - playbackTime;
+        }
+        playbackTime = time - basePlaybackTime;
+
+        setupFrameAtTime(playbackTime);
+        timelineInput.value = playbackTime;
+
+        if (playbackTime > _rig.recordedData.duration) {
+          stopPlaying();
+          basePlaybackTime = undefined;
+        }
+      }
+      requestAnimationFrame(timelinePlaybackAnimationFrame);
+    }
+    requestAnimationFrame(timelinePlaybackAnimationFrame);
+
+    async function doneDrawing() {
+      overlay.classList.remove("drawing", "recorded");
+      setOpacity(1);
+      clearAllStrokeData();
+      await enableAllDevices();
+    }
+    function clearAllStrokeData() {
+      clearCanvas();
+
+      recordedStrokeHistories.length = 0;
+      snapshotStrokeHistory.length = 0;
+    }
+
+    const timelineContainer = document.getElementById("timeline");
+    const timelineInput = timelineContainer.querySelector("input");
+
+    keyframesContainer.addEventListener("click", (event) => {
+      if (event.target.classList.contains("keyframe")) {
+        const keyframeContainer = event.target;
+        const time = Number(keyframeContainer.dataset.timestamp);
+        timelineInput.value = time;
+        setupFrameAtTime(time);
+      }
+    });
+    function getKeyframeAtTime(time) {
+      return Array.from(keyframesContainer.querySelectorAll(".keyframe")).find(
+        (_, index, keyframeContainers) => {
+          const nextKeyframeContainer = keyframeContainers[index + 1];
+          return (
+            !nextKeyframeContainer ||
+            nextKeyframeContainer.dataset.timestamp > time
+          );
+        }
+      );
+    }
+    function getCurrentKeyframe() {
+      const time = Number(timelineInput.value);
+      return getKeyframeAtTime(time);
+    }
+    function insertAfter(newNode, existingNode) {
+      existingNode.parentNode.insertBefore(
+        newNode,
+        existingNode.nextElementSibling
+      );
+    }
+    function addKeyframe() {
+      const time = Number(timelineInput.value);
+
+      const currentKeyframe = getCurrentKeyframe();
+
+      if (currentKeyframe && currentKeyframe.dataset.timestamp == time) {
+        return;
+      }
+
+      const keyframeContainer = document.createElement("div");
+      keyframeContainer.classList.add("keyframe");
+      keyframeContainer.dataset.timestamp = time;
+      const newStrokeHistory = [];
+      newStrokeHistory.timestamp = time;
+
+      if (!currentKeyframe) {
+        keyframeContainer.classList.add("selected");
+        recordedStrokeHistories.push(newStrokeHistory);
+        strokeHistory = newStrokeHistory;
+        keyframesContainer.appendChild(keyframeContainer);
+        keyframeContainer.style.flexGrow = _rig.recordedData.duration;
+      } else {
+        const totalDuration = Number(currentKeyframe.style.flexGrow);
+        const firstDuration = time - currentKeyframe.dataset.timestamp;
+        const secondDuration = totalDuration - firstDuration;
+
+        currentKeyframe.style.flexGrow = firstDuration;
+        keyframeContainer.style.flexGrow = secondDuration;
+
+        insertAfter(keyframeContainer, currentKeyframe);
+        const currentStrokeHistory = getCurrentStrokeHistory();
+        if (currentStrokeHistory) {
+          recordedStrokeHistories.splice(
+            recordedStrokeHistories.indexOf(currentStrokeHistory) + 1,
+            0,
+            newStrokeHistory
+          );
+        }
+      }
+      setupFrameAtTime(timelineInput.value);
+    }
+    function removeKeyframe(previous = true) {
+      const currentKeyframe = getCurrentKeyframe();
+      if (currentKeyframe) {
+        const siblings = [
+          currentKeyframe.previousElementSibling,
+          currentKeyframe.nextElementSibling,
+        ];
+        const siblingKeyframe = previous
+          ? siblings[0]
+          : siblings[1];
+        if (siblingKeyframe) {
+          const newDuration =
+            Number(currentKeyframe.style.flexGrow) +
+            Number(siblingKeyframe.style.flexGrow);
+          siblingKeyframe.style.flexGrow = newDuration;
+          currentKeyframe.remove();
+
+          if (
+            siblingKeyframe.dataset.timestamp >
+            currentKeyframe.dataset.timestamp
+          ) {
+            siblingKeyframe.dataset.timestamp =
+              currentKeyframe.dataset.timestamp;
+          }
+
+          const strokeHistory = getCurrentStrokeHistory();
+          if (strokeHistory) {
+            const currentStrokeHistoryIndex =
+              recordedStrokeHistories.indexOf(strokeHistory);
+            const siblingStrokeHistories = [
+              recordedStrokeHistories[currentStrokeHistoryIndex - 1],
+              recordedStrokeHistories[currentStrokeHistoryIndex + 1],
+            ];
+
+            const siblingStrokeHistory = previous
+              ? siblingStrokeHistories[0]
+              : siblingStrokeHistories[1];
+            recordedStrokeHistories.splice(currentStrokeHistoryIndex, 1);
+
+            if (siblingStrokeHistory.timestamp > strokeHistory.timestamp) {
+              siblingStrokeHistory.timestamp = strokeHistory.timestamp;
+            }
+          }
+          setupFrameAtTime(timelineInput.value);
+        }
+      }
+    }
+
+    function setTimeline(event) {
+      const time = Number(event.target.value);
+      setupFrameAtTime(time);
+    }
+
+    const opacityInput = overlay.querySelector("#opacity input");
+    function setOpacity(opacity) {
+      scene.style.opacity = opacity;
+    }
+
+    function toggleDrawMode() {
+      overlay.classList.toggle("orbit");
+    }
+  </script>
+
+  <script>
+    // https://github.com/shuding/apple-pencil-safari-api-test/blob/gh-pages/index.js
+
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    let lineWidth = 0;
+    let isMousedown = false;
+    let points = [];
+
+    window.addEventListener("resize", (event) => {
+      canvas.width = window.innerWidth * 2;
+      canvas.height = window.innerHeight * 2;
+    });
+    window.dispatchEvent(new Event("resize"));
+
+    const recordedStrokeHistories = []; //
+    const snapshotStrokeHistory = [];
+    let strokeHistory;
+
+    function getStrokeHistoryByTime(time) {
+      return recordedStrokeHistories.find((_, index) => {
+        const nextStrokeHistory = recordedStrokeHistories[index + 1];
+        return !nextStrokeHistory || nextStrokeHistory.timestamp > time;
+      });
+    }
+    function getCurrentStrokeHistory() {
+      const time = Number(timelineInput.value);
+      return getStrokeHistoryByTime(time);
+    }
+
+    const requestIdleCallback =
+      window.requestIdleCallback ||
+      function (fn) {
+        setTimeout(fn, 1);
+      };
+
+    /**
+     * This function takes in an array of points and draws them onto the canvas.
+     * @param {array} stroke array of points to draw on the canvas
+     * @return {void}
+     */
+    function drawOnCanvas(stroke) {
+      context.strokeStyle = "black";
+      context.lineCap = "round";
+      context.lineJoin = "round";
+
+      const l = stroke.length - 1;
+      if (stroke.length >= 3) {
+        const xc = (stroke[l].x + stroke[l - 1].x) / 2;
+        const yc = (stroke[l].y + stroke[l - 1].y) / 2;
+        context.lineWidth = stroke[l - 1].lineWidth;
+        context.quadraticCurveTo(stroke[l - 1].x, stroke[l - 1].y, xc, yc);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(xc, yc);
+      } else {
+        const point = stroke[l];
+        context.lineWidth = point.lineWidth;
+        context.strokeStyle = point.color;
+        context.beginPath();
+        context.moveTo(point.x, point.y);
+        context.stroke();
+      }
+    }
+
+    function drawAllOnCanvas() {
+      clearCanvas();
+      strokeHistory.forEach((stroke) => {
+        context.beginPath();
+
+        let strokePath = [];
+        stroke.forEach((point) => {
+          strokePath.push(point);
+          drawOnCanvas(strokePath);
+        });
+      });
+    }
+
+    /**
+     * Remove the previous stroke from history and repaint the entire canvas based on history
+     * @return {void}
+     */
+    function undoDraw() {
+      strokeHistory.pop();
+      clearCanvas();
+      drawAllOnCanvas();
+    }
+    function clearStrokeHistory() {
+      strokeHistory.length = 0;
+      clearCanvas();
+    }
+    function clearCanvas() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    for (const ev of ["touchstart", "mousedown"]) {
+      canvas.addEventListener(ev, function (e) {
+        if (!isCameraLocked) {
+          orbitControlsListeners.onTouchStart(e);
+        }
+
+        let pressure = 0.1;
+        let x, y;
+
+        if (
+          e.touches &&
+          e.touches[0] &&
+          typeof e.touches[0]["force"] !== "undefined"
+        ) {
+          if (e.touches[0]["force"] > 0) {
+            pressure = e.touches[0]["force"];
+          } else {
+            return;
+          }
+          x = e.touches[0].pageX * 2;
+          y = e.touches[0].pageY * 2;
+        } else {
+          pressure = 1.0;
+          x = e.pageX * 2;
+          y = e.pageY * 2;
+        }
+
+        isMousedown = true;
+
+        lineWidth = Math.log(pressure + 1) * 40;
+        context.lineWidth = lineWidth; // pressure * 50;
+
+        points.push({ x, y, lineWidth });
+        drawOnCanvas(points);
+      });
+    }
+
+    for (const ev of ["touchmove", "mousemove"]) {
+      canvas.addEventListener(ev, function (e) {
+        if (!isCameraLocked) {
+          orbitControlsListeners.onTouchMove(e);
+        }
+
+        if (!isMousedown) return;
+        e.preventDefault();
+
+        let pressure = 0.1;
+        let x, y;
+        if (
+          e.touches &&
+          e.touches[0] &&
+          typeof e.touches[0]["force"] !== "undefined"
+        ) {
+          if (e.touches[0]["force"] > 0) {
+            pressure = e.touches[0]["force"];
+          } else {
+            return;
+          }
+          x = e.touches[0].pageX * 2;
+          y = e.touches[0].pageY * 2;
+        } else {
+          pressure = 1.0;
+          x = e.pageX * 2;
+          y = e.pageY * 2;
+        }
+
+        // smoothen line width
+        lineWidth = Math.log(pressure + 1) * 40 * 0.2 + lineWidth * 0.8;
+        points.push({ x, y, lineWidth });
+
+        drawOnCanvas(points);
+      });
+    }
+
+    for (const ev of ["touchend", "touchleave", "mouseup"]) {
+      canvas.addEventListener(ev, function (e) {
+        if (!isCameraLocked) {
+          orbitControlsListeners.onTouchEnd(e);
+        }
+
+        let pressure = 0.1;
+        let x, y;
+
+        if (
+          e.touches &&
+          e.touches[0] &&
+          typeof e.touches[0]["force"] !== "undefined"
+        ) {
+          if (e.touches[0]["force"] > 0) {
+            pressure = e.touches[0]["force"];
+          } else {
+            return;
+          }
+          x = e.touches[0].pageX * 2;
+          y = e.touches[0].pageY * 2;
+        } else {
+          pressure = 1.0;
+          x = e.pageX * 2;
+          y = e.pageY * 2;
+        }
+
+        isMousedown = false;
+
+        requestIdleCallback(function () {
+          strokeHistory.push([...points]);
+          points = [];
+        });
+
+        lineWidth = 0;
+      });
+    }
+  </script>
+</html>

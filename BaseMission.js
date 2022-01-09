@@ -6,7 +6,7 @@ THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 {
   const eventDispatcherAddEventListener =
     THREE.EventDispatcher.prototype.addEventListener;
-  THREE.EventDispatcher.prototype.addEventListener = function(
+  THREE.EventDispatcher.prototype.addEventListener = function (
     type,
     listener,
     options
@@ -27,7 +27,7 @@ THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 
 class BaseMission {
   constructor() {
-    this.isLoggingEnabled = true;
+    this.isLoggingEnabled = !true;
     this._reconnectOnDisconnection = true;
 
     this._debug = null;
@@ -46,14 +46,33 @@ class BaseMission {
       quaternion: new THREE.Quaternion(),
       euler: new THREE.Euler(),
 
-      calibration: null
+      calibration: null,
     };
 
     this.pressure = Object.assign([], {
       sum: 0,
       mass: 0,
       heelToToe: 0,
-      centerOfMass: { x: 0, y: 0 }
+      centerOfMass: { x: 0, y: 0 },
+    });
+    
+    this._sensorDataTimestampOffset = 0;
+    this._lastRawSensorDataTimestamp = 0;
+
+    this.disableSensorsBeforeUnload = true;
+    window.addEventListener("beforeunload", async (event) => {
+      if (this.isConnected && this.disableSensorsBeforeUnload) {
+        const sensorDataConfigurations = {};
+        for (const sensorType in this.SensorDataTypeStrings) {
+          sensorDataConfigurations[sensorType.toLowerCase()] = {};
+          this.SensorDataTypeStrings[sensorType].forEach((sensorDataType) => {
+            sensorDataConfigurations[sensorType.toLowerCase()][
+              sensorDataType
+            ] = 0;
+          });
+        }
+        await this.setSensorDataConfigurations(sensorDataConfigurations);
+      }
     });
   }
 
@@ -80,7 +99,7 @@ class BaseMission {
 
   _concatenateArrayBuffers(...arrayBuffers) {
     arrayBuffers = arrayBuffers.filter(
-      arrayBuffer => arrayBuffer && "byteLength" in arrayBuffer
+      (arrayBuffer) => arrayBuffer && "byteLength" in arrayBuffer
     );
     //this.log("concatenating array buffers", arrayBuffers);
     const length = arrayBuffers.reduce(
@@ -89,7 +108,7 @@ class BaseMission {
     );
     const uint8Array = new Uint8Array(length);
     let offset = 0;
-    arrayBuffers.forEach(arrayBuffer => {
+    arrayBuffers.forEach((arrayBuffer) => {
       uint8Array.set(new Uint8Array(arrayBuffer), offset);
       offset += arrayBuffer.byteLength;
     });
@@ -121,7 +140,7 @@ class BaseMission {
   _parseMotionCalibration(dataView, byteOffset = 0) {
     let isFullyCalibrated = true;
     const motionCalibration = {};
-    this.MotionCalibrationTypeStrings.forEach(motionCalibrationTypeString => {
+    this.MotionCalibrationTypeStrings.forEach((motionCalibrationTypeString) => {
       const value = dataView.getUint8(byteOffset++);
       motionCalibration[motionCalibrationTypeString] = value;
       isFullyCalibrated = isFullyCalibrated && value == 3;
@@ -133,11 +152,11 @@ class BaseMission {
 
     this.dispatchEvent({
       type: "motioncalibration",
-      message: { motionCalibration }
+      message: { motionCalibration },
     });
     if (isFullyCalibrated) {
       this.dispatchEvent({
-        type: "motionisfullycalibrated"
+        type: "motionisfullycalibrated",
       });
     }
 
@@ -155,7 +174,7 @@ class BaseMission {
     });
     this.dispatchEvent({
       type: "sensordataconfigurations",
-      message: { sensorDataConfigurations: this._sensorDataConfigurations }
+      message: { sensorDataConfigurations: this._sensorDataConfigurations },
     });
     return byteOffset;
   }
@@ -177,9 +196,8 @@ class BaseMission {
     });
 
     const lowerCaseSensorTypeString = sensorTypeString.toLowerCase();
-    this._sensorDataConfigurations[
-      lowerCaseSensorTypeString
-    ] = sensorDataConfiguration;
+    this._sensorDataConfigurations[lowerCaseSensorTypeString] =
+      sensorDataConfiguration;
     return byteOffset;
   }
 
@@ -188,7 +206,7 @@ class BaseMission {
 
     this.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
       sensorTypeString = sensorTypeString.toLowerCase();
-      if (sensorTypeString in configurations) {
+      if ((sensorTypeString in configurations) && (sensorType != this.SensorTypes.PRESSURE || this.isInsole)) {
         flattenedConfigurations = this._concatenateArrayBuffers(
           flattenedConfigurations,
           this._flattenSensorConfiguration(
@@ -247,9 +265,14 @@ class BaseMission {
   }
 
   _parseSensorData(dataView, byteOffset = 0) {
-    const timestamp = dataView.getUint16(byteOffset, true);
+    const rawTimestamp = dataView.getUint16(byteOffset, true);
+    if (rawTimestamp < this._lastRawSensorDataTimestamp) {
+      this._sensorDataTimestampOffset += 2**16;
+    }
+    this._lastRawSensorDataTimestamp = rawTimestamp;
+    const timestamp = rawTimestamp + this._sensorDataTimestampOffset;
     byteOffset += 2;
-
+    
     while (byteOffset < dataView.byteLength) {
       const sensorType = dataView.getUint8(byteOffset++);
       byteOffset = this._parseSensorDataType(
@@ -297,9 +320,8 @@ class BaseMission {
   _parseMotionSensorData(dataView, byteOffset, finalByteOffset, timestamp) {
     while (byteOffset < finalByteOffset) {
       const motionSensorDataType = dataView.getUint8(byteOffset++);
-      const motionSensorDataTypeString = this.MotionDataTypeStrings[
-        motionSensorDataType
-      ];
+      const motionSensorDataTypeString =
+        this.MotionDataTypeStrings[motionSensorDataType];
       this.log(`got motion sensor data type "${motionSensorDataTypeString}"`);
 
       const scalar = this.MotionDataScalars[motionSensorDataTypeString];
@@ -336,7 +358,7 @@ class BaseMission {
           this.motion.euler.copy(euler);
           this.dispatchEvent({
             type: "euler",
-            message: { timestamp, euler }
+            message: { timestamp, euler },
           });
           break;
         default:
@@ -353,8 +375,8 @@ class BaseMission {
             motionSensorDataTypeString == "quaternion"
               ? quaternion
               : vector || euler,
-          rawData
-        }
+          rawData,
+        },
       });
       byteOffset += byteSize;
     }
@@ -363,9 +385,8 @@ class BaseMission {
   _parsePressureSensorData(dataView, byteOffset, finalByteOffset, timestamp) {
     while (byteOffset < finalByteOffset) {
       const pressureSensorDataType = dataView.getUint8(byteOffset++);
-      const pressureSensorDataTypeString = this.PressureDataTypeStrings[
-        pressureSensorDataType
-      ];
+      const pressureSensorDataTypeString =
+        this.PressureDataTypeStrings[pressureSensorDataType];
       this.log(
         `got pressure sensor data type "${pressureSensorDataTypeString}"`
       );
@@ -431,45 +452,45 @@ class BaseMission {
             type: "pressure",
             message: {
               timestamp,
-              pressure
-            }
+              pressure,
+            },
           });
 
           this.dispatchEvent({
             type: pressureSensorDataTypeString,
             message: {
               timestamp,
-              [pressureSensorDataTypeString]: pressure
-            }
+              [pressureSensorDataTypeString]: pressure,
+            },
           });
 
           this.dispatchEvent({
             type: "mass",
             message: {
               timestamp,
-              mass
-            }
+              mass,
+            },
           });
           this.dispatchEvent({
             type: "centerOfMass",
             message: {
               timestamp,
-              centerOfMass
-            }
+              centerOfMass,
+            },
           });
           this.dispatchEvent({
             type: "heelToToe",
             message: {
               timestamp,
-              heelToToe
-            }
+              heelToToe,
+            },
           });
           break;
         case this.PressureDataTypes.centerOfMass:
           {
             const centerOfMass = {
               x: dataView.getFloat32(byteOffset, true),
-              y: dataView.getFloat32(byteOffset + 4, true)
+              y: dataView.getFloat32(byteOffset + 4, true),
             };
 
             this.pressure.centerOfMass = centerOfMass;
@@ -479,8 +500,8 @@ class BaseMission {
               type: "centerOfMass",
               message: {
                 timestamp,
-                centerOfMass
-              }
+                centerOfMass,
+              },
             });
             break;
           }
@@ -496,8 +517,8 @@ class BaseMission {
               type: "mass",
               message: {
                 timestamp,
-                mass
-              }
+                mass,
+              },
             });
           }
           break;
@@ -511,8 +532,8 @@ class BaseMission {
               type: "heelToToe",
               message: {
                 timestamp,
-                heelToToe
-              }
+                heelToToe,
+              },
             });
           }
           break;
@@ -552,7 +573,10 @@ class BaseMission {
     return sensorType in this.SensorTypeStrings;
   }
   isValidSensorDataType(sensorDataType, sensorType) {
-    return this.isValidSensorType(sensorType) && sensorDataType in this.SensorDataTypes[this.SensorTypeStrings[sensorType]];
+    return (
+      this.isValidSensorType(sensorType) &&
+      sensorDataType in this.SensorDataTypes[this.SensorTypeStrings[sensorType]]
+    );
   }
 
   get MotionCalibrationTypes() {
@@ -668,7 +692,7 @@ class BaseMission {
     this.log(`Got battery level`, this.batteryLevel);
     this.dispatchEvent({
       type: "batterylevel",
-      message: { batteryLevel: this.batteryLevel }
+      message: { batteryLevel: this.batteryLevel },
     });
   }
 }
@@ -701,7 +725,7 @@ Object.assign(BaseMission, {
     "SET_PRESSURE_CONFIGURATION",
 
     "MOTION_DATA",
-    "PRESSURE_DATA"
+    "PRESSURE_DATA",
   ],
 
   SensorTypeStrings: ["MOTION", "PRESSURE"],
@@ -712,7 +736,7 @@ Object.assign(BaseMission, {
     "system",
     "gyroscope",
     "accelerometer",
-    "magnetometer"
+    "magnetometer",
   ],
 
   MotionDataTypeStrings: [
@@ -721,7 +745,7 @@ Object.assign(BaseMission, {
     "linearAcceleration",
     "rotationRate",
     "magnetometer",
-    "quaternion"
+    "quaternion",
   ],
 
   MotionDataScalars: {
@@ -730,7 +754,7 @@ Object.assign(BaseMission, {
     linearAcceleration: 1 / 100,
     rotationRate: 1 / 16,
     magnetometer: 1 / 16,
-    quaternion: 1 / (1 << 14)
+    quaternion: 1 / (1 << 14),
   },
 
   PressureDataTypeStrings: [
@@ -738,13 +762,13 @@ Object.assign(BaseMission, {
     "pressureDoubleByte",
     "centerOfMass",
     "mass",
-    "heelToToe"
+    "heelToToe",
   ],
 
   PressureDataScalars: {
     pressureSingleByte: 2 ** 8,
     pressureDoubleByte: 2 ** 12,
-    mass: 2 ** 16
+    mass: 2 ** 16,
   },
 
   PressurePositions: [
@@ -769,7 +793,7 @@ Object.assign(BaseMission, {
     [18.0, 200.0],
 
     [43.5, 242.0],
-    [18.55, 242.1]
+    [18.55, 242.1],
 
     /*
     Right Insole
@@ -804,8 +828,8 @@ Object.assign(BaseMission, {
 
   InsoleCorrectionQuaternions: {
     left: new THREE.Quaternion(),
-    right: new THREE.Quaternion()
-  }
+    right: new THREE.Quaternion(),
+  },
 });
 
 [
@@ -813,8 +837,8 @@ Object.assign(BaseMission, {
   "MotionCalibrationType",
   "MotionDataType",
   "PressureDataType",
-  "SensorType"
-].forEach(name => {
+  "SensorType",
+].forEach((name) => {
   BaseMission[name + "s"] = BaseMission[name + "Strings"].reduce(
     (object, name, index) => {
       object[name] = index;
@@ -825,11 +849,11 @@ Object.assign(BaseMission, {
 });
 BaseMission.SensorDataTypes = {
   MOTION: BaseMission.MotionDataTypes,
-  PRESSURE: BaseMission.PressureDataTypes
+  PRESSURE: BaseMission.PressureDataTypes,
 };
 BaseMission.SensorDataTypeStrings = {
   MOTION: BaseMission.MotionDataTypeStrings,
-  PRESSURE: BaseMission.PressureDataTypeStrings
+  PRESSURE: BaseMission.PressureDataTypeStrings,
 };
 Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
 
@@ -873,11 +897,11 @@ class BaseMissions {
     this.pressure = {
       sum: 0,
       centerOfMass: { x: 0, y: 0 },
-      mass: { left: 0, right: 0 }
+      mass: { left: 0, right: 0 },
     };
 
-    this.sides.forEach(side => {
-      this[side].addEventListener("pressure", event => {
+    this.sides.forEach((side) => {
+      this[side].addEventListener("pressure", (event) => {
         const { timestamp } = event.message;
         this._updatePressure({ side, timestamp });
       });
@@ -888,11 +912,11 @@ class BaseMissions {
     const pressure = {
       sum: 0,
       centerOfMass: { x: 0, y: 0 },
-      mass: { left: 0, right: 0 }
+      mass: { left: 0, right: 0 },
     };
     pressure.sum = this.left.pressure.sum + this.right.pressure.sum;
 
-    this.sides.forEach(side => {
+    this.sides.forEach((side) => {
       pressure.mass[side] = this[side].pressure.sum / pressure.sum || 0;
     });
 
@@ -903,7 +927,7 @@ class BaseMissions {
     this.pressure = pressure;
     this.dispatchEvent({
       type: "pressure",
-      message: { timestamp, side, pressure }
+      message: { timestamp, side, pressure },
     });
   }
 }
