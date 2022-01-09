@@ -9,6 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
     <script src="/BaseMission.js"></script>
     <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
@@ -129,6 +130,20 @@
       <div class="connect">
         <h2>Connect</h2>
 
+        <label class="connectionType">
+          connection type:
+          <select>
+            <option>bluetooth</option>
+            <option>websocket</option>
+          </select>
+        </label>
+
+        <br />
+        <label class="gateway1"> gateway1: <input /> </label>
+        <br />
+        <label class="gateway2"> gateway2: <input /> </label>
+        <br />
+
         <span class="left">
           <input type="button" class="mirror" value="👟" />
         </span>
@@ -238,12 +253,83 @@
       document.body.classList.add("iframe");
     }
 
-    const missions = new BluetoothMissions();
+    const url = new URL(location);
+
+    let connectionType = url.searchParams.get("connectionType") || "bluetooth";
+    const missions =
+      connectionType == "bluetooth"
+        ? new BluetoothMissions()
+        : new WebSocketMissions();
+
+    const connectionTypeSelect = document.querySelector(".connect select");
+    connectionTypeSelect.addEventListener("input", event => {
+      connectionType = event.target.value;
+      console.log("connection type", connectionType);
+      url.searchParams.set("connectionType", connectionType);
+      location = url.href;
+    });
+    connectionTypeSelect.value = connectionType;
+
+    function insertUrlParam(key, value) {
+      if (history.pushState) {
+        let searchParams = new URLSearchParams(window.location.search);
+        searchParams.set(key, value);
+        let newurl =
+          window.location.protocol +
+          "//" +
+          window.location.host +
+          window.location.pathname +
+          "?" +
+          searchParams.toString();
+        window.history.pushState({ path: newurl }, "", newurl);
+      }
+    }
+
+    let gateway1 = url.searchParams.get("gateway1") || "0.0.0.0";
+    console.log("gateway1", gateway1);
+    const gateway1Input = document.querySelector(".connect .gateway1 input");
+    gateway1Input.addEventListener("input", event => {
+      gateway1 = event.target.value;
+      console.log("new gateway1", gateway1);
+      url.searchParams.set("gateway1", gateway1);
+      insertUrlParam("gateway1", gateway1);
+    });
+    gateway1Input.value = gateway1;
+    if (connectionType != "websocket") {
+      gateway1Input.closest("label").style.display = "none";
+    } else {
+      gateway1Input.closest("label").style.display = "";
+    }
+    
+    let gateway2 = url.searchParams.get("gateway2") || "0.0.0.0";
+    console.log("gateway2", gateway2);
+    const gateway2Input = document.querySelector(".connect .gateway2 input");
+    gateway2Input.addEventListener("input", event => {
+      gateway2 = event.target.value;
+      console.log("new gateway2", gateway2);
+      url.searchParams.set("gateway2", gateway2);
+      insertUrlParam("gateway2", gateway2);
+    });
+    gateway2Input.value = gateway2;
+    if (connectionType != "websocket") {
+      gateway2Input.closest("label").style.display = "none";
+    } else {
+      gateway2Input.closest("label").style.display = "";
+    }
+
+
     window.missions = missions;
     missions.sides.forEach(side => {
       document
         .querySelector(`.connect .${side} input[type='button']`)
-        .addEventListener("click", event => missions[side].connect());
+        .addEventListener("click", event => {
+        if (connectionType == "bluetooth") {
+          missions[side].connect()
+        }
+        else {
+          missions[side].connect(side == "left"? gateway1:gateway2)
+        }
+      });
 
       missions[side].addEventListener("connected", event => {
         document
@@ -258,9 +344,13 @@
           .querySelector(`.pressure .${side} .enable input`)
           .addEventListener("click", event => {
             const enabled = event.target.checked;
-            const type = event.altKey ? "pressureDoubleByte" : "pressureSingleByte";
-            const otherType = !event.altKey ? "pressureDoubleByte" : "pressureSingleByte";
-            
+            const type = event.altKey
+              ? "pressureDoubleByte"
+              : "pressureSingleByte";
+            const otherType = !event.altKey
+              ? "pressureDoubleByte"
+              : "pressureSingleByte";
+
             missions[side].setSensorDataConfigurations({
               pressure: {
                 [type]: enabled ? 40 : 0,
