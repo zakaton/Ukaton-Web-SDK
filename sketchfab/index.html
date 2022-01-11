@@ -2,6 +2,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
     <title>Sketchfab Viewer API example</title>
 
     <!-- Insert this script -->
@@ -10,6 +14,8 @@
       src="https://static.sketchfab.com/api/sketchfab-viewer-1.10.1.js"
     ></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="./BaseMission.js"></script>
+    <script src="./BluetoothMissionDevice.js"></script>
     <script src="./SideMission.js"></script>
   </head>
 
@@ -18,11 +24,17 @@
       width: 100%;
       height: 100%;
     }
+    .hidden {
+      display: none;
+    }
   </style>
 
   <body>
     <button onclick="connectToSideMission(event)">
       connect
+    </button>
+    <button class="connected hidden" onclick="callibrateYaw()">
+      calibrate
     </button>
     <!-- Insert an empty iframe -->
     <iframe
@@ -66,12 +78,15 @@
     </script>
 
     <script>
-      const sideMission = new SideMission();
+      const sideMission = new BluetoothMissionDevice();
       function connectToSideMission(event) {
         sideMission.connect().then(() => {
+          document.querySelectorAll(".connected.hidden").forEach(div => {
+            div.classList.remove("hidden");
+          })
           event.target.remove();
-          sideMission.configureImu({
-            quaternion: 20
+          sideMission.setSensorDataConfigurations({
+            motion: {quaternion: 20}
           });
         });
       }
@@ -80,13 +95,8 @@
       const lookAtTarget = new THREE.Vector3(0, 0, 0);
       let yawOffset = 0;
       function callibrateYaw() {
-        yawOffset = sideMission.euler.y;
+        yawOffset = sideMission.motion.euler.y;
       }
-      document.addEventListener("keypress", event => {
-        if (event.key === "c") {
-          callibrateYaw();
-        }
-      });
       let didCallibrateYaw = false;
       sideMission.addEventListener("euler", event => {
         const { message } = event;

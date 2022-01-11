@@ -1,15 +1,235 @@
 <html>
   <head>
-    <title>Audio Spatialization</title>
+    <title>A-Frame Audio Spatialization | Ukaton Side Missions</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
+    <script src="/audio-spatialization/resonance-audio-system.js"></script>
   </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      position: relative;
+    }
+    a-scene {
+      width: 100%;
+      height: 100vh;
+    }
+    #overlay {
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+    }
+    #overlay:not(.connected) .connected {
+      display: none;
+    }
+    #overlay.connected .notConnected {
+      display: none;
+    }
+
+    #monkey {
+      width: 130px;
+      height: 130px;
+      top: 0;
+      right: 4px;
+      position: absolute;
+      border: none;
+    }
+  </style>
   <body>
-    <h1>
-      Audio Spatialization
-    </h1>
-    <ul>
-      <li><a href="audio-spatialization/a-frame.html">A-Frame</a></li>
-      <li><a href="audio-spatialization/media-elements.html">HTML Elements</a></li>
-      <li><a target="_blank" href="https://bookmarkify.it/43336">Javascript Bookmarklet</a></li>
-    </ul>
+    <div id="overlay">
+      <iframe id="monkey" src="/audio-spatialization/monkey.html"></iframe>
+      <button class="notConnected" onclick="connectToSideMission(event)">
+        connect
+      </button>
+      <button class="connected" onclick="calibrate(event)">
+        calibrate
+      </button>
+      <button onclick="toggleAudio(event)">
+        Toggle Audio
+      </button>
+
+      <span class="calibration"></span>
+    </div>
+    <a-scene
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      embedded
+      resonance-audio="gain: 0;
+                       width: 10;
+                       depth: 10;
+                       height: 7;
+                       listener: #face;
+                       ambisonicOrder: 3;
+                       left: uniform;
+                       right: uniform;
+                       front: uniform;
+                       down: uniform;
+                       back: uniform;
+                       up: uniform;"
+    >
+      <a-assets>
+        <audio
+          crossorigin="anonymous"
+          id="sound"
+          src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2FresonanceAudioTreasureHuntSound.wav?v=1628210256435"
+        ></audio>
+      </a-assets>
+
+      <a-light type="directional" intensity="0.5" position="0 1 0"></a-light>
+
+      <a-entity>
+        <a-camera
+          id="camera"
+          fov="75"
+          position="0 0 0"
+          look-controls="enabled: false;"
+          wasd-controls-enabled="false;"
+        >
+          <a-light type="point" intensity="0.9"></a-light>
+          <a-entity position="0 0 0.3" id="face"></a-entity>
+        </a-camera>
+      </a-entity>
+
+      <a-box
+        id="room"
+        material="side: back;"
+        height="7"
+        width="10"
+        depth="10"
+      ></a-box>
+
+      <a-entity id="device"></a-entity>
+
+      <a-box
+        id="box"
+        color="red"
+        position="0 0 -3"
+        animation="property: rotation; from: 0 0 0; to: 360 360 0; loop: true; dur: 5000; easing: linear;"
+        resonance-audio="src: #sound; loop: true; autoplay: true;"
+      ></a-box>
+    </a-scene>
   </body>
+  <script>
+    const monkeyIframe = document.querySelector("iframe#monkey");
+    let monkeyRotation;
+    monkeyIframe.addEventListener("load", event => {
+      monkeyRotation = monkeyIframe.contentDocument.getElementById(
+        "monkeyRotation"
+      );
+    });
+
+    // toggle audio
+    const scene = document.querySelector("a-scene");
+    function toggleAudio(event) {
+      const gain = scene.getAttribute("resonance-audio").gain;
+      scene.setAttribute("resonance-audio", { gain: 1 - gain });
+    }
+
+    // side mission
+    const sideMission = new BluetoothMissionDevice();
+    async function connectToSideMission(event) {
+      await sideMission.connect();
+    }
+    sideMission.addEventListener("connected", async event => {
+      await sideMission.setSensorDataConfigurations({
+        motion: {quaternion: 20}
+      });
+      document.getElementById("overlay").classList.add("connected");
+      useModuleForCameraRotation = true;
+    });
+    const camera = document.querySelector("a-camera");
+    const faceQuaternion = new THREE.Quaternion();
+    const faceEuler = new THREE.Euler(0, 0, 0, "YXZ");
+    const faceEuler2 = new THREE.Euler(0, 0, 0, "YXZ");
+    sideMission.addEventListener("quaternion", event => {
+      shouldUpdateCamera = true;
+      faceQuaternion.multiplyQuaternions(
+        deviceQuaternion.clone().invert(),
+        sideMission.motion.quaternion
+      );
+      faceEuler.setFromQuaternion(faceQuaternion);
+      faceEuler.y -= calibrationYaw;
+      faceEntity.object3D.rotation.copy(faceEuler);
+      faceEuler2.copy(faceEuler);
+      faceEuler2.y *= -1;
+      faceEuler2.y += Math.PI;
+      faceEuler2.z *= -1;
+      if (monkeyRotation) {
+        monkeyRotation.object3D.rotation.copy(faceEuler2);
+      }
+    });
+
+    // Device Orientation
+    window.addEventListener("deviceorientation", onDeviceOrientation);
+    async function requestDeviceOrientationEvent() {
+      const permissionState = await DeviceOrientationEvent.requestPermission();
+    }
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      document.addEventListener("click", requestDeviceOrientationEvent, {
+        once: true
+      });
+    }
+    const deviceQuaternion = new THREE.Quaternion();
+    const deviceEuler = new THREE.Euler();
+    const deviceEntity = document.getElementById("device");
+    const faceEntity = document.getElementById("face");
+    const deviceOrientationControls = new THREE.DeviceOrientationControls(
+      deviceEntity.object3D
+    );
+    function onDeviceOrientation(event) {
+      deviceOrientationControls.update();
+      deviceEuler.copy(deviceEntity.object3D.rotation);
+      if ("webkitCompassHeading" in event) {
+        deviceEuler.y = -THREE.Math.degToRad(event.webkitCompassHeading);
+      }
+      deviceQuaternion.setFromEuler(deviceEuler);
+      shouldUpdateCamera = true;
+    }
+
+    const log = AFRAME.utils.throttle(console.log, 100);
+
+    let calibrationYaw = 0;
+    function calibrate(event) {
+      calibrationYaw = sideMission.motion.euler.y - deviceEuler.y;
+    }
+
+    // update camera
+    let shouldUpdateCamera = false;
+    function updateCamera() {
+      camera.object3D.quaternion.copy(deviceQuaternion);
+    }
+
+    const onAnimationFrame = () => {
+      if (shouldUpdateCamera) {
+        updateCamera();
+        shouldUpdateCamera = false;
+      }
+      requestAnimationFrame(onAnimationFrame);
+    };
+    requestAnimationFrame(onAnimationFrame);
+
+    sideMission.addEventListener("calibration", event => {
+      const {
+        accelerometer,
+        gyroscope,
+        magnetometer,
+        system
+      } = event.message.calibration;
+      document.querySelector(
+        ".calibration"
+      ).innerText = `${accelerometer}, ${gyroscope}, ${magnetometer}, ${system}`;
+    });
+  </script>
 </html>

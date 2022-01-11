@@ -1,0 +1,184 @@
+<html>
+  <head>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+    <title>3D Controller | Ukaton Side Mission</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
+
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #overlay {
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #overlay .clickable {
+      pointer-events: all;
+    }
+    #overlay .hidden {
+      display: none;
+    }
+    #overlay:not(.connected) .connected {
+      display: none;
+    }
+  </style>
+  <body>
+    <div id="overlay">
+      <button class="clickable" onclick="connect(event)">connect</button>
+      <button class="clickable connected" onclick="callibrateYaw()">
+      calibrate
+    </button>
+      <select class="clickable" oninput="setMode(event.target.value)">
+        <option>nothing</option>
+        <option>camera</option>
+        <option>object</option>
+        <option>orbit</option>
+      </select>
+    </div>
+
+    <a-scene
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      embedded
+    >
+      <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
+      <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+      <a-cylinder
+        position="1 0.75 -3"
+        radius="0.5"
+        height="1.5"
+        color="#FFC65D"
+      ></a-cylinder>
+      <a-plane
+        position="0 0 -4"
+        rotation="-90 0 0"
+        width="4"
+        height="4"
+        color="#7BC8A4"
+      ></a-plane>
+      <a-sky color="#ECECEC"></a-sky>
+    </a-scene>
+  </body>
+  <script>
+    let cameraRadius;
+    
+    const scene = document.querySelector("a-scene")
+    const camera = scene.querySelector("a-camera, a-entity[camera]")
+
+    const cursor = document.createElement("a-cursor")
+    camera.appendChild(cursor)
+
+    let cameraHeight = camera.object3D.position.y
+
+    const vector = new THREE.Vector3()
+    
+    
+    const sideMission = new BluetoothMissionDevice();
+
+    function connect(event) {
+      sideMission.connect().then(() => {
+        event.target.remove();
+      })
+    }
+    
+    let yawOffset = 0;
+    function callibrateYaw() {
+      yawOffset = sideMission.motion.euler.y;
+    }
+    let didCallibrateYaw = false;
+
+    sideMission.addEventListener("connected", (event) => {
+      sideMission.setSensorDataConfigurations({ motion: { quaternion: 20 } });
+      document.getElementById("overlay").classList.add("connected");
+    });
+    sideMission.addEventListener("euler", (event) => {
+      const euler = event.message.euler.clone();
+      if (!didCallibrateYaw) {
+          setTimeout(() => callibrateYaw(), 100);
+          didCallibrateYaw = true;
+        }
+        euler.y -= yawOffset;
+      
+      switch (mode) {
+        case "nothing":
+          break;
+        case "camera":
+          camera.object3D.rotation.copy(euler);
+          break;
+        case "object":
+          if (entity) {
+            entity.object3D.rotation.copy(euler);
+          }
+          break;
+        case "orbit":
+          if (entity && cameraRadius > 0) {
+            vector
+              .set(0, 0, cameraRadius)
+              .applyEuler(euler)
+              .add(entity.object3D.position);
+            camera.object3D.position.copy(vector);
+            camera.object3D.rotation.copy(euler);
+          }
+          break;
+      }
+    });
+
+    const modes = ["nothing", "camera", "object", "orbit"];
+    let mode = modes[0];
+    function setMode(newMode) {
+      if (modes.includes(newMode)) {
+        mode = newMode;
+        console.log("new mode", mode);
+        switch (mode) {
+          case "nothing":
+            camera.setAttribute("look-controls", { enabled: true });
+            camera.object3D.position.y = cameraHeight;
+            break;
+          case "camera":
+            camera.setAttribute("look-controls", { enabled: false });
+            camera.object3D.position.y = cameraHeight;
+            break;
+          case "object":
+            camera.setAttribute("look-controls", { enabled: true });
+            camera.object3D.position.y = cameraHeight;
+            if (cursor.components.raycaster.intersectedEls.length) {
+              entity = cursor.components.raycaster.intersectedEls[0];
+            }
+            break;
+          case "orbit":
+            camera.setAttribute("look-controls", { enabled: false });
+            cameraHeight = camera.object3D.position.y;
+            if (cursor.components.raycaster.intersectedEls.length) {
+              entity = cursor.components.raycaster.intersectedEls[0];
+              cameraRadius = camera.object3D.position.distanceTo(
+                entity.object3D.position
+              );
+            }
+            break;
+        }
+      }
+    }
+
+    document.addEventListener("keypress", (event) => {
+      if (!isNaN(event.key)) {
+        const index = Number(event.key) - 1;
+        if (modes[index]) {
+          setMode(modes[index]);
+        }
+      }
+    });
+  </script>
+</html>

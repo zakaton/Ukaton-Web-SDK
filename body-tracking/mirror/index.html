@@ -1,10 +1,16 @@
 <html>
   <head>
     <title>Mirror | Ukaton</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
     <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@b78a9f4552e01d2cd933f26b07a223c43007a97c/dist/aframe-master.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
 
-    <script src="/MissionMesh.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
     <script src="/body-tracking/ukaton-body-tracking.js"></script>
     <script src="/body-tracking/aframe-webcam-component.js"></script>
     <!-- https://glitch.com/edit/#!/aframe-threejs-reflector?path=aframe-mirror.js%3A258%3A32 -->
@@ -39,6 +45,9 @@
       </button>
       <button class="clickable" onclick="calibrate()">
         calibrate
+      </button>
+      <button class="clickable" onclick="addBluetoothDevice()">
+        add device
       </button>
       <button
         class="clickable hidden"
@@ -127,6 +136,9 @@
     }
     function calibrate() {
       rig.emit("calibrate", { delay: 2000 });
+    }
+    function addBluetoothDevice() {
+      rig.emit("addbluetoothdevice");
     }
 
     const scene = document.querySelector("a-scene");
