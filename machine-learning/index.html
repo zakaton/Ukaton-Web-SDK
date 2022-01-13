@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Ukaton Side Missions | Machine Learning</title>
+    <title>Machine Learning | Ukaton</title>
     <link
       rel="icon"
       href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
@@ -43,6 +43,10 @@
       font-size: 60;
     }
 
+    #tflite {
+      display: none !important;
+    }
+
     input[type="number"] {
       width: 100px;
     }
@@ -71,25 +75,21 @@
   </style>
 
   <body>
-    <h1>
-      Ukaton Side Mission | Machine Learning
-    </h1>
+    <h1>Machine Learning | Ukaton Missions</h1>
 
     <hr />
 
-    <div id="numberOfSideMissions">
-      <h2>
-        Number of Side Missions
-      </h2>
+    <div id="numberOfMissionDevices">
+      <h2>Number of Mission Devices</h2>
 
       <label>
-        number of side missions:
+        number of mission devices:
         <input
           type="number"
           min="1"
           step="1"
           value="1"
-          oninput="onInputNumberOfSideMissions(event)"
+          oninput="onInputNumberOfMissionDevices(event)"
         />
       </label>
     </div>
@@ -99,10 +99,8 @@
     <div id="iframes">
       <template>
         <div>
-          <h2 class="index">
-            1
-          </h2>
-          <iframe src="/visualization" width="90%" height="500"></iframe>
+          <h2 class="index">1</h2>
+          <iframe src="/data-viz" width="90%" height="500"></iframe>
         </div>
       </template>
     </div>
@@ -125,9 +123,12 @@
       <hr />
 
       <div id="inputs">
-        <h3>
-          Inputs
-        </h3>
+        <h3>Inputs</h3>
+
+        <label data-input="pressureDoubleByte">
+          Pressure
+          <input type="checkbox" oninput="onToggleInput(event)" data-options />
+        </label>
 
         <label data-input="acceleration">
           Acceleration
@@ -158,9 +159,7 @@
       <hr />
 
       <div id="outputs">
-        <h3>
-          Outputs
-        </h3>
+        <h3>Outputs</h3>
 
         <label id="numberOfOutputs">
           Number of Outputs:
@@ -199,9 +198,7 @@
       <hr />
 
       <div id="Sampling">
-        <h3>
-          Sampling
-        </h3>
+        <h3>Sampling</h3>
 
         <label data-number-of-samples>
           Number of Samples:
@@ -244,9 +241,7 @@
       <hr />
 
       <div id="thresholds">
-        <h3>
-          Thresholds
-        </h3>
+        <h3>Thresholds</h3>
 
         <label data-thresholds="toggle">
           Toggle Thresholds
@@ -290,9 +285,7 @@
       <hr />
 
       <div id="captureDelay">
-        <h3>
-          Capture Delay
-        </h3>
+        <h3>Capture Delay</h3>
 
         <label>
           capture delay (ms)
@@ -306,25 +299,34 @@
           />
         </label>
       </div>
+      
+      <hr />
+      
+      <div id="neuralNetworkParams">
+        <h3>
+          Neural Network Parameters
+        </h3>
+        
+        <label>
+          learning rate: <input data-options type="number" value="0.2" step="0.1" min="0" oninput="onInputLearningRate(event)">
+        </label>
+        <label>
+          hidden units: <input data-options type="number" value="16" step="1" min="0" oninput="onInputHiddenUnits(event)">
+        </label>
+      </div>
 
       <hr />
 
       <div id="create">
-        <h3>
-          Create Neural Network
-        </h3>
+        <h3>Create Neural Network</h3>
 
-        <button onclick="onClickCreateNeuralNetwork(event)">
-          Create
-        </button>
+        <button onclick="onClickCreateNeuralNetwork(event)">Create</button>
       </div>
 
       <hr />
 
       <div id="addingData">
-        <h3>
-          Add Data
-        </h3>
+        <h3>Add Data</h3>
 
         <button data-add disabled onclick="onClickAddData(event)">
           Add Data
@@ -344,21 +346,22 @@
       <hr />
 
       <div id="train">
-        <h3>
-          Train Neural Network
-        </h3>
+        <h3>Train Neural Network</h3>
+        
+        <label>
+          epochs: <input data-train-option="epochs" type="number" min="1" value="32" step="1" oninput="onInputEpochs(event)">
+        </label>
+        <label>
+          batch size: <input data-train-option="batchSize" type="number" min="1" value="12" step="1" oninput="onInputBatchSize(event)">
+        </label>
 
-        <button data-train disabled onclick="onClickTrain(event)">
-          Train
-        </button>
+        <button data-train disabled onclick="onClickTrain(event)">Train</button>
       </div>
 
       <hr />
 
       <div id="results">
-        <h3>
-          Classify & Predict
-        </h3>
+        <h3>Classify & Predict</h3>
 
         <button onclick="onClickTest()" disabled data-test>Test</button>
         <label>
@@ -372,9 +375,7 @@
         </label>
 
         <div>
-          <h4>
-            Results
-          </h4>
+          <h4>Results</h4>
 
           <h1 data-results></h1>
         </div>
@@ -383,9 +384,7 @@
       <hr />
 
       <div id="save">
-        <h3>
-          Save
-        </h3>
+        <h3>Save</h3>
 
         <button data-save disabled onclick="onClickSaveData(event)">
           Save Data
@@ -399,9 +398,7 @@
       <hr />
 
       <div id="load">
-        <h3>
-          Load
-        </h3>
+        <h3>Load</h3>
 
         <label>
           Load Data
@@ -430,11 +427,9 @@
       <hr />
 
       <div id="tflite">
-        <h3>
-          Tensorflow Lite
-        </h3>
+        <h3>Tensorflow Lite</h3>
 
-        <label style="display: none;">
+        <label style="display: none">
           quantize model
           <input disabled type="checkbox" data-tflite="quantize" />
         </label>
@@ -453,24 +448,32 @@
         >
           Download tflite model
         </button>
-        
+
         <label data-tflite="toggle">
-          enabled <input checked disabled type="checkbox" oninput="onToggleTfLiteModel(event)">
+          enabled
+          <input
+            checked
+            disabled
+            type="checkbox"
+            oninput="onToggleTfLiteModel(event)"
+          />
         </label>
-        
-        <button data-tflite="makeInference" disabled onclick="onClickMakeTfLiteInference(event)">
+
+        <button
+          data-tflite="makeInference"
+          disabled
+          onclick="onClickMakeTfLiteInference(event)"
+        >
           Make Inference
         </button>
 
         <div>
-          <h4>
-            Results
-          </h4>
+          <h4>Results</h4>
 
           <h1 data-tflite="results"></h1>
         </div>
       </div>
-      <hr>
+      <hr />
     </div>
   </body>
 
@@ -483,11 +486,11 @@
 
     let iframes = [];
     const iframePool = [];
-    let sideMissions = [];
-    const sideMissionPool = [];
-    function setNumberOfSideMissions(numberOfSideMissions) {
-      if (iframePool.length < numberOfSideMissions) {
-        while (iframePool.length < numberOfSideMissions) {
+    let missionDevices = [];
+    const missionDevicePool = [];
+    function setNumberOfMissionDevices(numberOfMissionDevices) {
+      if (iframePool.length < numberOfMissionDevices) {
+        while (iframePool.length < numberOfMissionDevices) {
           const container = document
             .querySelector("#iframes template")
             .content.cloneNode(true)
@@ -496,33 +499,36 @@
           iframePool.push(iframe);
           const index = iframePool.indexOf(iframe);
           container.querySelector(".index").innerText = index + 1;
-          iframe.addEventListener("load", event => {
-            const sideMission = iframe.contentWindow.sideMission;
-            sideMissionPool[index] = sideMission;
+          iframe.addEventListener("load", (event) => {
+            const missionDevice = iframe.contentWindow.missionDevice;
+            missionDevicePool[index] = missionDevice;
             iframe.contentDocument
-              .querySelectorAll("input")
-              .forEach(input => (input.disabled = true));
+              .querySelectorAll("input, select:not(#setDeviceType), button:not(#connect)")
+              .forEach((input) => (input.disabled = true));
             let allIframesHaveLoaded = true;
             for (
               let i = 0;
-              i < numberOfSideMissions && !allIframesHaveLoaded;
+              i < numberOfMissionDevices && !allIframesHaveLoaded;
               i++
             ) {
-              allIframesHaveLoaded = sideMissionPool[i];
+              allIframesHaveLoaded = missionDevicePool[i];
             }
             if (allIframesHaveLoaded) {
-              sideMissions = sideMissionPool.slice(0, numberOfSideMissions);
+              missionDevices = missionDevicePool.slice(
+                0,
+                numberOfMissionDevices
+              );
               window.dispatchEvent(new Event("updatednumberofsidemissions"));
             }
           });
           document.getElementById("iframes").appendChild(container);
         }
       } else {
-        sideMissions = sideMissionPool.slice(0, numberOfSideMissions);
+        missionDevices = missionDevicePool.slice(0, numberOfMissionDevices);
       }
 
-      iframes = iframePool.slice(0, numberOfSideMissions);
-      iframePool.forEach(iframe => {
+      iframes = iframePool.slice(0, numberOfMissionDevices);
+      iframePool.forEach((iframe) => {
         iframe.closest("div").style.display = iframes.includes(iframe)
           ? ""
           : "none";
@@ -535,9 +541,9 @@
       document.getElementById("captureDelay").style.display =
         iframes.length > 1 ? "none" : "";
     }
-    setNumberOfSideMissions(1);
-    function onInputNumberOfSideMissions(event) {
-      setNumberOfSideMissions(Number(event.target.value));
+    setNumberOfMissionDevices(1);
+    function onInputNumberOfMissionDevices(event) {
+      setNumberOfMissionDevices(Number(event.target.value));
     }
 
     let task = "classification";
@@ -546,7 +552,7 @@
       console.log(`changing task to ${task}`);
       document
         .querySelectorAll(`#outputs .outputs .output input`)
-        .forEach(input => {
+        .forEach((input) => {
           formatOutputs();
         });
     }
@@ -555,7 +561,7 @@
       const outputElements = Array.from(
         document.querySelectorAll("#outputs .outputs .output")
       );
-      outputElements.forEach(outputElement => {
+      outputElements.forEach((outputElement) => {
         const value = outputElement.querySelector("[data-value]");
         if (task == "classification") {
           value.setAttribute("value", 0);
@@ -577,7 +583,7 @@
       );
 
       const _outputs = outputElements.map(
-        outputElement => outputElement.querySelector("[data-name]").value
+        (outputElement) => outputElement.querySelector("[data-name]").value
       );
 
       if (_outputs.length) {
@@ -588,7 +594,7 @@
     function getOutputValues() {
       let outputValues = Array.from(
         document.querySelectorAll("#outputs .outputs .output [data-value]")
-      ).map(input => {
+      ).map((input) => {
         let value = Number(input.value);
         return value;
       });
@@ -636,7 +642,7 @@
     }
     document
       .querySelectorAll("[checked]")
-      .forEach(input => input.dispatchEvent(new Event("input")));
+      .forEach((input) => input.dispatchEvent(new Event("input")));
 
     let numberOfOutputs = 0;
 
@@ -653,7 +659,7 @@
         if (outputElements.length > numberOfOutputs) {
           outputElements
             .slice(numberOfOutputs)
-            .forEach(output => output.remove());
+            .forEach((output) => output.remove());
         } else {
           for (
             let index = 0;
@@ -715,7 +721,7 @@
 
     const thresholds = {
       linearAcceleration: 0,
-      rotationRate: 0
+      rotationRate: 0,
     };
     let allowThresholds = false;
     function onToggleThresholds(event) {
@@ -738,12 +744,16 @@
       if (enabled) {
         thresholds[thresholdName] = input.value;
         meter.low = input.value;
-        sideMissions[0].configureImu({ [thresholdName]: samplingRate });
+        missionDevices[0].setSensorDataConfigurations({
+          motion: { [thresholdName]: samplingRate },
+        });
       } else {
         input.value = 0;
         meter.low = 0;
         meter.value = 0;
-        sideMissions[0].configureImu({ [thresholdName]: 0 });
+        missionDevices[0].setSensorDataConfigurations({
+          motion: { [thresholdName]: 0 },
+        });
       }
     }
     function onInputThreshold(event) {
@@ -761,7 +771,7 @@
 
     const reachedThresholds = {
       linearAcceleration: false,
-      rotationRate: false
+      rotationRate: false,
     };
     function hasReachedThresholds() {
       let hasReachedThresholds = false;
@@ -779,10 +789,10 @@
     let waitingForCaptureDelayToEnd = false;
     window.addEventListener(
       "updatednumberofsidemissions",
-      event => {
-        const sideMission = sideMissions[0];
+      (event) => {
+        const missionDevice = missionDevices[0];
         for (const thresholdName in thresholds) {
-          sideMission.addEventListener(thresholdName, event => {
+          missionDevice.addEventListener(thresholdName, (event) => {
             const threshold = thresholds[thresholdName];
 
             const { message } = event;
@@ -791,9 +801,9 @@
             document.querySelector(
               `[data-input="${thresholdName}"] meter`
             ).value = length;
-            
+
             reachedThresholds[thresholdName] = length >= threshold;
-            
+
             if (hasReachedThresholds() && allowThresholds) {
               console.log("reached threshold!");
               if (neuralNetwork) {
@@ -829,63 +839,82 @@
     }
 
     /* global ml5 */
+    let hiddenUnits;
+    let learningRate;
+    function onInputHiddenUnits(event) {
+      hiddenUnits = Number(event.target.value)
+      console.log("updated hidden units", hiddenUnits)
+    }
+    function onInputLearningRate(event) {
+      learningRate = Number(event.target.value)
+      console.log("updated learning rate", learningRate)
+    }
+    
     let neuralNetwork;
     function onClickCreateNeuralNetwork(event) {
       const outputs = getOutputs();
       if (
         inputs.length &&
         outputs.length > (task === "classification" ? 1 : 0) &&
-        sideMissions.every(sideMission => sideMission.isConnected)
+        missionDevices.every((missionDevice) => missionDevice.isConnected)
       ) {
-        const imuConfiguration = {};
-        inputs.forEach(imuDataType => {
-          imuConfiguration[imuDataType] = samplingRate;
+        const sensorDataConfigurations = { motion: {}, pressure: {} };
+        inputs.forEach((dataType) => {
+          if (dataType == "pressureDoubleByte") {
+            sensorDataConfigurations.pressure[dataType] = samplingRate;
+          } else {
+            sensorDataConfigurations.motion[dataType] = samplingRate;
+          }
         });
         for (const thresholdName in thresholds) {
           if (thresholds[thresholdName] > 0) {
-            imuConfiguration[thresholdName] =
-              imuConfiguration[thresholdName] || samplingRate;
+            sensorDataConfigurations.motion[thresholdName] =
+              sensorDataConfigurations.motion[thresholdName] || samplingRate;
           }
         }
-        sideMissions.forEach(sideMission => {
-          sideMission.configureImu(imuConfiguration);
+        missionDevices.forEach((missionDevice) => {
+          missionDevice.setSensorDataConfigurations(sensorDataConfigurations);
         });
-
-        neuralNetwork = ml5.neuralNetwork({
+        
+        const options = {
           task,
 
           inputs: getNumberOfInputs(),
           outputs,
 
           debug: true,
-
-          learningRate: 0.06,
-          hiddenUnits: 72
-        });
+        }
+        if (learningRate) {
+          options.learningRate = learningRate;
+        }
+        if (hiddenUnits) {
+          options.hiddenUnits = hiddenUnits;
+        }
+        neuralNetwork = ml5.neuralNetwork(options);
 
         event.target.disabled = true;
         document
           .querySelectorAll("[data-options]")
-          .forEach(input => (input.disabled = true));
+          .forEach((input) => (input.disabled = true));
 
         document
           .querySelectorAll("#thresholds [data-input] input")
-          .forEach(input => (input.disabled = true));
+          .forEach((input) => (input.disabled = true));
 
         document
           .querySelectorAll("[data-add]")
-          .forEach(input => (input.disabled = false));
+          .forEach((input) => (input.disabled = false));
         document
           .querySelectorAll("[data-train]")
-          .forEach(input => (input.disabled = false));
+          .forEach((input) => (input.disabled = false));
 
         document
           .querySelectorAll("[data-save]")
-          .forEach(input => (input.disabled = false));
+          .forEach((input) => (input.disabled = false));
 
         document
           .querySelectorAll("[data-load]")
-          .forEach(input => (input.disabled = false));
+          .forEach((input) => (input.disabled = false));
 
         console.log("created neural network", neuralNetwork);
       }
@@ -897,22 +926,33 @@
       linearAcceleration: 3,
       rotationRate: 3,
       magnetometer: 3,
-      quaternion: 4
+      quaternion: 4,
+      pressureDoubleByte: 16,
     };
     function getNumberOfInputs() {
       let numberOfInputs = 0;
+      
       for (const input in inputCounts) {
-        if (inputs.includes(input)) {
+        if (input != "pressureDoubleByte" && inputs.includes(input)) {
           numberOfInputs += inputCounts[input];
         }
       }
       numberOfInputs *= numberOfSamples;
-      numberOfInputs *= sideMissions.length;
+      numberOfInputs *= missionDevices.length;
+      
+      if (inputs.includes("pressureDoubleByte")) {
+        missionDevices.forEach(missionDevice => {
+          if (missionDevice.isInsole) {
+            numberOfInputs += (inputCounts.pressureDoubleByte * numberOfSamples);
+          }
+        })
+      }
+      
       return numberOfInputs;
     }
 
     function includesAny(a, ...b) {
-      return b.some(_ => a.includes(_));
+      return b.some((_) => a.includes(_));
     }
 
     let isAddingData = false;
@@ -937,7 +977,7 @@
         isAddingData = true;
         addDataButton.disabled = true;
         addDataButton.innerText = "collecting data";
-        collectData(data => {
+        collectData((data) => {
           data.forEach((value, index) => {
             if (!value) {
               data[index] = 0.000001 * Math.random();
@@ -963,40 +1003,42 @@
     }
 
     function collectData(callback) {
-      let sideMissionsData = sideMissions.map(() => []); // [[{timestamp, [type]: value, isComplete: true|false}]]
+      let missionDevicesData = missionDevices.map(() => []); // [[{timestamp, [type]: value, isComplete: true|false}]]
 
-      const checkData = data => {
-        if (inputs.every(input => input in data)) {
+      const checkData = (data) => {
+        if (inputs.every((input) => input in data)) {
           data.isComplete = true;
         }
 
-        const hasCollectedAllData = sideMissionsData.every(sideMissionDatum => {
-          return (
-            sideMissionDatum.filter(data => data.isComplete).length >=
-            numberOfSamples
-          );
-        });
+        const hasCollectedAllData = missionDevicesData.every(
+          (missionDeviceDatum) => {
+            return (
+              missionDeviceDatum.filter((data) => data.isComplete).length >=
+              numberOfSamples
+            );
+          }
+        );
         if (hasCollectedAllData) {
           onCollectedData();
         }
       };
 
       const onCollectedData = () => {
-        console.log(sideMissionsData);
-        sideMissionsData = sideMissionsData.map(sideMissionDatum =>
-          sideMissionDatum
-            .filter(data => data.isComplete)
+        console.log(missionDevicesData);
+        missionDevicesData = missionDevicesData.map((missionDeviceDatum) =>
+          missionDeviceDatum
+            .filter((data) => data.isComplete)
             .sort((a, b) => a.timestamp - b.timestamp)
         );
-        const data = sideMissionsData.flatMap(sideMissionDatum =>
-          sideMissionDatum
+        const data = missionDevicesData.flatMap((missionDeviceDatum) =>
+          missionDeviceDatum
             .slice(0, numberOfSamples)
-            .flatMap(data => inputs.flatMap(input => data[input]))
+            .flatMap((data) => inputs.flatMap((input) => data[input]))
         );
         callback(data);
-        sideMissions.forEach((sideMission, index) => {
+        missionDevices.forEach((missionDevice, index) => {
           for (const input in eventListeners[index]) {
-            sideMission.removeEventListener(
+            missionDevice.removeEventListener(
               input,
               eventListeners[index][input]
             );
@@ -1005,32 +1047,32 @@
       };
 
       const eventListeners = []; // [{type: eventListener}]
-      sideMissions.forEach((sideMission, index) => {
+      missionDevices.forEach((missionDevice, index) => {
         eventListeners[index] = {};
-        inputs.forEach(input => {
-          eventListeners[index][input] = event => {
+        inputs.forEach((input) => {
+          eventListeners[index][input] = (event) => {
             const { timestamp } = event.message;
-            const sideMissionData = sideMissionsData[index];
+            const missionDeviceData = missionDevicesData[index];
 
-            const data = sideMissionData.find(
-              data => data.timestamp == timestamp
+            const data = missionDeviceData.find(
+              (data) => data.timestamp == timestamp
             ) || {
-              timestamp
+              timestamp,
             };
-            if (!sideMissionData.includes(data)) {
-              sideMissionData.push(data);
+            if (!missionDeviceData.includes(data)) {
+              missionDeviceData.push(data);
             }
-
-            //const value = event.message[input];
-            //const array = value.toArray();
-            let array = event.message.rawData;
-            array = array.map(
-              rawValue => rawValue / sideMission.imuDataRanges[input]
-            );
+            
+            let array = (input == "pressureDoubleByte")?
+              event.message.pressure.map(({value}) => value * BluetoothMissionDevice.PressureDataScalars.pressureDoubleByte)
+              : event.message[input].toArray();
+            if (input == "rotationRate") {
+              array.pop();
+            }
             data[input] = array;
             checkData(data);
           };
-          sideMission.addEventListener(input, eventListeners[index][input]);
+          missionDevice.addEventListener(input, eventListeners[index][input]);
         });
       });
     }
@@ -1039,29 +1081,47 @@
     let overlaps = 1;
     let overlap = 250;
     let isTraining = false;
+    
+    let epochs;
+    let batchSize;
+    function onInputEpochs(event) {
+      epochs = Number(event.target.value);
+      console.log("updated epochs", epochs);
+    }
+    function onInputBatchSize(event) {
+      batchSize = Number(event.target.value)
+      console.log("updated batch size", batchSize)
+    }
+    
     function onClickTrain(event) {
       if (neuralNetwork) {
-        //neuralNetwork.normalizeData();
+        neuralNetwork.normalizeData(); // TODO: remove for manual normalization given the range 
         if (isTraining) {
           return;
         }
         isTraining = true;
+        event.target.disabled = true;
+        const options = {epochs: epochs || 32, batchSize: batchSize || 12};
+        if (epochs) {
+          options.epochs = epochs;
+        }
+        if (batchSize) {
+          options.batchSize = batchSize;
+        }
         neuralNetwork.train(
-          {
-            batchSize: 18,
-            epochs: 200
-          },
+          options,
           () => {
+            isTraining = false;
             console.log("done training");
-            event.target.disabled = true;
+            event.target.disabled = false;
             document
               .querySelectorAll("[data-test]")
-              .forEach(input => (input.disabled = false));
+              .forEach((input) => (input.disabled = false));
             document
               .querySelectorAll(
                 '[data-tflite="convert"], [data-tflite="quantize"]'
               )
-              .forEach(input => (input.disabled = false));
+              .forEach((input) => (input.disabled = false));
             test();
 
             if (samplingPeriod >= 2 * overlapMinimum) {
@@ -1094,7 +1154,7 @@
           return;
         }
         isTesting = true;
-        collectData(data => {
+        collectData((data) => {
           console.log("collected data", data);
           if (task == "classification") {
             neuralNetwork.classify(data, handleResults);
@@ -1112,7 +1172,7 @@
         console.log(results);
         const resultsContainer = document.querySelector("[data-results]");
         resultsContainer.innerHTML = "";
-        results.forEach(result => {
+        results.forEach((result) => {
           const { label } = result;
           let string = `label: ${label}, `;
           if (task == "classification") {
@@ -1173,20 +1233,20 @@
     // returns (model.weights.bin, model.json)
     function getModel(callback) {
       if (
-        sideMissions.length == 1 &&
+        missionDevices.length == 1 &&
         neuralNetwork &&
         neuralNetwork.neuralNetwork.isTrained
       ) {
         neuralNetwork.neuralNetwork.model.save(
-          ml5.tf.io.withSaveHandler(async data => {
+          ml5.tf.io.withSaveHandler(async (data) => {
             const weightsManifest = {
               modelTopology: data.modelTopology,
               weightsManifest: [
                 {
                   paths: [`./model.weights.bin`],
-                  weights: data.weightSpecs
-                }
-              ]
+                  weights: data.weightSpecs,
+                },
+              ],
             };
             callback(data.weightData, weightsManifest);
           })
@@ -1234,8 +1294,8 @@
       const a = minOut - minIn;
       const scaleRatio = (maxOut - minOut) / (maxIn - minIn);
 
-      X.forEach(row => {
-        rescaledX.push(row.map(v => (v + a) * scaleRatio));
+      X.forEach((row) => {
+        rescaledX.push(row.map((v) => (v + a) * scaleRatio));
       });
       return [rescaledX, Y];
     }
@@ -1298,26 +1358,26 @@
                   }
 
                   return fetch(url, req);
-                }
+                },
               }
             )
           )
-          .then(result => {
+          .then((result) => {
             console.log(result);
             const res = result.responses[0];
             res
               .arrayBuffer() // Download gzipped tar file and get ArrayBuffer
               .then(pako.inflate) // Decompress gzip using pako
-              .then(arr => arr.buffer) // Get ArrayBuffer from the Uint8Array pako returns
+              .then((arr) => arr.buffer) // Get ArrayBuffer from the Uint8Array pako returns
               .then(untar) // Untar
-              .then(files => {
+              .then((files) => {
                 // js-untar returns a list of files (See https://github.com/InvokIT/js-untar#file-object for details)
                 console.log("received files", files);
                 const tfLite_model_cpp = files.find(
-                  file => file.name === "tfLite_model.cpp"
+                  (file) => file.name === "tfLite_model.cpp"
                 );
                 const model_tflite = files.find(
-                  file => file.name === "model.tflite"
+                  (file) => file.name === "model.tflite"
                 );
                 console.log(tfLite_model_cpp, model_tflite);
                 isSendingModel = false;
@@ -1327,7 +1387,7 @@
                 window.dispatchEvent(new Event("convertedtflitemodel"));
               });
           })
-          .catch(error => {
+          .catch((error) => {
             console.log(error);
             isSendingModel = false;
             convertModelButton.disabled = false;
@@ -1347,8 +1407,9 @@
     }
 
     function onClickConvertToTfLite(event) {
-      const quantizeModel = document.querySelector('[data-tflite="quantize"]')
-        .checked;
+      const quantizeModel = document.querySelector(
+        '[data-tflite="quantize"]'
+      ).checked;
       sendModel(quantizeModel);
       event.target.disabled = true;
     }
@@ -1356,40 +1417,43 @@
     const downloadTfLiteButton = document.querySelector(
       '[data-tflite="download"]'
     );
-    window.addEventListener("convertedtflitemodel", event => {
+    window.addEventListener("convertedtflitemodel", (event) => {
       downloadTfLiteButton.disabled = false;
     });
     function onClickDownloadTfLite(event) {
       downloadBlob(tfLiteFiles.tfLite_model_cpp.blob, "tfLite_model.cpp");
       downloadBlob(tfLiteFiles.model_tflite.blob, "model.tflite");
     }
-    
-    const tfLiteModelToggle = document.querySelector('[data-tflite="toggle"] input')
+
+    const tfLiteModelToggle = document.querySelector(
+      '[data-tflite="toggle"] input'
+    );
     async function onToggleTfLiteModel(event) {
-      const sideMission = sideMissions[0];
-      if (!sideMission) return;
-      const isEnabled = await sideMission.isTfLiteModelEnabled();
+      const missionDevice = missionDevices[0];
+      if (!missionDevice) return;
+      const isEnabled = await missionDevice.isTfLiteModelEnabled();
       if (isEnabled) {
         console.log("disabling tflite model");
-        sideMission.disableTfLiteModel();
-      }
-      else {
+        missionDevice.disableTfLiteModel();
+      } else {
         console.log("enabling tflite model");
-        sideMission.enableTfLiteModel();
+        missionDevice.enableTfLiteModel();
       }
     }
-    const makeTfLiteInferenceButton = document.querySelector('[data-tflite="makeInference"]')
+    const makeTfLiteInferenceButton = document.querySelector(
+      '[data-tflite="makeInference"]'
+    );
     async function onClickMakeTfLiteInference(event) {
-      const sideMission = sideMissions[0];
-      const hasTfLiteModelLoaded = await sideMission.hasTfLiteModelLoaded();
+      const missionDevice = missionDevices[0];
+      const hasTfLiteModelLoaded = await missionDevice.hasTfLiteModelLoaded();
       if (hasTfLiteModelLoaded) {
-      sideMission.makeTfLiteInference();
+        missionDevice.makeTfLiteInference();
       }
     }
 
-    window.addEventListener("convertedtflitemodel", event => {
-      const sideMission = sideMissions[0];
-      sideMission
+    window.addEventListener("convertedtflitemodel", (event) => {
+      const missionDevice = missionDevices[0];
+      missionDevice
         .transferTfLiteModel({
           model: tfLiteFiles.model_tflite,
           type: task,
@@ -1398,10 +1462,10 @@
           sampleRate: samplingRate,
           numberOfSamples: numberOfSamples,
           thresholds,
-          captureDelay
+          captureDelay,
         })
         .then(() => {
-          sideMission.enableTfLiteModel();
+          missionDevice.enableTfLiteModel();
           makeTfLiteInferenceButton.disabled = false;
           tfLiteModelToggle.disabled = false;
         });
@@ -1411,11 +1475,13 @@
     );
     window.addEventListener(
       "updatednumberofsidemissions",
-      event => {
-        const sideMission = sideMissions[0];
-        sideMission.addEventListener("inference", event => {
+      (event) => {
+        const missionDevice = missionDevices[0];
+        missionDevice.addEventListener("inference", (event) => {
           const { index, value } = event.message;
-          tfLiteResultsContainer.innerText = `${outputs[index]}: ${value.toFixed(4)}`;
+          tfLiteResultsContainer.innerText = `${
+            outputs[index]
+          }: ${value.toFixed(4)}`;
         });
       },
       { once: true }
