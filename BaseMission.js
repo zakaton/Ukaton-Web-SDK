@@ -461,6 +461,7 @@ class BaseMission {
             message: {
               timestamp,
               [pressureSensorDataTypeString]: pressure,
+              pressure
             },
           });
 
@@ -509,7 +510,7 @@ class BaseMission {
         case this.PressureDataTypes.mass:
           {
             let mass = dataView.getUint32(byteOffset, true);
-            mass /= scalar;
+            mass *= scalar;
             this.pressure.mass = mass;
             byteOffset += 4;
 
@@ -766,9 +767,9 @@ Object.assign(BaseMission, {
   ],
 
   PressureDataScalars: {
-    pressureSingleByte: 2 ** 8,
-    pressureDoubleByte: 2 ** 12,
-    mass: 2 ** 16,
+    pressureSingleByte: 1 / (2 ** 8),
+    pressureDoubleByte: 1 / (2 ** 12),
+    mass: 1 / (2 ** 16),
   },
 
   PressurePositions: [

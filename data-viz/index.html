@@ -118,7 +118,7 @@
 
         <label class="connectionType">
           connection type:
-          <select>
+          <select id="setDeviceType">
             <option>bluetooth</option>
             <option>websocket</option>
           </select>
@@ -128,7 +128,7 @@
         <label class="gateway"> gateway: <input /> </label>
         <br />
 
-        <button>
+        <button id="connect">
           connect
         </button>
 
@@ -353,6 +353,7 @@
       connectionType == "bluetooth"
         ? new BluetoothMissionDevice()
         : new WebSocketMissionDevice();
+    window.missionDevice = missionDevice;
 
     const connectionTypeSelect = document.querySelector("#connection select");
     connectionTypeSelect.addEventListener("input", event => {
