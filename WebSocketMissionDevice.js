@@ -126,6 +126,17 @@ class WebSocketMissionDevice extends BaseMission {
         case this.MessageTypes.SENSOR_DATA:
           byteOffset = this._parseSensorData(dataView, byteOffset);
           break;
+        case this.MessageTypes.GET_WEIGHT_DATA_DELAY:
+        case this.MessageTypes.SET_WEIGHT_DATA_DELAY:
+          this._weightDataDelay = dataView.getUint16(byteOffset, true);
+          byteOffset += 2;
+          this._onWeightDataDelayUpdate();
+          break;
+        case this.MessageTypes.WEIGHT_DATA:
+          this._weight = dataView.getFloat32(byteOffset, true);
+          byteOffset += 4;
+          this._onWeightDataUpdate();
+          break;
         case this.MessageTypes.BATTERY_LEVEL:
           byteOffset = this._parseBatteryLevel(dataView, byteOffset);
           break;
@@ -497,10 +508,83 @@ class WebSocketMissionDevice extends BaseMission {
 
     return promise;
   }
+  
+  // WEIGHT DATA DELA
+  async getWeightDataDelay(sendImmediately = true) {
+    this._assertConnection();
+
+    if (this._weightDataDelay !== null) {
+      return this._weightDataDelay;
+    } else {
+      if (this._messagePromiseMap.has(this.MessageTypes.GET_WEIGHT_DATA_DELAY)) {
+        return this._messagePromiseMap.get(this.MessageTypes.GET_WEIGHT_DATA_DELAY);
+      } else {
+        const promise = new Promise((resolve, reject) => {
+          this.addEventListener(
+            "weightdatadelay",
+            event => {
+              const { error, message } = event;
+              if (error) {
+                reject(error);
+              } else {
+                resolve(message.weightDataDelay);
+              }
+
+              this._messagePromiseMap.delete(this.MessageTypes.GET_WEIGHT_DATA_DELAY);
+            },
+            { once: true }
+          );
+        });
+
+        this._messageMap.set(this.MessageTypes.GET_WEIGHT_DATA_DELAY);
+        if (sendImmediately) {
+          this.send();
+        }
+
+        this._messagePromiseMap.set(this.MessageTypes.GET_WEIGHT_DATA_DELAY, promise);
+        return promise;
+      }
+    }
+  }
+  async setWeightDataDelay(newWeightDataDelay, sendImmediately = true) {
+    this._assertConnection();
+    
+    this.log(`setting weight data delay to ${newWeightDataDelay}...`);
+
+    if (isNaN(newWeightDataDelay)) {
+      throw `weight data delay "${newWeightDataDelay}" is not a number!`;
+    }
+    newWeightDataDelay = Number(newWeightDataDelay);
+
+    const promise = new Promise((resolve, reject) => {
+      this.addEventListener(
+        "weightdatadelay",
+        event => {
+          const { error, message } = event;
+          if (error) {
+            reject(error);
+          } else {
+            resolve(message.weightDataDelay);
+          }
+        },
+        { once: true }
+      );
+    });
+    
+    this._messageMap.delete(this.MessageTypes.GET_WEIGHT_DATA_DELAY);
+    this._messageMap.set(this.MessageTypes.SET_WEIGHT_DATA_DELAY, Uint16Array.of([newWeightDataDelay]));
+    if (sendImmediately) {
+      this.send();
+    }
+
+    return promise;
+  }
 }
 
 Object.assign(BaseMission, {
   MessageTypeStrings: [
+    "BATTERY_LEVEL",
+
     "GET_DEBUG",
     "SET_DEBUG",
 
@@ -516,8 +600,11 @@ Object.assign(BaseMission, {
     "SET_SENSOR_DATA_CONFIGURATIONS",
 
     "SENSOR_DATA",
+    
+    "GET_WEIGHT_DATA_DELAY",
+    "SET_WEIGHT_DATA_DELAY",
 
-    "BATTERY_LEVEL"
+    "WEIGHT_DATA"
   ]
 });
 

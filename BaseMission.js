@@ -28,7 +28,7 @@ THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 class BaseMission {
   constructor() {
     this.isLoggingEnabled = !true;
-    this._reconnectOnDisconnection = true;
+    this._reconnectOnDisconnection = !true;
 
     this._debug = null;
     this._batteryLevel = null;
@@ -55,6 +55,8 @@ class BaseMission {
       heelToToe: 0,
       centerOfMass: { x: 0, y: 0 },
     });
+    this._weightDataDelay = null;
+    this._weight = null;
     
     this._sensorDataTimestampOffset = 0;
     this._lastRawSensorDataTimestamp = 0;
@@ -135,6 +137,14 @@ class BaseMission {
   _onNameUpdate() {
     this.log(`name: "${this._name}"`);
     this.dispatchEvent({ type: "name", message: { name: this._name } });
+  }
+  _onWeightDataDelayUpdate() {
+    this.log(`weight data delay: ${this._weightDataDelay}`);
+    this.dispatchEvent({ type: "weightdatadelay", message: { weightDataDelay: this._weightDataDelay } });
+  }
+  _onWeightDataUpdate() {
+    this.log(`weight: ${this._weight}`);
+    this.dispatchEvent({ type: "weight", message: { weight: this._weight } });
   }
 
   _parseMotionCalibration(dataView, byteOffset = 0) {
@@ -701,34 +711,6 @@ Object.assign(BaseMission, {
   textEncoder: new TextEncoder(),
   textDecoder: new TextDecoder(),
 
-  MessageTypeStrings: [
-    "TIMESTAMP",
-
-    "GET_NUMBER_OF_DEVICES",
-    "AVAILABILITY",
-
-    "DEVICE_ADDED",
-    "DEVICE_REMOVED",
-
-    "BATTERY_LEVEL",
-
-    "GET_NAME",
-    "SET_NAME",
-
-    "GET_TYPE",
-
-    "MOTION_CALIBRATION",
-
-    "GET_MOTION_CONFIGURATION",
-    "SET_MOTION_CONFIGURATION",
-
-    "GET_PRESSURE_CONFIGURATION",
-    "SET_PRESSURE_CONFIGURATION",
-
-    "MOTION_DATA",
-    "PRESSURE_DATA",
-  ],
-
   SensorTypeStrings: ["MOTION", "PRESSURE"],
 
   TypeStrings: ["MOTION_MODULE", "LEFT_INSOLE", "RIGHT_INSOLE"],
@@ -869,13 +851,6 @@ Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
   BaseMission.InsoleCorrectionQuaternions.left.setFromEuler(
     insoleCorrectionEuler
   );
-
-  window.updateCorrectionEuler = (x, y, z, order) => {
-    insoleCorrectionEuler.set(x, y, z, order);
-    BaseMission.InsoleCorrectionQuaternions.right.setFromEuler(
-      insoleCorrectionEuler
-    );
-  };
 }
 
 class BaseMissions {

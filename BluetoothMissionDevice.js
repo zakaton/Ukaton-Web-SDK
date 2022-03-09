@@ -1,6 +1,8 @@
-/* global THREE, BaseMission, BaseMissions */
+/* global THREE, BaseMission, BaseMissions, PeerBluetoothMissionDevice */
 
 class BluetoothMissionDevice extends BaseMission {
+  static MAX_NUMBER_OF_BLE_PEERS = 2;
+
   constructor() {
     super();
 
@@ -29,10 +31,10 @@ class BluetoothMissionDevice extends BaseMission {
     this._device = await navigator.bluetooth.requestDevice({
       filters: [
         {
-          services: [this.GENERATE_UUID("0000")]
-        }
+          services: [this.GENERATE_UUID("0000")],
+        },
       ],
-      optionalServices: ["battery_service"]
+      optionalServices: ["battery_service"],
     });
     this.log("got device!");
     this._device.addEventListener(
@@ -43,6 +45,26 @@ class BluetoothMissionDevice extends BaseMission {
     this.log("getting server");
     this._server = await this._device.gatt.connect();
     this.log("got server!");
+
+    // BATTERY SERVICE/CHARACTERITICS
+    this.log("getting battery service...");
+    this._batteryService = await this._server.getPrimaryService(
+      "battery_service"
+    );
+    this.log("got battery service!");
+
+    this.log("getting battery level characteristic...");
+    this._batteryLevelCharacteristic =
+      await this._batteryService.getCharacteristic("battery_level");
+    this.log("got battery level characteristic!");
+
+    this._batteryLevelCharacteristic.addEventListener(
+      "characteristicvaluechanged",
+      this._onBatteryLevelCharacteristicValueChanged.bind(this)
+    );
+    this.log("starting battery level notifications...");
+    await this._batteryLevelCharacteristic.startNotifications();
+    this.log("started battery level notifications!");
 
     this.log("getting service...");
     this._service = await this._server.getPrimaryService(
@@ -100,9 +122,8 @@ class BluetoothMissionDevice extends BaseMission {
 
     // MOTION CALIBRATION
     this.log("getting motion calibration characteristic...");
-    this._motionCalibrationCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("5001")
-    );
+    this._motionCalibrationCharacteristic =
+      await this._service.getCharacteristic(this.GENERATE_UUID("5001"));
     this.log("got motion calibration characteristic!");
 
     this._motionCalibrationCharacteristic.addEventListener(
@@ -115,9 +136,8 @@ class BluetoothMissionDevice extends BaseMission {
 
     // SENSOR DATA CONFIGURATION
     this.log("getting sensor data configuration characteristic...");
-    this._sensorDataConfigurationCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("6001")
-    );
+    this._sensorDataConfigurationCharacteristic =
+      await this._service.getCharacteristic(this.GENERATE_UUID("6001"));
     this.log("got sensor data configuration characteristic!");
 
     this.log("getting sensor data configuration...");
@@ -138,6 +158,32 @@ class BluetoothMissionDevice extends BaseMission {
     this.log("starting sensor data notifications...");
     await this._sensorDataCharacteristic.startNotifications();
     this.log("started sensor data notifications!");
+
+    // WEIGHT DATA DELAY
+    this.log("getting weight data delay characteristic...");
+    this._weightDataDelayCharacteristic = await this._service.getCharacteristic(
+      this.GENERATE_UUID("8001")
+    );
+    this.log("got weight data delay characteristic!");
+
+    this.log("getting weight data delay...");
+    await this.getWeightDataDelay();
+    this.log("got weight data delay!");
+
+    // WEIGHT DATA
+    this.log("getting weight data characteristic...");
+    this._weightDataCharacteristic = await this._service.getCharacteristic(
+      this.GENERATE_UUID("8002")
+    );
+    this.log("got weight data characteristic!");
+
+    this._weightDataCharacteristic.addEventListener(
+      "characteristicvaluechanged",
+      this._onWeightDataCharacteristicValueChanged.bind(this)
+    );
+    this.log("starting weight data notifications...");
+    await this._weightDataCharacteristic.startNotifications();
+    this.log("started weight data notifications!");
 
     // WIFI CHARACTERITICS
     this.log("getting wifi ssid characteristic...");
@@ -204,27 +250,16 @@ class BluetoothMissionDevice extends BaseMission {
     this.log("starting wifi MAC address notifications...");
     await this._wifiMACAddressCharacteristic.startNotifications();
     this.log("started wifi MAC address notifications!");
-
-    // BATTERY SERVICE/CHARACTERITICS
-    this.log("getting battery service...");
-    this._batteryService = await this._server.getPrimaryService(
-      "battery_service"
-    );
-    this.log("got battery service!");
-
-    this.log("getting battery level characteristic...");
-    this._batteryLevelCharacteristic = await this._batteryService.getCharacteristic(
-      "battery_level"
-    );
-    this.log("got battery level characteristic!");
-
-    this._batteryLevelCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onBatteryLevelCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting battery level notifications...");
-    await this._batteryLevelCharacteristic.startNotifications();
-    this.log("started battery level notifications!");
+    
+    // PEERS
+    this.log("getting peer characteristics...");
+    this.peers = [];
+    for (let index = 0; index < this.constructor.MAX_NUMBER_OF_BLE_PEERS; index++) {
+      const peer = new PeerBluetoothMissionDevice();
+      await peer.init(index, this._service);
+      this.peers.push(peer);
+    }
+    this.log("got peer characteristics!");
 
     // COMPLETED
     this.log("connection complete!");
@@ -238,6 +273,12 @@ class BluetoothMissionDevice extends BaseMission {
       this.log("attempting to reconnect...");
       this._device.gatt.connect();
     }
+  }
+
+  // BATTERY LEVEL
+  _onBatteryLevelCharacteristicValueChanged(event) {
+    const dataView = event.target.value;
+    this._parseBatteryLevel(dataView);
   }
 
   // DEBUG
@@ -269,7 +310,7 @@ class BluetoothMissionDevice extends BaseMission {
     this.log(`error message: ${errorMessage}`);
     this.dispatchEvent({
       type: "errorMessage",
-      message: { errorMessage }
+      message: { errorMessage },
     });
   }
 
@@ -335,9 +376,10 @@ class BluetoothMissionDevice extends BaseMission {
   // SENSOR DATA CONFIGURATION
   async getSensorDataConfigurations() {
     this._assertConnection();
-    
+
     if (this._sensorDataConfigurations == null) {
-      const dataView = await this._sensorDataConfigurationCharacteristic.readValue();
+      const dataView =
+        await this._sensorDataConfigurationCharacteristic.readValue();
       this.log("getting sensor data configuration", dataView);
       this._parseSensorDataConfigurations(dataView);
     }
@@ -347,13 +389,13 @@ class BluetoothMissionDevice extends BaseMission {
   async setSensorDataConfigurations(configurations = {}) {
     this._assertConnection();
 
-    const flattenedConfigurations = this._flattenSensorConfigurations(
-      configurations
-    );
+    const flattenedConfigurations =
+      this._flattenSensorConfigurations(configurations);
     await this._sensorDataConfigurationCharacteristic.writeValueWithResponse(
       flattenedConfigurations
     );
-    const dataView = await this._sensorDataConfigurationCharacteristic.readValue();
+    const dataView =
+      await this._sensorDataConfigurationCharacteristic.readValue();
     this._parseSensorDataConfigurations(dataView);
     return this.getSensorDataConfigurations();
   }
@@ -363,6 +405,38 @@ class BluetoothMissionDevice extends BaseMission {
     const dataView = event.target.value;
     this.log("received sensor data", dataView);
     this._parseSensorData(dataView);
+  }
+
+  // WEIGHT DATA DELAY
+  async getWeightDataDelay() {
+    this._assertConnection();
+
+    if (this._weightDelay == null) {
+      const dataView = await this._weightDataDelayCharacteristic.readValue();
+      this.log("getting weight data delay", dataView);
+      this._weightDataDelay = dataView.getUint16(0, true);
+      this._onWeightDataDelayUpdate();
+    }
+    return this._weightDelay;
+  }
+
+  async setWeightDataDelay(delay) {
+    this._assertConnection();
+    await this._weightDataDelayCharacteristic.writeValueWithResponse(
+      Uint16Array.of([delay])
+    );
+    const dataView = await this._weightDataDelayCharacteristic.readValue();
+    this._weightDataDelay = dataView.getUint16(0, true);
+    this._onWeightDataDelayUpdate();
+    return this._weightDataDelay;
+  }
+
+  // WEIGHT DATA
+  _onWeightDataCharacteristicValueChanged(event) {
+    const dataView = event.target.value;
+    this.log("received weight data", dataView);
+    this._weight = dataView.getFloat32(0, true);
+    this._onWeightDataUpdate();
   }
 
   // WIFI
@@ -396,7 +470,7 @@ class BluetoothMissionDevice extends BaseMission {
     this.log(`wifi ssid is ${this._wifiSSID}`);
     this.dispatchEvent({
       type: "wifissid",
-      message: { wifiSSID: this._wifiSSID }
+      message: { wifiSSID: this._wifiSSID },
     });
   }
 
@@ -430,7 +504,7 @@ class BluetoothMissionDevice extends BaseMission {
     this.log(`wifi password is ${this._wifiPassword}`);
     this.dispatchEvent({
       type: "wifipassword",
-      message: { wifiPassword: this._wifiPassword }
+      message: { wifiPassword: this._wifiPassword },
     });
   }
 
@@ -457,7 +531,7 @@ class BluetoothMissionDevice extends BaseMission {
     );
     this.dispatchEvent({
       type: "iswificonnected",
-      message: { isWifiConnected: this._isWifiConnected }
+      message: { isWifiConnected: this._isWifiConnected },
     });
   }
 
@@ -483,7 +557,7 @@ class BluetoothMissionDevice extends BaseMission {
     this._onWifiConnectUpdate();
     return this._wifiConnect;
   }
-  
+
   async connectToWifi() {
     return this._setWifiConnection(true);
   }
@@ -496,7 +570,7 @@ class BluetoothMissionDevice extends BaseMission {
     );
     this.dispatchEvent({
       type: "wificonnect",
-      message: { wifiConnect: this._wifiConnect }
+      message: { wifiConnect: this._wifiConnect },
     });
   }
 
@@ -521,7 +595,7 @@ class BluetoothMissionDevice extends BaseMission {
     this.log(`wifi IP Address: ${this._wifiIPAddress}`);
     this.dispatchEvent({
       type: "wifiipaddress",
-      message: { wifiIPAddress: this._wifiIPAddress }
+      message: { wifiIPAddress: this._wifiIPAddress },
     });
   }
 
@@ -546,15 +620,12 @@ class BluetoothMissionDevice extends BaseMission {
     this.log(`wifi MAC Address: ${this._wifiMACAddress}`);
     this.dispatchEvent({
       type: "wifimacaddress",
-      message: { wifiMACAddress: this._wifiMACAddress }
+      message: { wifiMACAddress: this._wifiMACAddress },
     });
   }
-
-  // BATTERY LEVEL
-  _onBatteryLevelCharacteristicValueChanged(event) {
-    const dataView = event.target.value;
-    this._parseBatteryLevel(dataView);
-  }
+  
+  // PEERS
+  
 }
 
 class BluetoothMissions extends BaseMissions {

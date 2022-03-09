@@ -33,6 +33,8 @@ AFRAME.registerSystem("ukaton-body-tracking", {
 
 AFRAME.registerComponent("ukaton-body-tracking", {
   schema: {
+    rate: { type: "number", default: 80 },
+
     footstepSounds: { type: "boolean", default: false },
     physics: { type: "boolean", default: true },
     hidePressure: { type: "boolean", default: false },
@@ -555,7 +557,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
         }
       });
 
-      sensorDataConfigurations.pressure.mass = 60;
+      sensorDataConfigurations.pressure.mass = this.data.rate;
     }
 
     device.addEventListener("quaternion", (event) => {
@@ -576,7 +578,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
       }
     });
 
-    sensorDataConfigurations.motion.quaternion = 60;
+    sensorDataConfigurations.motion.quaternion = this.data.rate;
 
     await device.setSensorDataConfigurations(sensorDataConfigurations);
   },
@@ -586,6 +588,17 @@ AFRAME.registerComponent("ukaton-body-tracking", {
     await bluetoothMissionDevice.connect();
     console.log("got bluetooth mission device", bluetoothMissionDevice);
     await this._setupDevice(bluetoothMissionDevice);
+    bluetoothMissionDevice.peers.forEach(async peer => {
+      let isConnected = await peer._isConnected();
+      if (isConnected) {
+        await this._setupDevice(peer);
+      }
+      else {
+        peer.addEventListener("connected", async () => {
+          await this._setupDevice(peer);
+        }, {once: true});
+      }
+    });
     return bluetoothMissionDevice;
   },
   _addWebSocketDevice: async function (gateway) {
@@ -1121,7 +1134,7 @@ AFRAME.registerComponent("ukaton-body-tracking", {
               .sub(rootPosition);
 
             const obstacleHeight = 0.4318; // gym bench height
-            const allowSteppingOnObstacle = false;
+            const allowSteppingOnObstacle = !true;
             if (allowSteppingOnObstacle) {
               footPosition.y =
                 footPosition.y >= obstacleHeight / 2 ? obstacleHeight : 0;
