@@ -35,10 +35,11 @@ AFRAME.registerComponent("ready-player-me", {
   dependencies: ["gltf-model"],
   schema: {
     hidePressure: { type: "boolean", default: true },
+    flip: { type: "boolean", default: true },
     manualArticulation: { type: "boolean", default: false },
     pressureAnchoringEnabled: { type: "boolean", default: true },
     gateway: { type: "array", default: [] },
-    rate: { type: "number", default: 40 },
+    rate: { type: "number", default: 20 },
   },
   init: function () {
     window._rig = this;
@@ -62,66 +63,6 @@ AFRAME.registerComponent("ready-player-me", {
 
       const _euler = new THREE.Euler();
       window._euler = _euler;
-
-      /*
-      // DELETE (begin)
-      window._updateCorrectionQuaternion = (name, x = 0, y = 0, z = 0, order = "XYZ") => {
-        if (this.names.includes(name)) {
-          console.log(name, x*Math.PI/2, y*Math.PI/2, z*Math.PI/2, order)
-          _euler.set(x*Math.PI/2, y*Math.PI/2, z*Math.PI/2, order)
-          correctionQuaternions[name] = new THREE.Quaternion().setFromEuler(_euler);
-          this.quaternionOffsets[name].identity();
-          this.yawQuaternionOffsets[name].identity();
-          this.pitchRollQuaternionOffsets[name].identity();
-          this.quaternions[name].identity();
-        }
-      }
-      
-      const correctionQuaternionIteration = {
-        x: -2,
-        y: -2,
-        z: -2,
-        order: "XYZ"
-      };
-      window._resetCorrectionQuaternionIterator = () => {
-        const o = correctionQuaternionIteration;
-        o.x = o.y = o.z = -2;
-        o.order = "XYZ";
-      }
-      const orders = ["XYZ", "YXZ", "XZY", "YZX", "ZXY", "ZYX"];
-      window._stepCorrectionQuaternionIterator = (name) => {
-        const o = correctionQuaternionIteration;
-        o.x++;
-        if (o.x == 3) {
-          o.x = -2;
-          o.y++;
-          if (o.y == 3) {
-            o.y = -2;
-            o.z++;
-            if (o.z == 3) {
-              o.z = -2;
-              const orderIndex = orders.indexOf(o.order);
-              let newOrderIndex = orderIndex+1;
-              if (orders.length == newOrderIndex) {
-                newOrderIndex = 0;
-              }
-              o.order = orders[newOrderIndex];
-            }
-          }
-        }
-        window._updateCorrectionQuaternion(name, o.x, o.y, o.z, o.order);
-      }
-      document.addEventListener("keypress", event => {
-        if (event.key == "v") {
-          window._stepCorrectionQuaternionIterator("leftBicep");
-        }
-        else if (event.key == "c") {
-          this._calibrate();
-        }
-      });
-      
-      // DELETE (end)
-      */
 
       _euler.set(0, Math.PI, 0);
       correctionQuaternions.head = new THREE.Quaternion().setFromEuler(_euler);
@@ -183,6 +124,20 @@ AFRAME.registerComponent("ready-player-me", {
       correctionQuaternions.rightFoot = new THREE.Quaternion().setFromEuler(
         _euler
       );
+    }
+    
+    {
+      const euler = new THREE.Euler();
+      const quaternion = new THREE.Quaternion();
+      
+      euler.x = Math.PI;
+      quaternion.setFromEuler(euler);
+      this.flipQuaternion = quaternion.clone();
+      
+      euler.x = 0;
+      euler.y = Math.PI;
+      quaternion.setFromEuler(euler);
+      this.flipFootQuaternion = quaternion.clone();
     }
 
     this.sides = ["left", "right"];
@@ -389,6 +344,15 @@ AFRAME.registerComponent("ready-player-me", {
 
         const { quaternion } = event.message;
         if (name in this.correctionQuaternions) {
+          if (this.data.flip) {
+            if (name.includes("Foot")) {
+              quaternion.multiply(this.flipFootQuaternion);
+            }
+            else {
+              quaternion.multiply(this.flipQuaternion);
+            }
+          }
+          
           this.quaternions[name].multiplyQuaternions(
             quaternion,
             this.correctionQuaternions[name]
@@ -403,6 +367,14 @@ AFRAME.registerComponent("ready-player-me", {
     sensorDataConfigurations.motion.quaternion = this.data.rate;
 
     await device.setSensorDataConfigurations(sensorDataConfigurations);
+    
+    device.addEventListener("connected", async event => {
+      await device.setSensorDataConfigurations(sensorDataConfigurations);
+    })
+    
+    device.addEventListener("isConnected", event => {
+      console.log("isConnected", event.message.isConnected, name);
+    });
   },
   _addBluetoothDevice: async function () {
     console.log("getting device");

@@ -3,6 +3,8 @@
 class BluetoothMissionDevice extends BaseMission {
   static MAX_NUMBER_OF_BLE_PEERS = 2;
 
+  _minimizeBluetooth = false;
+
   constructor() {
     super();
 
@@ -46,57 +48,33 @@ class BluetoothMissionDevice extends BaseMission {
     this._server = await this._device.gatt.connect();
     this.log("got server!");
 
-    // BATTERY SERVICE/CHARACTERITICS
-    this.log("getting battery service...");
-    this._batteryService = await this._server.getPrimaryService(
-      "battery_service"
-    );
-    this.log("got battery service!");
+    if (!this._minimizeBluetooth) {
+      // BATTERY SERVICE/CHARACTERITICS
+      this.log("getting battery service...");
+      this._batteryService = await this._server.getPrimaryService(
+        "battery_service"
+      );
+      this.log("got battery service!");
 
-    this.log("getting battery level characteristic...");
-    this._batteryLevelCharacteristic =
-      await this._batteryService.getCharacteristic("battery_level");
-    this.log("got battery level characteristic!");
+      this.log("getting battery level characteristic...");
+      this._batteryLevelCharacteristic =
+        await this._batteryService.getCharacteristic("battery_level");
+      this.log("got battery level characteristic!");
 
-    this._batteryLevelCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onBatteryLevelCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting battery level notifications...");
-    await this._batteryLevelCharacteristic.startNotifications();
-    this.log("started battery level notifications!");
+      this._batteryLevelCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onBatteryLevelCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting battery level notifications...");
+      await this._batteryLevelCharacteristic.startNotifications();
+      this.log("started battery level notifications!");
+    }
 
     this.log("getting service...");
     this._service = await this._server.getPrimaryService(
       this.GENERATE_UUID("0000")
     );
     this.log("got service!");
-
-    // DEBUG
-    this.log("getting debug characteristic...");
-    this._debugCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("1001")
-    );
-    this.log("got debug characteristic!");
-
-    this.log("getting debug value...");
-    await this.getDebug();
-    this.log("got debug value!");
-
-    // ERROR MESSAGE
-    this.log("getting error message characteristic...");
-    this._errorMessageCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("2001")
-    );
-    this.log("got error message characteristic!");
-
-    this._errorMessageCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onErrorMessageCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting error message  notifications...");
-    await this._errorMessageCharacteristic.startNotifications();
-    this.log("started error message notifications!");
 
     // TYPE
     this.log("getting type characteristic...");
@@ -120,19 +98,21 @@ class BluetoothMissionDevice extends BaseMission {
     await this.getName();
     this.log("got name value!");
 
-    // MOTION CALIBRATION
-    this.log("getting motion calibration characteristic...");
-    this._motionCalibrationCharacteristic =
-      await this._service.getCharacteristic(this.GENERATE_UUID("5001"));
-    this.log("got motion calibration characteristic!");
+    if (!this._minimizeBluetooth) {
+      // MOTION CALIBRATION
+      this.log("getting motion calibration characteristic...");
+      this._motionCalibrationCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("5001"));
+      this.log("got motion calibration characteristic!");
 
-    this._motionCalibrationCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onMotionCalibrationCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting motion calibration notifications...");
-    await this._motionCalibrationCharacteristic.startNotifications();
-    this.log("started imu calibration notifications!");
+      this._motionCalibrationCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onMotionCalibrationCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting motion calibration notifications...");
+      await this._motionCalibrationCharacteristic.startNotifications();
+      this.log("started imu calibration notifications!");
+    }
 
     // SENSOR DATA CONFIGURATION
     this.log("getting sensor data configuration characteristic...");
@@ -159,107 +139,190 @@ class BluetoothMissionDevice extends BaseMission {
     await this._sensorDataCharacteristic.startNotifications();
     this.log("started sensor data notifications!");
 
-    // WEIGHT DATA DELAY
-    this.log("getting weight data delay characteristic...");
-    this._weightDataDelayCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("8001")
-    );
-    this.log("got weight data delay characteristic!");
+    if (!this._minimizeBluetooth) {
+      // WEIGHT DATA DELAY
+      this.log("getting weight data delay characteristic...");
+      this._weightDataDelayCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("8001"));
+      this.log("got weight data delay characteristic!");
 
-    this.log("getting weight data delay...");
-    await this.getWeightDataDelay();
-    this.log("got weight data delay!");
+      this.log("getting weight data delay...");
+      await this.getWeightDataDelay();
+      this.log("got weight data delay!");
 
-    // WEIGHT DATA
-    this.log("getting weight data characteristic...");
-    this._weightDataCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("8002")
-    );
-    this.log("got weight data characteristic!");
+      // WEIGHT DATA
+      this.log("getting weight data characteristic...");
+      this._weightDataCharacteristic = await this._service.getCharacteristic(
+        this.GENERATE_UUID("8002")
+      );
+      this.log("got weight data characteristic!");
 
-    this._weightDataCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onWeightDataCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting weight data notifications...");
-    await this._weightDataCharacteristic.startNotifications();
-    this.log("started weight data notifications!");
+      this._weightDataCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onWeightDataCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting weight data notifications...");
+      await this._weightDataCharacteristic.startNotifications();
+      this.log("started weight data notifications!");
 
-    // WIFI CHARACTERITICS
-    this.log("getting wifi ssid characteristic...");
-    this._wifiSSIDCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("7001")
-    );
-    await this.getWifiSSID();
-    this.log("got wifi ssid characteristic!");
+      // WIFI CHARACTERITICS
+      this.log("getting wifi ssid characteristic...");
+      this._wifiSSIDCharacteristic = await this._service.getCharacteristic(
+        this.GENERATE_UUID("7001")
+      );
+      await this.getWifiSSID();
+      this.log("got wifi ssid characteristic!");
 
-    this.log("getting wifi password characteristic...");
-    this._wifiPasswordCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("7002")
-    );
-    await this.getWifiPassword();
-    this.log("got wifi password characteristic!");
+      this.log("getting wifi password characteristic...");
+      this._wifiPasswordCharacteristic = await this._service.getCharacteristic(
+        this.GENERATE_UUID("7002")
+      );
+      await this.getWifiPassword();
+      this.log("got wifi password characteristic!");
 
-    this.log("getting wifi connect characteristic...");
-    this._wifiConnectCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("7003")
-    );
-    await this.getWifiConnect();
-    this.log("got wifi connect characteristic!");
+      this.log("getting wifi connect characteristic...");
+      this._wifiConnectCharacteristic = await this._service.getCharacteristic(
+        this.GENERATE_UUID("7003")
+      );
+      await this.getWifiConnect();
+      this.log("got wifi connect characteristic!");
 
-    this.log("getting wifi is connected characteristic...");
-    this._isWifiConnectedCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("7004")
-    );
-    await this.isWifiConnected();
-    this.log("got wifi is connected characteristic!");
-    this._isWifiConnectedCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onWifiIsConnectedCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting wifi is connected notifications...");
-    await this._isWifiConnectedCharacteristic.startNotifications();
-    this.log("started wifi is connected notifications!");
+      this.log("getting wifi is connected characteristic...");
+      this._isWifiConnectedCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("7004"));
+      await this.isWifiConnected();
+      this.log("got wifi is connected characteristic!");
+      this._isWifiConnectedCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onWifiIsConnectedCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting wifi is connected notifications...");
+      await this._isWifiConnectedCharacteristic.startNotifications();
+      this.log("started wifi is connected notifications!");
 
-    this.log("getting wifi IP address characteristic...");
-    this._wifiIPAddressCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("7005")
-    );
-    await this.getWifiIPAddress();
-    this.log("got wifi IP address characteristic!");
+      this.log("getting wifi IP address characteristic...");
+      this._wifiIPAddressCharacteristic = await this._service.getCharacteristic(
+        this.GENERATE_UUID("7005")
+      );
+      await this.getWifiIPAddress();
+      this.log("got wifi IP address characteristic!");
 
-    this._wifiIPAddressCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onWifiIPAddressCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting wifi IP address notifications...");
-    await this._wifiIPAddressCharacteristic.startNotifications();
-    this.log("started wifi IP address notifications!");
+      this._wifiIPAddressCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onWifiIPAddressCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting wifi IP address notifications...");
+      await this._wifiIPAddressCharacteristic.startNotifications();
+      this.log("started wifi IP address notifications!");
 
-    this.log("getting wifi MAC address characteristic...");
-    this._wifiMACAddressCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("7006")
-    );
-    await this.getWifiMACAddress();
-    this.log("got wifi MAC address characteristic!");
+      this.log("getting wifi MAC address characteristic...");
+      this._wifiMACAddressCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("7006"));
+      await this.getWifiMACAddress();
+      this.log("got wifi MAC address characteristic!");
 
-    this._wifiMACAddressCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onWifiMACAddressCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting wifi MAC address notifications...");
-    await this._wifiMACAddressCharacteristic.startNotifications();
-    this.log("started wifi MAC address notifications!");
-    
+      this._wifiMACAddressCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onWifiMACAddressCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting wifi MAC address notifications...");
+      await this._wifiMACAddressCharacteristic.startNotifications();
+      this.log("started wifi MAC address notifications!");
+    }
+
     // PEERS
     this.log("getting peer characteristics...");
     this.peers = [];
-    for (let index = 0; index < this.constructor.MAX_NUMBER_OF_BLE_PEERS; index++) {
+    for (
+      let index = 0;
+      index < this.constructor.MAX_NUMBER_OF_BLE_PEERS;
+      index++
+    ) {
       const peer = new PeerBluetoothMissionDevice();
       await peer.init(index, this._service);
       this.peers.push(peer);
     }
     this.log("got peer characteristics!");
+
+    if (!this._minimizeBluetooth) {
+      // FILE TRANSFER
+
+      this.log("getting max file transfer size characteristic...");
+      this._maxFileSizeCharacteristic = await this._service.getCharacteristic(
+        this.GENERATE_UUID("a000")
+      );
+      await this.getMaxFileSize();
+      this.log("got max file transfer size characteristic!");
+
+      this.log("getting file transfer size characteristic...");
+      this._fileTransferSizeCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("a001"));
+      this.log("got file transfer size characteristic!");
+
+      this.log("getting max file transfer filePath length characteristic...");
+      this._maxFileTransferFilePathLengthCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("a002"));
+      await this.getMaxFileTransferFilePathLength();
+      this.log("got max file transfer filePath length characteristic!");
+
+      this.log("getting filePath characteristic...");
+      this._fileTransferFilePathCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("a003"));
+      this.log("got file transfer filePath characteristic!");
+
+      this.log("getting file transfer command characteristic...");
+      this._fileTransferCommandCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("a004"));
+      this.log("got file transfer command characteristic!");
+
+      this.log("getting file transfer status characteristic...");
+      this._fileTransferStatusCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("a005"));
+      await this.getFileTransferStatus();
+      this.log("got file transfer status characteristic!");
+
+      this._fileTransferStatusCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onFileTransferStatusCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting file transfer status notifications...");
+      await this._fileTransferStatusCharacteristic.startNotifications();
+      this.log("started file transfer status notifications!");
+
+      this.log("getting file transfer data characteristic...");
+      this._fileTransferDataCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("a006"));
+      this.log("got file transfer data characteristic!");
+
+      this._fileTransferDataCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onFileTransferDataCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting file transfer data notifications...");
+      await this._fileTransferDataCharacteristic.startNotifications();
+      this.log("started file transfer data notifications!");
+    }
+
+    if (!this._minimizeBluetooth) {
+      // FIRMWARE
+      this.log("getting firmware version characteristic...");
+      this._firmwareVersionCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("b000"));
+      await this.getFirmwareVersion();
+      this.log("got firmware version characteristic");
+
+      this.log("getting max firmware size characteristic...");
+      this._maxFirmwareSizeCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("b001"));
+      await this.getMaxFirmwareSize();
+      this.log("got max firmware size  characteristic");
+
+      this.log("getting firmware data characteristic...");
+      this._firmwareDataCharacteristic = await this._service.getCharacteristic(
+        this.GENERATE_UUID("b002")
+      );
+      this.log("got firmware data characteristic");
+    }
 
     // COMPLETED
     this.log("connection complete!");
@@ -279,39 +342,6 @@ class BluetoothMissionDevice extends BaseMission {
   _onBatteryLevelCharacteristicValueChanged(event) {
     const dataView = event.target.value;
     this._parseBatteryLevel(dataView);
-  }
-
-  // DEBUG
-  async getDebug() {
-    this._assertConnection();
-
-    if (this._debug == null) {
-      const dataView = await this._debugCharacteristic.readValue();
-      this._debug = Boolean(dataView.getUint8(0));
-      this._onDebugUpdate();
-    }
-    return this._debug;
-  }
-  async setDebug(debug) {
-    this._assertConnection();
-
-    this.log(`setting debug value to ${debug}...`);
-    await this._debugCharacteristic.writeValueWithResponse(
-      Uint8Array.of([debug ? 1 : 0])
-    );
-    this._debug = Boolean(this._debugCharacteristic.value.getUint8(0));
-    this._onDebugUpdate();
-  }
-
-  // ERROR MESSAGE
-  _onErrorMessageCharacteristicValueChanged(event) {
-    const dataView = event.target.value;
-    const errorMessage = this.textDecoder.decode(dataView);
-    this.log(`error message: ${errorMessage}`);
-    this.dispatchEvent({
-      type: "errorMessage",
-      message: { errorMessage },
-    });
   }
 
   // TYPE
@@ -623,9 +653,414 @@ class BluetoothMissionDevice extends BaseMission {
       message: { wifiMACAddress: this._wifiMACAddress },
     });
   }
+
+  // FILE TRANSFER
+  _maxFileSize = null;
+  async getMaxFileSize() {
+    this._assertConnection();
+
+    if (this._maxFileSize != null) {
+      return this._maxFileSize;
+    }
+
+    const maxFileSizeValue = await this._maxFileSizeCharacteristic.readValue();
+    this._maxFileSize = maxFileSizeValue.getUint32(0, true);
+
+    this.log("got max file transfer size", this._maxFileSize);
+    return this._maxFileSize;
+  }
+
+  _fileTransferSize = null;
+  async _getFileTransferSize(refresh = false) {
+    this._assertConnection();
+
+    if (this._fileTransferSize != null && !refresh) {
+      return this._fileTransferSize;
+    }
+
+    const fileTransferSizeValue =
+      await this._fileTransferSizeCharacteristic.readValue();
+    this._fileTransferSize = fileTransferSizeValue.getUint32(0, true);
+    this.log("updated file transfer size", this._fileTransferSize);
+    return this._fileTransferSize;
+  }
+  async _assertValidFileTransferSize(fileTransferSize) {
+    const maxFileSize = await this.getMaxFileSize();
+    if (fileTransferSize > maxFileSize) {
+      throw `File size is too big: ${fileTransferSize} bytes but max is ${maxFileSize}`;
+    }
+  }
+  async _setFileTransferSize(newFileTransferSize) {
+    this._assertConnection();
+
+    this.log(`setting file transfer size to ${newFileTransferSize} bytes...`);
+
+    this._assertValidFileTransferSize(newFileTransferSize);
+
+    await this._fileTransferSizeCharacteristic.writeValueWithResponse(
+      Uint32Array.from([newFileTransferSize])
+    );
+    this._fileTransferSize =
+      this._fileTransferSizeCharacteristic.value.getUint32(0, true);
+
+    return this._fileTransferSize;
+  }
+
+  _maxFileTransferFilePathLength = null;
+  async getMaxFileTransferFilePathLength() {
+    this._assertConnection();
+
+    if (this._maxFileTransferFilePathLength != null) {
+      return this._maxFileTransferFilePathLength;
+    }
+
+    const maxFileTransferFilePathLengthValue =
+      await this._maxFileTransferFilePathLengthCharacteristic.readValue();
+    this._maxFileTransferFilePathLength =
+      maxFileTransferFilePathLengthValue.getUint8(0);
+
+    this.log(
+      "got max file transfer filePath length",
+      this._maxFileTransferFilePathLength
+    );
+    return this._maxFileTransferFilePathLength;
+  }
+
+  _fileTransferFilePath = null;
+  async _getFileTransferFilePath(refresh = false) {
+    this._assertConnection();
+
+    if (this._fileTransferFilePath != null && !refresh) {
+      return this._fileTransferFilePath;
+    }
+
+    const fileTransferFilePathValue =
+      await this._fileTransferFilePathCharacteristic.readValue();
+    this._fileTransferFilePath = this.textDecoder.decode(
+      fileTransferFilePathValue
+    );
+    return this._fileTransferFilePath;
+  }
+  async _assertValidFileTransferFilePath(filePath) {
+    const maxFilePathLength = await this.getMaxFileTransferFilePathLength();
+    if (filePath.length > maxFilePathLength) {
+      throw `FilePath "${filePath}" is too long: max is ${maxFileSize} characters`;
+    }
+  }
+  async _setFileTransferFilePath(newFilePath) {
+    this._assertConnection();
+
+    this.log(`setting file transfer filePath to "${newFilePath}"...`);
+
+    this._assertValidFileTransferFilePath(newFilePath);
+
+    await this._fileTransferFilePathCharacteristic.writeValueWithResponse(
+      this.textEncoder.encode(newFilePath)
+    );
+    this._fileTransferFilePath = this.textDecoder.decode(
+      this._fileTransferFilePathCharacteristic.value
+    );
+
+    return this._fileTransferFilePath;
+  }
+
+  async _assertFileTransferCommand(command) {
+    if (!this.isValidFileTransferCommand(command)) {
+      throw `invalid file transfer command ${command}`;
+    }
+  }
+  async _setFileTransferCommand(command) {
+    this._assertConnection();
+
+    this.log(`setting file transfer command to ${command}...`);
+
+    this._assertFileTransferCommand(command);
+
+    const fileTransferStatus = await this.getFileTransferStatus();
+    if (fileTransferStatus !== this.FILE_TRANSFER_STATUSES.IDLE) {
+      throw "already transfefring file";
+    }
+
+    await this._fileTransferCommandCharacteristic.writeValueWithResponse(
+      Uint8Array.from([command])
+    );
+  }
+
+  async cancelFileTransfer() {
+    return this._setFileTransferCommand(
+      this.FILE_TRANSFER_COMMANDS.CANCEL_FILE_TRANSFER
+    );
+  }
+
+  _fileTransferStatus = null;
+  async getFileTransferStatus() {
+    this._assertConnection();
+
+    if (this._fileTransferStatus != null) {
+      return this._fileTransferStatus;
+    }
+
+    const fileTransferStatusValue =
+      await this._fileTransferStatusCharacteristic.readValue();
+    this._fileTransferStatus = fileTransferStatusValue.getUint8(0);
+    this._onFileTransferStatusUpdate();
+    return this._fileTransferStatus;
+  }
+  _onFileTransferStatusCharacteristicValueChanged(event) {
+    this._fileTransferStatus = event.target.value.getUint8(0);
+    this._onFileTransferStatusUpdate();
+  }
+  async _assertFileTransferStatusIsIdle() {
+    const status = await this.getFileTransferStatus();
+    if (status !== missionDevice.FILE_TRANSFER_STATUSES.IDLE) {
+      throw "file transfer service is busy"
+    }
+  }
+
+  async sendFile(file, filePath) {
+    this.log("transferring file", file);
+    this._assertFileTransferStatusIsIdle();
+    const fileBuffer = await this._getFileBuffer(file);
+
+    await this._setFileTransferSize(fileBuffer.byteLength);
+    await this._setFileTransferFilePath(filePath);
+
+    const commandArray = Uint8Array.of(
+      this.FILE_TRANSFER_COMMANDS.START_FILE_SEND
+    );
+    await this._fileTransferCommandCharacteristic.writeValueWithResponse(
+      commandArray
+    );
+
+    return this._sendFileBlock(fileBuffer, 0);
+  }
+
+  _maxBlockLength = 512;
+  async _sendFileBlock(fileContents, bytesAlreadySent) {
+    let bytesRemaining = fileContents.byteLength - bytesAlreadySent;
+
+    const maxBlockLength = this._maxBlockLength;
+    const blockLength = Math.min(bytesRemaining, maxBlockLength);
+    const blockView = new Uint8Array(
+      fileContents,
+      bytesAlreadySent,
+      blockLength
+    );
+
+    try {
+      await this._fileTransferDataCharacteristic.writeValueWithResponse(
+        blockView
+      );
+      bytesRemaining -= blockLength;
+      this.log(`File block written - ${bytesRemaining} bytes remaining`);
+      bytesAlreadySent += blockLength;
+      const progress = bytesAlreadySent / fileContents.byteLength;
+      this.dispatchEvent({
+        type: "filetransferprogress",
+        message: { progress, type: "send" },
+      });
+
+      if (
+        bytesRemaining > 0 &&
+        this._fileTransferStatus == this.FILE_TRANSFER_STATUSES.SENDING_FILE
+      ) {
+        return this._sendFileBlock(fileContents, bytesAlreadySent);
+      } else {
+        this.log("successfully written file");
+        this.dispatchEvent({
+          type: "filetransfercomplete",
+          message: { type: "send" },
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      this.log(`File block write error with ${bytesRemaining} bytes remaining`);
+    }
+  }
+
+  _receivedFileTransferArray = null;
+  async receiveFile(filePath) {
+    this.log("requesting file", filePath);
+    this._assertFileTransferStatusIsIdle();
+    await this._setFileTransferFilePath(filePath);
+
+    const commandArray = Uint8Array.of(
+      this.FILE_TRANSFER_COMMANDS.START_FILE_RECEIVE
+    );
+    await this._fileTransferCommandCharacteristic.writeValueWithResponse(
+      commandArray
+    );
+    
+    this._receivedFileTransferArray = null;
+
+    const fileSize = await this._getFileTransferSize(true);
+
+    if (fileSize > 0) {
+      return new Promise((resolve) => {
+        this.addEventListener("filetransfercomplete", (event) => resolve(event), {once: true});
+      });
+    }
+    else {
+      throw {error: "file doesn't exist", filePath}
+    }
+  }
+
+  async _onFileTransferDataCharacteristicValueChanged(event) {
+    const dataView = event.target.value;
+    this.log("received file data", dataView);
+    this._receivedFileTransferArray = this._concatenateArrayBuffers(
+      this._receivedFileTransferArray,
+      dataView
+    );
+    this.log(
+      "received file length",
+      this._receivedFileTransferArray.byteLength
+    );
+    const fileTransferSize = await this._getFileTransferSize();
+    const progress =
+      this._receivedFileTransferArray.byteLength / fileTransferSize;
+    this.log("filetransferprogress", progress)
+    this.dispatchEvent({
+      type: "filetransferprogress",
+      message: { progress, type: "receive" },
+    });
+
+    if (this._receivedFileTransferArray.byteLength == fileTransferSize) {
+      this.log("finished receiving file data!");
+      const filePath = await this._getFileTransferFilePath();
+      const filename = filePath.split('/').pop()
+      const file = new File([this._receivedFileTransferArray], filename);
+      this.dispatchEvent({
+        type: "filetransfercomplete",
+        message: { file, type: "receive" },
+      });
+    }
+  }
   
-  // PEERS
+  async removeFile(filePath) {
+    this.log("removing file", filePath);
+    this._assertFileTransferStatusIsIdle();
+    await this._setFileTransferFilePath(filePath);
+
+    const commandArray = Uint8Array.of(
+      this.FILE_TRANSFER_COMMANDS.REMOVE_FILE
+    );
+    await this._fileTransferCommandCharacteristic.writeValueWithResponse(
+      commandArray
+    );
+
+    return new Promise((resolve) => {
+      const eventListener = (event => {
+        if (event.message.filetransferstatus == this.FILE_TRANSFER_STATUSES.IDLE) {
+          this.removeEventListener("filetransferstatus", eventListener)
+          this.dispatchEvent({
+            type: "fileremovecomplete",
+            message: {filePath}
+          })
+          resolve()
+        }
+      }).bind(this)
+      this.addEventListener("filetransferstatus", eventListener)
+    });
+  }
   
+  async formatFilesystem() {
+    this.log("formatting filesystem");
+    this._assertFileTransferStatusIsIdle();
+
+    const commandArray = Uint8Array.of(
+      this.FILE_TRANSFER_COMMANDS.FORMAT_FILESYSTEM
+    );
+    await this._fileTransferCommandCharacteristic.writeValueWithResponse(
+      commandArray
+    );
+
+    return new Promise((resolve) => {
+      const eventListener = (event => {
+        if (event.message.filetransferstatus == this.FILE_TRANSFER_STATUSES.IDLE) {
+          this.removeEventListener("filetransferstatus", eventListener)
+          this.dispatchEvent({
+            type: "fileformatcomplete",
+            message: {filePath}
+          })
+          resolve();
+        }
+      }).bind(this)
+      this.addEventListener("filetransferstatus", eventListener)
+    });
+  }
+
+  // FIRMWARE UPDATE
+  async getFirmwareVersion() {
+    const firmwareVersionValue =
+      await this._firmwareVersionCharacteristic.readValue();
+    const firmwareVersion = this.textDecoder.decode(firmwareVersionValue);
+    return firmwareVersion;
+  }
+  async getMaxFirmwareSize() {
+    const maxFirmwareSizeValue =
+      await this._maxFirmwareSizeCharacteristic.readValue();
+    const maxFirmwareSize = maxFirmwareSizeValue.getUint32(0, true);
+    return maxFirmwareSize;
+  }
+
+  async updateFirmware(file) {
+    let fileBuffer = await this._getFileBuffer(file);
+    if (!fileBuffer) {
+      return;
+    }
+
+    const maxFirmwareSize = await this.getMaxFirmwareSize();
+
+    if (fileBuffer.byteLength > maxFirmwareSize) {
+      this.log(
+        `File length is too long: ${fileBuffer.byteLength} bytes but maximum is ${maximumFileLength}`
+      );
+      return;
+    }
+
+    this.log("transferring firmware", fileBuffer);
+
+    return this.sendFirmwareBlock(fileBuffer, 0);
+  }
+
+  async sendFirmwareBlock(fileContents, bytesAlreadySent) {
+    let bytesRemaining = fileContents.byteLength - bytesAlreadySent;
+
+    const maxBlockLength = this._maxBlockLength;
+    const blockLength = Math.min(bytesRemaining, maxBlockLength);
+    const blockView = new Uint8Array(
+      fileContents,
+      bytesAlreadySent,
+      blockLength
+    );
+
+    try {
+      await this.firmwareDataCharacteristic.writeValueWithResponse(blockView);
+      bytesRemaining -= blockLength;
+      this.log(`firmware block written - ${bytesRemaining} bytes remaining`);
+      bytesAlreadySent += blockLength;
+      const progress = bytesAlreadySent / fileContents.byteLength;
+      this.dispatchEvent({
+        type: "firmwareupdateprogress",
+        message: { progress },
+      });
+
+      if (bytesRemaining > 0) {
+        return this.sendFirmwareBlock(fileContents, bytesAlreadySent);
+      } else {
+        this.log("successfully updated firmware");
+        this.dispatchEvent({
+          type: "firmwareupdatecomplete",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      this.log(
+        `firmware block write error with ${bytesRemaining} bytes remaining`
+      );
+    }
+  }
 }
 
 class BluetoothMissions extends BaseMissions {

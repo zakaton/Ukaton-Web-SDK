@@ -155,8 +155,6 @@
           </span>
         </span>
         <br />
-
-        <label class="debug"> debug <input type="checkbox" /> </label>
         <br />
 
         <label class="type">
@@ -427,16 +425,6 @@
           `[data-motion-calibration="${key}"] span`
         ).innerText = motionCalibration[key];
       }
-    });
-
-    const debugCheckbox = document.querySelector("#connection .debug input");
-    missionDevice.addEventListener("connected", async event => {
-      const isDebuggingEnabled = await missionDevice.getDebug();
-      debugCheckbox.checked = isDebuggingEnabled;
-    });
-    debugCheckbox.addEventListener("input", async event => {
-      const { checked } = event.target;
-      await missionDevice.setDebug(checked);
     });
 
     const typeSelect = document.querySelector("#connection .type select");
