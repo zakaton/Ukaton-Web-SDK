@@ -1,6 +1,14 @@
 next Web SDK
+  automatically format quaternion/vectors based on...config (and device type)
   pressure value should be (0, 1) normalized based on bit precision, with a rawValue for TinyML
   make euler a data type you can configure (just enables quaternion)
+  same data example for ble/websocket
+  Mass, CenterOfMass, HeelToToe (each is derived from the left one)
+  [characterstic] array to make getting BLE services/characteristics easier
+  using class properties and static blocks and private variables for easier setup
+  global "isLoggingEnabled" once we compile...
+  bluetooth reconnnection - when reconnected get brand new services/characteristics
+  PeerBluetoothMissionDevice - need to rethink "isConnected" and stuff....
   errors
     warnings when not connected (nothing happens) or will fail silently (setting pressure configuration)
     errors when something that should never happen happens
@@ -10,10 +18,17 @@ next Web SDK
   use ble notifications and promises to make things cleaner and easier for websocket-based stuff
     events for ("namechange", "typechange", "debugchange", "configurationchange")
   make all keys lowercase (motion, pressure)
+  UKATON global (like THREE or AFRAME)
+  parcel or something for bundling (so we don't have to include others)
+  github for cdn stuff
+  missions.connect (detect whether it's left or right)
+  ble filters for device type?
   make eventDispatcher messages camelCase to make event.message[type] easier
   isValidSensorDataType(sensorDataType, motionSensorType)
+  websocket get/set helpers (annoying to copy/paste all the messageMap stuff...)
   index DataType by SensorType to sensorType abstraction easier
   enabledSensorType(); // if an insole or not
+  global currentTime for aligned delays...
   while BLE can read characteristics, WebSockets needs an explicit message
     abstract get/set, so BLE can return after characteristic read/write
     but WebSocket can respond after the WebSocket response
@@ -47,3 +62,4 @@ next Web SDK
   ble helper functions for creating characteristics (type+subtype [type, 0, 0, subtype], notifications, etc)
   websocket helper functions for get/set (assert connection, promise hub, )
   promise hub for async get/set
+  

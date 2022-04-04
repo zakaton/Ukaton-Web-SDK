@@ -35,7 +35,7 @@
 
     <div id="connection">
       <label class="ip">
-        <b>ip address:</b> <input value="192.168.6.45" />
+        <b>ip address:</b> <input value="192.168.1.199" />
       </label>
       <button class="connect">
         connect
@@ -154,6 +154,57 @@
         <div data-type="centerOfMass">center of mass: <span></span></div>
         <div data-type="mass">mass: <span></span></div>
         <div data-type="heelToToe">heel to toe: <span></span></div>
+      </div>
+      
+      <div class="weight delay configuration">
+        <b>weight delay</b>
+        <label data-configuration="weight"
+          >weight: <input type="number" value="0" step="20" min="0" max="1000"
+        /></label>
+      </div>
+      <div class="weight data">
+        <b>weight data</b>
+        <div data-type="weight">weight (kg): <span></span></div>
+      </div>
+    </div>
+    
+    <hr>
+    
+    <div id="fileTransfer">
+      <h2>File Transfer</h2>
+
+      <label>sending file? <input type="checkbox" checked /></label>
+      <br />
+      <input type="file" />
+      <br />
+      <label>filePath: <input type="text" /></label>
+      <br />
+      <button class="transfer" disabled>transfer file</button>
+
+      <progress value="0"></progress>
+      
+      <br>
+      <button class="remove">
+        remove file
+      </button>
+      
+      <button class="format">
+        format filesystem
+      </button>
+    </div>
+    
+    <hr>
+    
+    <div id="firmware">
+      <h2>Firmware</h2>
+
+      <div class="firmware version">
+        <label> version: <input type="string" readonly /></label>
+      </div>
+
+      <div class="firmware update">
+        <button onclick="updateFirmware()">update firmware</button>
+        <progress value="0"></progress>
       </div>
     </div>
   </body>
@@ -330,5 +381,149 @@
         }
       );
     });
+    
+    // Weight stuff
+    deviceContainer.querySelector(".weight.delay input").addEventListener("input", event => {
+      const delay = Number(event.target.value);
+      missionDevice.setWeightDataDelay(delay);
+    })
+    missionDevice.addEventListener("weight", event => {
+      const {weight} = event.message;
+      deviceContainer.querySelector(".weight.data [data-type='weight'] span").innerText = weight;
+    });
+    
+    // File Transfer
+    const fileTransferContainer = document.querySelector("#fileTransfer");
+    const fileTransferCheckbox = fileTransferContainer.querySelector(
+      "input[type='checkbox']"
+    );
+    const fileTransferInput =
+      fileTransferContainer.querySelector("input[type='file']");
+    const fileTransferFilePathInput =
+      fileTransferContainer.querySelector("input[type='text']");
+    const fileTransferButton =
+      fileTransferContainer.querySelector("button.transfer");
+    const fileTransferProgress =
+      fileTransferContainer.querySelector("progress");
+    const removeFileButton =
+      fileTransferContainer.querySelector("button.remove");
+    const formatFilesystemButton =
+      fileTransferContainer.querySelector("button.format");
+
+    function getIsSendingFile() {
+      return fileTransferCheckbox.checked;
+    }
+    function getIsValidInput() {
+      var isValidInput = true;
+      isValidInput &&= fileTransferFilePathInput.value.length > 0;
+      if (getIsSendingFile()) {
+        isValidInput &&= fileTransferInput.files.length > 0;
+      }
+      return isValidInput;
+    }
+    function updateFileTransferButton() {
+      fileTransferButton.disabled = !getIsValidInput();
+      fileTransferButton.innerText = getIsSendingFile()
+        ? "send file"
+        : "receive file";
+    }
+    fileTransferCheckbox.addEventListener("input", (event) => {
+      const isSendingFile = getIsSendingFile();
+      fileTransferInput.disabled = !isSendingFile;
+      updateFileTransferButton();
+    });
+    fileTransferInput.addEventListener("input", (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        fileTransferFilePathInput.value = '/' + file.name
+      }
+      fileTransferFilePathInput.value
+      updateFileTransferButton();
+    });
+    missionDevice.addEventListener("connected", async (event) => {
+      const maxFileTransferFilePathLength = 31
+      fileTransferFilePathInput.maxLength = maxFileTransferFilePathLength;
+      fileTransferFilePathInput.size = maxFileTransferFilePathLength;
+    });
+    fileTransferFilePathInput.addEventListener("input", (event) => {
+      updateFileTransferButton();
+    });
+    fileTransferButton.addEventListener("click", async (event) => {
+      const fileTransferFilePath = fileTransferFilePathInput.value;
+      if (getIsSendingFile()) {
+        var file = fileTransferInput.files[0];
+        fileTransferInput.value = "";
+        await missionDevice.sendFile(file, fileTransferFilePath);
+      } else {
+        const file = await missionDevice.receiveFile(fileTransferFilePath);
+        console.log("file received", file);
+      }
+    });
+    
+    removeFileButton.addEventListener("click", async event => {
+      event.target.disabled = true
+      const fileTransferFilePath = fileTransferFilePathInput.value;
+      await missionDevice.removeFile(fileTransferFilePath);
+      event.target.disabled = false
+    })
+    formatFilesystemButton.addEventListener("click", event => {
+      missionDevice.formatFilesystem();
+    })
+
+    missionDevice.addEventListener("filetransferprogress", (event) => {
+      const { progress } = event.message;
+      fileTransferProgress.value = progress;
+    });
+    missionDevice.addEventListener("filetransfercomplete", async (event) => {
+      if (event.message.type == "receive") {
+        const { file } = event.message
+        const link = document.createElement("a");
+        link.download = file.name
+        link.href = URL.createObjectURL(file);
+        link.click();
+      }
+    });
+    
+    function sendArrayBuffer(length = 100, filePath = "/test.txt") {
+      const array = []
+      while (array.length < length) {
+        array.push(array.length)
+      }
+      const arrayBuffer = Uint8Array.from(array).buffer
+      missionDevice.sendFile(arrayBuffer, filePath)
+    }
+    
+    // Firmware update
+    const firmwareContainer = document.getElementById("firmware");
+    
+    const firmwareVersionInput = firmwareContainer.querySelector(".version input");
+    missionDevice.addEventListener("connected", async event => {
+      const version = await missionDevice.getFirmwareVersion();
+      firmwareVersionInput.value = version;
+    });
+    
+    const updateFirmwareButton = firmwareContainer.querySelector(".update button");
+    const updateFirmwareProgress = firmwareContainer.querySelector(".update progress");
+    missionDevice.addEventListener("firmwareupdateprogress", (event) => {
+      const { progress } = event.message;
+      updateFirmwareProgress.value = progress;
+    });
+
+    function updateFirmware() {
+      if (!missionDevice.isConnected) {
+        return;
+      }
+
+      updateFirmwareButton.disabled = true;
+      updateFirmwareProgress.value = 0;
+
+      missionDevice.updateFirmware(
+        "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/firmware.bin?v=1647219503819"
+      );
+    }
+    
+    missionDevice.addEventListener("disconnected", event => {
+      window.location = window.location
+    })
   </script>
 </html>

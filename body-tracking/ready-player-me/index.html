@@ -1,23 +1,19 @@
 <html>
   <head>
-    <title>Mirror | Ukaton</title>
+    <title>Ready Player Me | Ukaton</title>
     <link
       rel="icon"
       href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
     />
-    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@b78a9f4552e01d2cd933f26b07a223c43007a97c/dist/aframe-master.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
+
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script>
 
     <script src="/BaseMission.js"></script>
     <script src="/BluetoothMissionDevice.js"></script>
     <script src="/PeerBluetoothMissionDevice.js"></script>
     <script src="/WebSocketMissionDevice.js"></script>
-    <script src="/body-tracking/ukaton-body-tracking.js"></script>
-    <script src="/body-tracking/aframe-webcam-component.js"></script>
-    <!-- https://glitch.com/edit/#!/aframe-threejs-reflector?path=aframe-mirror.js%3A258%3A32 -->
-    <!-- https://github.com/aframevr/aframe/issues/4806#issuecomment-861114767 -->
-    <script src="/body-tracking/aframe-mirror-component.js"></script>
-    <script src="/body-tracking/aframe-resonance-audio-component.js"></script>
+    <script src="/body-tracking/ready-player-me.js"></script>
   </head>
   <style>
     html,
@@ -35,24 +31,22 @@
     #overlay .clickable {
       pointer-events: all;
     }
-    .hidden {
+    #overlay .hidden {
       display: none;
     }
   </style>
   <body>
     <div id="overlay">
       <button class="clickable" onclick="connect()">
-        connect
+        connect via WebSockets
       </button>
-      <button class="clickable" onclick="calibrate()">
-        calibrate
-      </button>
+      <button class="clickable" onclick="calibrate()">Calibrate</button>
       <button class="clickable" onclick="addBluetoothDevice()">
-        add device
+        add bluetooth device
       </button>
       <button
         class="clickable hidden"
-        onclick="navigator.clipboard.writeText('ws://192.168.5.193,ws://192.168.5.194,ws://192.168.5.241,ws://192.168.5.242,ws://192.168.5.201,ws://192.168.5.200,ws://192.168.5.243,ws://192.168.5.244,ws://192.168.5.240,ws://192.168.5.238,ws://192.168.5.236,ws://192.168.5.202,ws://192.168.5.239,ws://192.168.5.237,ws://192.168.5.204')"
+        onclick="navigator.clipboard.writeText('')"
       >
         copy gateways
       </button>
@@ -60,13 +54,17 @@
 
     <a-scene
       device-orientation-permission-ui="enabled: false"
-      resonance-audio="width: 50; depth: 50; height: 20; "
+      vr-mode-ui="enabled: false"
+      renderer="colorManagement: true;"
     >
       <a-assets>
         <canvas id="floorTexture"></canvas>
       </a-assets>
 
-      <a-camera></a-camera>
+      <a-camera
+        look-controls="enabled: false;"
+        orbit-controls="target: 0 1 0; minDistance: 0.1; maxDistance: 8; initialPosition: 0 0.2 -2"
+      ></a-camera>
 
       <a-light type="ambient" light="intensity: 0.6;"></a-light>
       <a-light
@@ -75,15 +73,6 @@
         light="castShadow: true; intensity: 0.6;"
         target="#rig"
       ></a-light>
-
-      <a-entity
-        id="mirror"
-        rotation="0 0 0"
-        position="0.0 1.5 -1"
-        geometry="primitive:plane; width:1.6; height:3.0"
-        aframe-mirror="color:#777; textureWidth:1024; textureHeight:1024;"
-      >
-      </a-entity>
 
       <a-plane
         id="floor"
@@ -98,9 +87,12 @@
       <a-entity
         id="rig"
         position="0 0 0"
-        ukaton-body-tracking="move-hands: false; pressure-anchoring-enabled: false; anchor-to-camera: true; hide-extremities: true; auto-connect: false; gateway: 193, 194, 241, 242, 201, 200, 243, 244, 240, 238, 236, 202, 239, 237, 204; forearm-radius: 0.030; elbow-radius: 0.030"
-        shadow
-      ></a-entity>
+        gltf-model="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/umar-avatar.glb?v=1646884379785"
+        ready-player-me="gateway: 192.168.1.223, 192.168.1.254, 192.168.1.173,
+        192.168.1.55, 192.168.1.132, 192.168.1.184, 192.168.1.251, 192.168.1.29,
+        192.168.1.85, 192.168.1.183, 192.168.1.224, 192.168.1.211,
+        192.168.1.201, 192.168.1.19, 192.168.1.140;" shadow ></a-entity
+      >
 
       <a-sky color="#ECECEC"></a-sky>
     </a-scene>
@@ -136,7 +128,7 @@
       rig.emit("connect");
     }
     function calibrate() {
-      rig.emit("calibrate", { delay: 2000 });
+      rig.emit("calibrate", { delay: 0000 });
     }
     function addBluetoothDevice() {
       rig.emit("addbluetoothdevice");

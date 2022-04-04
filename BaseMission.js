@@ -27,10 +27,9 @@ THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 
 class BaseMission {
   constructor() {
-    this.isLoggingEnabled = !true;
-    this._reconnectOnDisconnection = true;
+    this.isLoggingEnabled = true;
+    this._reconnectOnDisconnection = !true;
 
-    this._debug = null;
     this._batteryLevel = null;
     this._name = null;
     this._type = null;
@@ -55,6 +54,8 @@ class BaseMission {
       heelToToe: 0,
       centerOfMass: { x: 0, y: 0 },
     });
+    this._weightDataDelay = null;
+    this._weight = null;
     
     this._sensorDataTimestampOffset = 0;
     this._lastRawSensorDataTimestamp = 0;
@@ -74,6 +75,25 @@ class BaseMission {
         await this.setSensorDataConfigurations(sensorDataConfigurations);
       }
     });
+  }
+  
+  async _getFileBuffer(file) {
+    let fileBuffer;
+    if (file instanceof Array) {
+      fileBuffer = file;
+    } else if (file.buffer) {
+      fileBuffer = file.buffer;
+    } else if (typeof file == "string") {
+      const response = await fetch(file);
+      fileBuffer = await response.arrayBuffer();
+    } else if (file instanceof File) {
+      fileBuffer = await file.arrayBuffer();
+    } else if(file instanceof ArrayBuffer) {
+      fileBuffer = file
+    } else {
+      throw {error: "not a valid file type", file}
+    }
+    return fileBuffer
   }
 
   log() {
@@ -98,6 +118,24 @@ class BaseMission {
   }
 
   _concatenateArrayBuffers(...arrayBuffers) {
+    arrayBuffers = arrayBuffers.filter(arrayBuffer => arrayBuffer)
+    arrayBuffers = arrayBuffers.map(arrayBuffer => {
+      if (arrayBuffer instanceof ArrayBuffer) {
+        return arrayBuffer
+      }
+      else if ("buffer" in arrayBuffer && arrayBuffer.buffer instanceof ArrayBuffer) {
+        return arrayBuffer.buffer
+      }
+      else if (arrayBuffer instanceof DataView) {
+        return arrayBuffer.buffer
+      }
+      else if (arrayBuffer instanceof Array) {
+        return Uint8Array.from(arrayBuffer).buffer
+      }
+      else {
+        return arrayBuffer
+      }
+    })
     arrayBuffers = arrayBuffers.filter(
       (arrayBuffer) => arrayBuffer && "byteLength" in arrayBuffer
     );
@@ -115,10 +153,6 @@ class BaseMission {
     return uint8Array.buffer;
   }
 
-  _onDebugUpdate() {
-    this.log(`debug is ${this._debug ? "enabled" : "disabled"}`);
-    this.dispatchEvent({ type: "debug", message: { debug: this._debug } });
-  }
   getTypeString() {
     return this.TypeStrings[this._type];
   }
@@ -135,6 +169,14 @@ class BaseMission {
   _onNameUpdate() {
     this.log(`name: "${this._name}"`);
     this.dispatchEvent({ type: "name", message: { name: this._name } });
+  }
+  _onWeightDataDelayUpdate() {
+    this.log(`weight data delay: ${this._weightDataDelay}`);
+    this.dispatchEvent({ type: "weightdatadelay", message: { weightDataDelay: this._weightDataDelay } });
+  }
+  _onWeightDataUpdate() {
+    this.log(`weight: ${this._weight}`);
+    this.dispatchEvent({ type: "weight", message: { weight: this._weight } });
   }
 
   _parseMotionCalibration(dataView, byteOffset = 0) {
@@ -696,38 +738,46 @@ class BaseMission {
       message: { batteryLevel: this.batteryLevel },
     });
   }
+  
+
+  // file transfer
+  static FILE_TRANSFER_COMMANDS = {
+    START_FILE_SEND: 0,
+    START_FILE_RECEIVE: 1,
+    CANCEL_FILE_TRANSFER: 2,
+    REMOVE_FILE: 3,
+    FORMAT_FILESYSTEM: 4
+  };
+  get FILE_TRANSFER_COMMANDS() {
+    return this.constructor.FILE_TRANSFER_COMMANDS;
+  }
+  isValidFileTransferCommand(command) {
+    return command in this.FILE_TRANSFER_COMMANDS;
+  }
+
+  static FILE_TRANSFER_STATUSES = {
+    IDLE: 0,
+    SENDING_FILE: 1,
+    RECEIVING_FILE: 2,
+    REMOVING_FILE: 3,
+    FORMATTING_FILESYSTEM: 4
+  };
+  get FILE_TRANSFER_STATUSES() {
+    return this.constructor.FILE_TRANSFER_STATUSES;
+  }
+  
+  _onFileTransferStatusUpdate() {
+    this.log(`file transfer status: ${this._fileTransferStatus}`);
+    this.dispatchEvent({ type: "filetransferstatus", message: { fileTransferStatus: this._fileTransferStatus } });
+  }
+  _onFileTransferTypeUpdate() {
+    this.log(`file transfer type: "${this._fileTransferType}"`);
+    this.dispatchEvent({ type: "filetransfertype", message: { fileTransferType: this._fileTransferType } });
+  }
 }
 Object.assign(BaseMission, {
   textEncoder: new TextEncoder(),
   textDecoder: new TextDecoder(),
-
-  MessageTypeStrings: [
-    "TIMESTAMP",
-
-    "GET_NUMBER_OF_DEVICES",
-    "AVAILABILITY",
-
-    "DEVICE_ADDED",
-    "DEVICE_REMOVED",
-
-    "BATTERY_LEVEL",
-
-    "GET_NAME",
-    "SET_NAME",
-
-    "GET_TYPE",
-
-    "MOTION_CALIBRATION",
-
-    "GET_MOTION_CONFIGURATION",
-    "SET_MOTION_CONFIGURATION",
-
-    "GET_PRESSURE_CONFIGURATION",
-    "SET_PRESSURE_CONFIGURATION",
-
-    "MOTION_DATA",
-    "PRESSURE_DATA",
-  ],
 
   SensorTypeStrings: ["MOTION", "PRESSURE"],
 
@@ -869,13 +919,6 @@ Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
   BaseMission.InsoleCorrectionQuaternions.left.setFromEuler(
     insoleCorrectionEuler
   );
-
-  window.updateCorrectionEuler = (x, y, z, order) => {
-    insoleCorrectionEuler.set(x, y, z, order);
-    BaseMission.InsoleCorrectionQuaternions.right.setFromEuler(
-      insoleCorrectionEuler
-    );
-  };
 }
 
 class BaseMissions {
