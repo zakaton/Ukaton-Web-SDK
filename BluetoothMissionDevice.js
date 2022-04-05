@@ -324,6 +324,34 @@ class BluetoothMissionDevice extends BaseMission {
       this.log("got firmware data characteristic");
     }
 
+    // STEPS
+    this.log("getting is step tracking enabled characteristic...");
+    this._isStepTrackingEnabledCharacteristic =
+      await this._service.getCharacteristic(this.GENERATE_UUID("c000"));
+    await this.isStepTrackingEnabled();
+    this.log("got is step tracking enabled characteristic");
+
+    this.log("getting step tracking mass threshold characteristic...");
+    this._stepTrackingMassThresholdCharacteristic =
+      await this._service.getCharacteristic(this.GENERATE_UUID("c001"));
+    await this.getStepTrackingMassThreshold();
+    this.log("got step tracking mass threshold  characteristic");
+
+    this.log("getting step data characteristic...");
+    this._stepDataCharacteristic = await this._service.getCharacteristic(
+      this.GENERATE_UUID("c002")
+    );
+    await this.getSteps();
+    this.log("got step data characteristic");
+
+    this._stepDataCharacteristic.addEventListener(
+      "characteristicvaluechanged",
+      this._onStepDataCharacteristicValueChanged.bind(this)
+    );
+    this.log("starting step data notifications...");
+    await this._stepDataCharacteristic.startNotifications();
+    this.log("started step data notifications!");
+    
     // COMPLETED
     this.log("connection complete!");
     this.dispatchEvent({ type: "connected" });
@@ -813,7 +841,7 @@ class BluetoothMissionDevice extends BaseMission {
   async _assertFileTransferStatusIsIdle() {
     const status = await this.getFileTransferStatus();
     if (status !== missionDevice.FILE_TRANSFER_STATUSES.IDLE) {
-      throw "file transfer service is busy"
+      throw "file transfer service is busy";
     }
   }
 
@@ -890,18 +918,21 @@ class BluetoothMissionDevice extends BaseMission {
     await this._fileTransferCommandCharacteristic.writeValueWithResponse(
       commandArray
     );
-    
+
     this._receivedFileTransferArray = null;
 
     const fileSize = await this._getFileTransferSize(true);
 
     if (fileSize > 0) {
       return new Promise((resolve) => {
-        this.addEventListener("filetransfercomplete", (event) => resolve(event), {once: true});
+        this.addEventListener(
+          "filetransfercomplete",
+          (event) => resolve(event),
+          { once: true }
+        );
       });
-    }
-    else {
-      throw {error: "file doesn't exist", filePath}
+    } else {
+      throw { error: "file doesn't exist", filePath };
     }
   }
 
@@ -919,7 +950,7 @@ class BluetoothMissionDevice extends BaseMission {
     const fileTransferSize = await this._getFileTransferSize();
     const progress =
       this._receivedFileTransferArray.byteLength / fileTransferSize;
-    this.log("filetransferprogress", progress)
+    this.log("filetransferprogress", progress);
     this.dispatchEvent({
       type: "filetransferprogress",
       message: { progress, type: "receive" },
@@ -928,7 +959,7 @@ class BluetoothMissionDevice extends BaseMission {
     if (this._receivedFileTransferArray.byteLength == fileTransferSize) {
       this.log("finished receiving file data!");
       const filePath = await this._getFileTransferFilePath();
-      const filename = filePath.split('/').pop()
+      const filename = filePath.split("/").pop();
       const file = new File([this._receivedFileTransferArray], filename);
       this.dispatchEvent({
         type: "filetransfercomplete",
@@ -936,34 +967,34 @@ class BluetoothMissionDevice extends BaseMission {
       });
     }
   }
-  
+
   async removeFile(filePath) {
     this.log("removing file", filePath);
     this._assertFileTransferStatusIsIdle();
     await this._setFileTransferFilePath(filePath);
 
-    const commandArray = Uint8Array.of(
-      this.FILE_TRANSFER_COMMANDS.REMOVE_FILE
-    );
+    const commandArray = Uint8Array.of(this.FILE_TRANSFER_COMMANDS.REMOVE_FILE);
     await this._fileTransferCommandCharacteristic.writeValueWithResponse(
       commandArray
     );
 
     return new Promise((resolve) => {
-      const eventListener = (event => {
-        if (event.message.filetransferstatus == this.FILE_TRANSFER_STATUSES.IDLE) {
-          this.removeEventListener("filetransferstatus", eventListener)
+      const eventListener = ((event) => {
+        if (
+          event.message.filetransferstatus == this.FILE_TRANSFER_STATUSES.IDLE
+        ) {
+          this.removeEventListener("filetransferstatus", eventListener);
           this.dispatchEvent({
             type: "fileremovecomplete",
-            message: {filePath}
-          })
-          resolve()
+            message: { filePath },
+          });
+          resolve();
         }
-      }).bind(this)
-      this.addEventListener("filetransferstatus", eventListener)
+      }).bind(this);
+      this.addEventListener("filetransferstatus", eventListener);
     });
   }
-  
+
   async formatFilesystem() {
     this.log("formatting filesystem");
     this._assertFileTransferStatusIsIdle();
@@ -976,17 +1007,19 @@ class BluetoothMissionDevice extends BaseMission {
     );
 
     return new Promise((resolve) => {
-      const eventListener = (event => {
-        if (event.message.filetransferstatus == this.FILE_TRANSFER_STATUSES.IDLE) {
-          this.removeEventListener("filetransferstatus", eventListener)
+      const eventListener = ((event) => {
+        if (
+          event.message.filetransferstatus == this.FILE_TRANSFER_STATUSES.IDLE
+        ) {
+          this.removeEventListener("filetransferstatus", eventListener);
           this.dispatchEvent({
             type: "fileformatcomplete",
-            message: {filePath}
-          })
+            message: { filePath },
+          });
           resolve();
         }
-      }).bind(this)
-      this.addEventListener("filetransferstatus", eventListener)
+      }).bind(this);
+      this.addEventListener("filetransferstatus", eventListener);
     });
   }
 
@@ -1060,6 +1093,94 @@ class BluetoothMissionDevice extends BaseMission {
         `firmware block write error with ${bytesRemaining} bytes remaining`
       );
     }
+  }
+
+  // STEPS
+  _isStepTrackingEnabled = null;
+  async isStepTrackingEnabled() {
+    this._assertConnection();
+
+    if (this._isStepTrackingEnabled != null) {
+      return this._isStepTrackingEnabled;
+    }
+
+    const isStepTrackingEnabledValue = await this._isStepTrackingEnabledCharacteristic.readValue();
+    this._isStepTrackingEnabled = Boolean(isStepTrackingEnabledValue.getUint8(0));
+
+    this.log("is step tracking enabled?", this._isStepTrackingEnabled);
+    return this._isStepTrackingEnabled;
+  }
+  async setStepTrackingEnabled(enabled) {
+    this._assertConnection();
+
+    this.log("setting step tracking", enabled);
+
+    await this._isStepTrackingEnabledCharacteristic.writeValueWithResponse(Uint8Array.of([enabled? 1:0]));
+    this._isStepTrackingEnabled = Boolean(this._isStepTrackingEnabledCharacteristic.value.getUint8(0));
+
+    return this._isStepTrackingEnabled;
+  }
+  async enableStepTracking() {
+    return this.setStepTrakingEnabled(true);
+  }
+  async disableStepTracking() {
+    return this.setStepTrakingEnabled(false);
+  }
+  _stepTrackingMassThreshold = null;
+  async getStepTrackingMassThreshold() {
+    this._assertConnection();
+
+    if (this._stepTrackingMassThreshold != null) {
+      return this._stepTrackingMassThreshold;
+    }
+
+    const stepTrackingMassThresholdValue = await this._stepTrackingMassThresholdCharacteristic.readValue();
+    this._stepTrackingMassThreshold = stepTrackingMassThresholdValue.getFloat32(0, true);
+
+    this.log("step tracking mass threshold", this._stepTrackingMassThreshold);
+    return this._stepTrackingMassThreshold;
+  }
+  async setStepTrackingMassThreshold(massThreshold){
+    this._assertConnection();
+
+    this.log("setting step tracking mass threshold", massThreshold);
+
+    await this._stepTrackingMassThresholdCharacteristic.writeValueWithResponse(Float32Array.of([massThreshold]));
+    this._stepTrackingMassThreshold = this._stepTrackingMassThresholdCharacteristic.value.getFloat32(0, true)
+
+    return this._isStepTrackingEnabled;
+  }
+  _stepData = null;
+  async getSteps() {
+    this._assertConnection();
+    
+    if (this._stepData != null) {
+      return this._stepData;
+    }
+
+    const stepDataValue = await this._stepDataCharacteristic.readValue();
+    this._stepData = stepDataValue.getUint32(0, true);
+
+    this.log("steps", this._stepData);
+    return this._stepData;
+  }
+  async setSteps(steps) {
+    this._assertConnection();
+
+    this.log("setting steps", steps);
+
+    await this._stepDataCharacteristic.writeValueWithResponse(Uint32Array.of([steps]));
+    this._stepData = this._stepDataCharacteristic.value.getUint32(0, true)
+
+    return this._stepData;
+  }
+  _onStepDataCharacteristicValueChanged(event) {
+    const dataView = event.target.value
+    this._stepData = dataView.getUint32(0, true);
+    this.dispatchEvent({
+      type: "steps",
+      message: {steps: this._stepData}
+    })
   }
 }
 
