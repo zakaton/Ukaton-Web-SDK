@@ -352,6 +352,13 @@ class BluetoothMissionDevice extends BaseMission {
     await this._stepDataCharacteristic.startNotifications();
     this.log("started step data notifications!");
     
+    // HAPTICS
+    this.log("getting haptics vibration characteristic...");
+    this._hapticsVibrationCharacteristic = await this._service.getCharacteristic(
+      this.GENERATE_UUID("d000")
+    );
+    this.log("got haptic vibration characteristic");
+    
     // COMPLETED
     this.log("connection complete!");
     this.dispatchEvent({ type: "connected" });
@@ -1181,6 +1188,23 @@ class BluetoothMissionDevice extends BaseMission {
       type: "steps",
       message: {steps: this._stepData}
     })
+  }
+  
+  // HAPTICS
+  static VIBRATION_TYPES = {waveform: 0, sequence: 1}
+  get VIBRATION_TYPES() {return this.constructor.VIBRATION_TYPES}
+  async vibrateWaveform(waveform) {
+    return this._vibrate([this.VIBRATION_TYPES.waveform, ...waveform])
+  }
+  async vibrateSequence(sequence) {
+    // must be an even number
+    if (sequence.length % 2) {
+      sequence = sequence.slice(0, -1)
+    }
+    return this._vibrate([this.VIBRATION_TYPES.sequence, ...sequence.map((value, index) => (index%2)? Math.floor(value/10):value)])
+  }
+  async _vibrate(array) {
+    await this._hapticsVibrationCharacteristic.writeValue(Uint8Array.from(array))
   }
 }
 

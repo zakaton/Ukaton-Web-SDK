@@ -223,30 +223,99 @@
       <button class="transfer" disabled>transfer file</button>
 
       <progress value="0"></progress>
-      
-      <br>
-      <button class="remove">
-        remove file
-      </button>
-      
-      <button class="format">
-        format filesystem
-      </button>
+
+      <br />
+      <button class="remove">remove file</button>
+
+      <button class="format">format filesystem</button>
     </div>
-    
+
     <hr />
-    
+
     <div id="stepData">
       <h2>Step Data</h2>
-      <label>enabled? <input class="enabled" type="checkbox"></label>
-      <br>
-      <label>mass threshold: <input class="massThreshold" type="number" min="0" max="1" step="0.01" value="0"></label>
-      <br>
-      <label>number of steps: <input class="steps" type="number" readonly value="0" step="1" min="0" max="1000"></label>
-      <br>
-      <button class="reset">
-        reset steps
-      </button>
+      <label>enabled? <input class="enabled" type="checkbox" /></label>
+      <br />
+      <label
+        >mass threshold:
+        <input
+          class="massThreshold"
+          type="number"
+          min="0"
+          max="1"
+          step="0.01"
+          value="0"
+      /></label>
+      <br />
+      <label
+        >number of steps:
+        <input
+          class="steps"
+          type="number"
+          readonly
+          value="0"
+          step="1"
+          min="0"
+          max="1000"
+      /></label>
+      <br />
+      <button class="reset">reset steps</button>
+    </div>
+
+    <hr />
+
+    <div id="haptics">
+      <h2>Haptics</h2>
+
+      <label
+        >number of waveform slots:
+        <input
+          class="numberOfWaveformSlots"
+          type="number"
+          min="1"
+          max="8"
+          value="1"
+          step="1"
+      /></label>
+      <div class="waveform">
+        <input type="number" min="1" max="127" value="1" />
+        <input type="number" min="1" max="127" value="1" />
+        <input type="number" min="1" max="127" value="1" />
+        <input type="number" min="1" max="127" value="1" />
+        <input type="number" min="1" max="127" value="1" />
+        <input type="number" min="1" max="127" value="1" />
+        <input type="number" min="1" max="127" value="1" />
+        <input type="number" min="1" max="127" value="1" />
+      </div>
+      <br />
+      <button class="triggerWaveform">trigger waveform</button>
+
+      <br />
+
+      <label
+        >number of sequence segments:
+        <input
+          class="numberOfSequenceSegments"
+          type="number"
+          min="1"
+          max="10"
+          value="1"
+          step="1"
+      /></label>
+      <div class="sequence">
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" /> <br>
+      </div>
+      <br />
+      <button class="triggerSequence">trigger sequence</button>
     </div>
 
     <hr />
@@ -680,9 +749,9 @@
       updateFileTransferButton();
     });
     fileTransferInput.addEventListener("input", (event) => {
-      const file = event.target.files[0]
+      const file = event.target.files[0];
       if (file) {
-        fileTransferFilePathInput.value = '/' + file.name
+        fileTransferFilePathInput.value = "/" + file.name;
       }
       updateFileTransferButton();
     });
@@ -706,16 +775,16 @@
         console.log("file received", file);
       }
     });
-    
-    removeFileButton.addEventListener("click", async event => {
-      event.target.disabled = true
+
+    removeFileButton.addEventListener("click", async (event) => {
+      event.target.disabled = true;
       const fileTransferFilePath = fileTransferFilePathInput.value;
       await missionDevice.removeFile(fileTransferFilePath);
-      event.target.disabled = false
-    })
-    formatFilesystemButton.addEventListener("click", event => {
+      event.target.disabled = false;
+    });
+    formatFilesystemButton.addEventListener("click", (event) => {
       missionDevice.formatFilesystem();
-    })
+    });
 
     missionDevice.addEventListener("filetransferprogress", (event) => {
       const { progress } = event.message;
@@ -723,55 +792,110 @@
     });
     missionDevice.addEventListener("filetransfercomplete", async (event) => {
       if (event.message.type == "receive") {
-        const { file } = event.message
+        const { file } = event.message;
         const link = document.createElement("a");
-        link.download = file.name
+        link.download = file.name;
         link.href = URL.createObjectURL(file);
         link.click();
       }
     });
-    
+
     function sendArrayBuffer(length = 100, filePath = "/test.txt") {
-      const array = []
+      const array = [];
       while (array.length < length) {
-        array.push(array.length)
+        array.push(array.length);
       }
-      const arrayBuffer = Uint8Array.from(array).buffer
-      missionDevice.sendFile(arrayBuffer, filePath)
+      const arrayBuffer = Uint8Array.from(array).buffer;
+      missionDevice.sendFile(arrayBuffer, filePath);
     }
-    
+
     // Steps
     const stepDataContainer = document.querySelector("#stepData");
-    const enableStepDataInput = stepDataContainer.querySelector("input.enabled")
-    const stepDataMassThresholdInput = stepDataContainer.querySelector("input.massThreshold")
-    const numberOfStepsInput = stepDataContainer.querySelector("input.steps")    
-    const resetStepsThresholdButton = stepDataContainer.querySelector("button.reset")
-    
-    missionDevice.addEventListener("connected", async event => {
+    const enableStepDataInput =
+      stepDataContainer.querySelector("input.enabled");
+    const stepDataMassThresholdInput = stepDataContainer.querySelector(
+      "input.massThreshold"
+    );
+    const numberOfStepsInput = stepDataContainer.querySelector("input.steps");
+    const resetStepsThresholdButton =
+      stepDataContainer.querySelector("button.reset");
+
+    missionDevice.addEventListener("connected", async (event) => {
       enableStepDataInput.checked = await missionDevice.isStepTrackingEnabled();
-    })
-    enableStepDataInput.addEventListener("input", async event => {
-      await missionDevice.setStepTrackingEnabled(event.target.checked)
-    })
-    
-    missionDevice.addEventListener("connected", async event => {
-      stepDataMassThresholdInput.value = await missionDevice.getStepTrackingMassThreshold();
-    })
-    stepDataMassThresholdInput.addEventListener("input", async event => {
-      await missionDevice.setStepTrackingMassThreshold(Number(event.target.value))
-    })
-    
-    missionDevice.addEventListener("connected", async event => {
+    });
+    enableStepDataInput.addEventListener("input", async (event) => {
+      await missionDevice.setStepTrackingEnabled(event.target.checked);
+    });
+
+    missionDevice.addEventListener("connected", async (event) => {
+      stepDataMassThresholdInput.value =
+        await missionDevice.getStepTrackingMassThreshold();
+    });
+    stepDataMassThresholdInput.addEventListener("input", async (event) => {
+      await missionDevice.setStepTrackingMassThreshold(
+        Number(event.target.value)
+      );
+    });
+
+    missionDevice.addEventListener("connected", async (event) => {
       const steps = await missionDevice.getSteps();
       numberOfStepsInput.value = steps;
-    })
-    missionDevice.addEventListener("steps", event => {
-      numberOfStepsInput.value = event.message.steps
-    })
+    });
+    missionDevice.addEventListener("steps", (event) => {
+      numberOfStepsInput.value = event.message.steps;
+    });
+
+    resetStepsThresholdButton.addEventListener("click", async (event) => {
+      numberOfStepsInput.value = await missionDevice.setSteps(0);
+    });
     
-    resetStepsThresholdButton.addEventListener("click", async event => {
-        numberOfStepsInput.value = await missionDevice.setSteps(0)
+    // HAPTICS
+    // FILL
+    const hapticsContainer = document.querySelector("#haptics");
+    const triggerWaveformButton = hapticsContainer.querySelector("button.triggerWaveform")
+    const numberOfWaveformSlotsInput = hapticsContainer.querySelector("input.numberOfWaveformSlots")
+    const waveformContainer = hapticsContainer.querySelector("div.waveform")
+    const triggerSequenceButton = hapticsContainer.querySelector("button.triggerSequence")
+    const numberOfSequenceSegmentsInput = hapticsContainer.querySelector("input.numberOfSequenceSegments")
+    const sequenceContainer = hapticsContainer.querySelector("div.sequence")
+    
+    triggerWaveformButton.addEventListener("click", event => {
+      const waveform = []
+      waveformContainer.querySelectorAll("input").forEach((input, index) => {
+        if (index < numberOfWaveformSlots) {
+          waveform.push(Number(input.value))
+        }
+      })
+      missionDevice.vibrateWaveform(waveform)
     })
+    let numberOfWaveformSlots = 1
+    numberOfWaveformSlotsInput.addEventListener("input", event => {
+      numberOfWaveformSlots = Number(event.target.value)
+      waveformContainer.querySelectorAll("input").forEach((input, index) => {
+        input.style.display = index < numberOfWaveformSlots? "":"none"
+      })
+    })
+    numberOfWaveformSlotsInput.dispatchEvent(new Event("input"))
+    
+    triggerSequenceButton.addEventListener("click", event => {
+      const sequence = []
+      sequenceContainer.querySelectorAll("input").forEach((input, index) => {
+        const _index = (index%2? index-1:index)/2
+        if (_index < numberOfSequenceSegments) {
+          sequence.push(Number(input.value))
+        }
+      })
+      missionDevice.vibrateSequence(sequence)
+    })
+    let numberOfSequenceSegments = 1
+    numberOfSequenceSegmentsInput.addEventListener("input", event => {
+      numberOfSequenceSegments = Number(event.target.value)
+      sequenceContainer.querySelectorAll("input").forEach((input, index) => {
+        const _index = index%2? index-1:index
+        input.style.display = (_index/2) < numberOfSequenceSegments? "":"none"
+      })
+    })
+    numberOfSequenceSegmentsInput.dispatchEvent(new Event("input"))
 
     // Peers
     const peersContainer = document.querySelector("#peers");
