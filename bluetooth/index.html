@@ -268,6 +268,12 @@
       <h2>Haptics</h2>
 
       <label
+        >vibrate on change? <input type="checkbox" class="vibrateOnChange"
+      /></label>
+      <br />
+      <br />
+
+      <label
         >number of waveform slots:
         <input
           class="numberOfWaveformSlots"
@@ -308,16 +314,26 @@
         }
       </style>
       <div class="sequence">
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="100" value="40" /> <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
+        <input type="number" min="0" max="127" value="40" />
+        <input type="number" min="0" max="1000" value="100" step="10" />
       </div>
       <br />
       <button class="triggerSequence">trigger sequence</button>
@@ -853,54 +869,84 @@
     resetStepsThresholdButton.addEventListener("click", async (event) => {
       numberOfStepsInput.value = await missionDevice.setSteps(0);
     });
-    
+
     // HAPTICS
-    // FILL
     const hapticsContainer = document.querySelector("#haptics");
-    const triggerWaveformButton = hapticsContainer.querySelector("button.triggerWaveform")
-    const numberOfWaveformSlotsInput = hapticsContainer.querySelector("input.numberOfWaveformSlots")
-    const waveformContainer = hapticsContainer.querySelector("div.waveform")
-    const triggerSequenceButton = hapticsContainer.querySelector("button.triggerSequence")
-    const numberOfSequenceSegmentsInput = hapticsContainer.querySelector("input.numberOfSequenceSegments")
-    const sequenceContainer = hapticsContainer.querySelector("div.sequence")
-    
-    triggerWaveformButton.addEventListener("click", event => {
-      const waveform = []
+    const vibrateOnChangeInput = hapticsContainer.querySelector(
+      "input.vibrateOnChange"
+    );
+    const triggerWaveformButton = hapticsContainer.querySelector(
+      "button.triggerWaveform"
+    );
+    const numberOfWaveformSlotsInput = hapticsContainer.querySelector(
+      "input.numberOfWaveformSlots"
+    );
+    const waveformContainer = hapticsContainer.querySelector("div.waveform");
+    const triggerSequenceButton = hapticsContainer.querySelector(
+      "button.triggerSequence"
+    );
+    const numberOfSequenceSegmentsInput = hapticsContainer.querySelector(
+      "input.numberOfSequenceSegments"
+    );
+    const sequenceContainer = hapticsContainer.querySelector("div.sequence");
+
+    let vibrateOnChange = vibrateOnChangeInput.checked;
+    vibrateOnChangeInput.addEventListener("input", (event) => {
+      vibrateOnChange = vibrateOnChangeInput.checked;
+    });
+    waveformContainer.querySelectorAll("input").forEach((input, index) => {
+      input.addEventListener("input", event => {
+        if (vibrateOnChange) {
+          triggerWaveformButton.click()
+        }
+      })
+    });
+    sequenceContainer.querySelectorAll("input").forEach((input, index) => {
+      input.addEventListener("input", event => {
+        if (vibrateOnChange) {
+          triggerSequenceButton.click()
+        }
+      })
+    });
+
+    triggerWaveformButton.addEventListener("click", (event) => {
+      const waveform = [];
       waveformContainer.querySelectorAll("input").forEach((input, index) => {
         if (index < numberOfWaveformSlots) {
-          waveform.push(Number(input.value))
+          waveform.push(Number(input.value));
         }
-      })
-      missionDevice.vibrateWaveform(waveform)
-    })
-    let numberOfWaveformSlots = 1
-    numberOfWaveformSlotsInput.addEventListener("input", event => {
-      numberOfWaveformSlots = Number(event.target.value)
+      });
+      missionDevice.vibrateWaveform(waveform);
+    });
+    let numberOfWaveformSlots = 1;
+    numberOfWaveformSlotsInput.addEventListener("input", (event) => {
+      numberOfWaveformSlots = Number(event.target.value);
       waveformContainer.querySelectorAll("input").forEach((input, index) => {
-        input.style.display = index < numberOfWaveformSlots? "":"none"
-      })
-    })
-    numberOfWaveformSlotsInput.dispatchEvent(new Event("input"))
-    
-    triggerSequenceButton.addEventListener("click", event => {
-      const sequence = []
+        input.style.display = index < numberOfWaveformSlots ? "" : "none";
+      });
+    });
+    numberOfWaveformSlotsInput.dispatchEvent(new Event("input"));
+
+    triggerSequenceButton.addEventListener("click", (event) => {
+      const sequence = [];
       sequenceContainer.querySelectorAll("input").forEach((input, index) => {
-        const _index = (index%2? index-1:index)/2
+        const _index = (index % 2 ? index - 1 : index) / 2;
         if (_index < numberOfSequenceSegments) {
-          sequence.push(Number(input.value))
+          sequence.push(Number(input.value));
         }
-      })
-      missionDevice.vibrateSequence(sequence)
-    })
-    let numberOfSequenceSegments = 1
-    numberOfSequenceSegmentsInput.addEventListener("input", event => {
-      numberOfSequenceSegments = Number(event.target.value)
+      });
+      missionDevice.vibrateSequence(sequence);
+    });
+    let numberOfSequenceSegments = 1;
+    numberOfSequenceSegmentsInput.addEventListener("input", (event) => {
+      numberOfSequenceSegments = Number(event.target.value);
       sequenceContainer.querySelectorAll("input").forEach((input, index) => {
-        const _index = index%2? index-1:index
-        input.style.display = (_index/2) < numberOfSequenceSegments? "":"none"
-      })
-    })
-    numberOfSequenceSegmentsInput.dispatchEvent(new Event("input"))
+        const _index = index % 2 ? index - 1 : index;
+        input.style.display =
+          _index / 2 < numberOfSequenceSegments ? "" : "none";
+      });
+    });
+    numberOfSequenceSegmentsInput.dispatchEvent(new Event("input"));
 
     // Peers
     const peersContainer = document.querySelector("#peers");
