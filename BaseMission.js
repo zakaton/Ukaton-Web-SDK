@@ -187,6 +187,8 @@ class BaseMission {
       motionCalibration[motionCalibrationTypeString] = value;
       isFullyCalibrated = isFullyCalibrated && value == 3;
     });
+    // TODO - remove isFullyCalibrated for new firmware
+    // TODO - use this.MotionCalibrationTypeStrings for calibration values
     motionCalibration.isFullyCalibrated = isFullyCalibrated;
 
     //this.log("received motion calibration data", motionCalibration);
@@ -628,6 +630,13 @@ class BaseMission {
   get MotionCalibrationTypeStrings() {
     return this.constructor.MotionCalibrationTypeStrings;
   }
+  
+  get MotionCalibrationValues() {
+    return this.constructor.MotionCalibrationValues;
+  }
+  get MotionCalibrationValueStrings() {
+    return this.constructor.MotionCalibrationValueStrings;
+  }
 
   get MotionDataTypes() {
     return this.constructor.MotionDataTypes;
@@ -789,6 +798,13 @@ Object.assign(BaseMission, {
     "accelerometer",
     "magnetometer",
   ],
+  _MotionCalibrationTypeStrings: [ // TODO - NEW FIRMWARE STUFF
+    "accelerometer",
+    "gyroscope",
+    "magnetometer",
+    "quaternion",
+  ],
+  MotionCalibrationValueStrings: ["unreliable", "low", "medium", "high"],
 
   MotionDataTypeStrings: [
     "acceleration",
@@ -806,6 +822,14 @@ Object.assign(BaseMission, {
     rotationRate: 1 / 16,
     magnetometer: 1 / 16,
     quaternion: 1 / (1 << 14),
+  },
+  _MotionDataScalars: { // TODO - NEW FIRMWARE STUFF
+    acceleration: 2 ** -8,
+    gravity: 2 ** -8,
+    linearAcceleration: 2 ** -8,
+    rotationRate: 2 ** -9,
+    magnetometer: 2 ** -4,
+    quaternion: 2 ** -14,
   },
 
   PressureDataTypeStrings: [
@@ -886,6 +910,7 @@ Object.assign(BaseMission, {
 [
   "Type",
   "MotionCalibrationType",
+  "MotionCalibrationValue",
   "MotionDataType",
   "PressureDataType",
   "SensorType",
