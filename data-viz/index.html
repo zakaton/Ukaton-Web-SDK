@@ -113,9 +113,7 @@
   <body>
     <div id="container">
       <div id="connection">
-        <h1 style="margin: 0;">
-          Ukaton Mission
-        </h1>
+        <h1 style="margin: 0">Ukaton Mission</h1>
 
         <label class="connectionType">
           connection type:
@@ -129,9 +127,7 @@
         <label class="gateway"> gateway: <input /> </label>
         <br />
 
-        <button id="connect">
-          connect
-        </button>
+        <button id="connect">connect</button>
 
         <span class="batteryLevel">battery: <span>0</span>%</span>
         <br />
@@ -149,6 +145,9 @@
           </span>
           <span data-motion-calibration="magnetometer">
             magnetometer(<span>0</span>),
+          </span>
+          <span data-motion-calibration="quaternion">
+            quaternion(<span>0</span>),
           </span>
           <span data-motion-calibration="isFullyCalibrated">
             fully? (<span>false</span>)
@@ -355,7 +354,7 @@
     window.missionDevice = missionDevice;
 
     const connectionTypeSelect = document.querySelector("#connection select");
-    connectionTypeSelect.addEventListener("input", event => {
+    connectionTypeSelect.addEventListener("input", (event) => {
       connectionType = event.target.value;
       console.log("connection type", connectionType);
       url.searchParams.set("connectionType", connectionType);
@@ -381,7 +380,7 @@
     let gateway = url.searchParams.get("gateway") || "0.0.0.0";
     console.log("gateway", gateway);
     const gatewayInput = document.querySelector("#connection input");
-    gatewayInput.addEventListener("input", event => {
+    gatewayInput.addEventListener("input", (event) => {
       gateway = event.target.value;
       console.log("new gateway", gateway);
       url.searchParams.set("gateway", gateway);
@@ -396,21 +395,21 @@
 
     // interface
     const connectButton = document.querySelector("#connection button");
-    connectButton.addEventListener("click", event => {
+    connectButton.addEventListener("click", (event) => {
       if (connectionType == "bluetooth") {
         missionDevice.connect();
       } else {
         missionDevice.connect(gateway);
       }
     });
-    missionDevice.addEventListener("connected", event => {
+    missionDevice.addEventListener("connected", (event) => {
       connectButton.remove();
     });
 
     const batteryLevelSpan = document.querySelector(
       "#connection .batteryLevel span"
     );
-    missionDevice.addEventListener("batterylevel", event => {
+    missionDevice.addEventListener("batterylevel", (event) => {
       const { batteryLevel } = event.message;
       batteryLevelSpan.innerText = batteryLevel;
     });
@@ -418,7 +417,7 @@
     const motionCalibrationContainer = document.querySelector(
       "#connection .motionCalibration"
     );
-    missionDevice.addEventListener("motioncalibration", event => {
+    missionDevice.addEventListener("motioncalibration", (event) => {
       const { motionCalibration } = event.message;
       for (const key in motionCalibration) {
         motionCalibrationContainer.querySelector(
@@ -428,21 +427,21 @@
     });
 
     const typeSelect = document.querySelector("#connection .type select");
-    missionDevice.addEventListener("connected", async event => {
+    missionDevice.addEventListener("connected", async (event) => {
       const type = await missionDevice.getType();
       typeSelect.value = type;
     });
-    typeSelect.addEventListener("input", async event => {
+    typeSelect.addEventListener("input", async (event) => {
       await missionDevice.setType(Number(event.target.value));
     });
 
     const nameInput = document.querySelector("#connection .name input");
     const nameButton = document.querySelector("#connection .name button");
-    missionDevice.addEventListener("name", async event => {
+    missionDevice.addEventListener("name", async (event) => {
       const name = await missionDevice.getName();
       nameInput.value = name;
     });
-    nameButton.addEventListener("click", async event => {
+    nameButton.addEventListener("click", async (event) => {
       await missionDevice.setName(nameInput.value);
     });
 
@@ -451,11 +450,11 @@
     const entities = {
       LEFT_INSOLE: scene.querySelector("#leftShoe"),
       RIGHT_INSOLE: scene.querySelector("#rightShoe"),
-      MOTION_MODULE: scene.querySelector("#motionModule")
+      MOTION_MODULE: scene.querySelector("#motionModule"),
     };
     const targetEntity = scene.querySelector("#target");
-    scene.addEventListener("loaded", event => {
-      missionDevice.addEventListener("type", async event => {
+    scene.addEventListener("loaded", (event) => {
+      missionDevice.addEventListener("type", async (event) => {
         const type = await missionDevice.getType();
         for (const typeString in entities) {
           const entity = entities[typeString];
@@ -464,7 +463,7 @@
         }
       });
     });
-    missionDevice.addEventListener("quaternion", event => {
+    missionDevice.addEventListener("quaternion", (event) => {
       const { quaternion } = event.message;
       targetEntity.object3D.quaternion.copy(quaternion);
     });
@@ -476,19 +475,19 @@
           `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"]`
         );
         if (input) {
-          input.addEventListener("input", async event => {
+          input.addEventListener("input", async (event) => {
             const rate = Number(event.target.value);
             await missionDevice.setSensorDataConfigurations({
               [sensorType.toLowerCase()]: {
-                [sensorDataType]: rate
-              }
+                [sensorDataType]: rate,
+              },
             });
           });
         }
       }
     }
 
-    missionDevice.addEventListener("sensordataconfigurations", event => {
+    missionDevice.addEventListener("sensordataconfigurations", (event) => {
       const { sensorDataConfigurations } = event.message;
       for (const sensorType in sensorDataConfigurations) {
         for (const sensorDataType in sensorDataConfigurations[sensorType]) {
@@ -496,7 +495,10 @@
             `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"] input`
           );
           if (input) {
-            input.value = sensorDataConfigurations[sensorType.toLowerCase()][sensorDataType];
+            input.value =
+              sensorDataConfigurations[sensorType.toLowerCase()][
+                sensorDataType
+              ];
           }
         }
       }
@@ -508,7 +510,7 @@
       quaternion: ["x", "y", "z", "w"],
       heelToToe: ["heelToToe"],
       mass: ["mass"],
-      heelAndToe: ["heel", "toe"]
+      heelAndToe: ["heel", "toe"],
     };
 
     const canvases = {};
@@ -526,9 +528,9 @@
       "linearAcceleration",
       "rotationRate",
       "mass",
-      "heelToToe"
+      "heelToToe",
     ];
-    dataVisualizations.forEach(type => {
+    dataVisualizations.forEach((type) => {
       const canvas = document.querySelector(`#${type} canvas`);
       canvases[type] = canvas;
       contexts[type] = canvases[type].getContext("2d");
@@ -537,14 +539,14 @@
 
       samples[type] = {};
       components.forEach(
-        component =>
+        (component) =>
           (samples[type][component] = new Array(numberOfSamples).fill(0))
       );
 
-      missionDevice.addEventListener(type, event => {
+      missionDevice.addEventListener(type, (event) => {
         const { message } = event;
         const { timestamp } = message;
-        components.forEach(component => {
+        components.forEach((component) => {
           const value =
             typeof message[type] == "number"
               ? message[type]
@@ -557,7 +559,7 @@
       });
 
       if (type == "heelAndToe") {
-        missionDevice.addEventListener("pressure", event => {
+        missionDevice.addEventListener("pressure", (event) => {
           const { message } = event;
           const { timestamp } = message;
 
@@ -589,36 +591,36 @@
     const ranges = {
       default: {
         min: -20,
-        max: 20
+        max: 20,
       },
       magnetometer: {
         min: -70,
-        max: 70
+        max: 70,
       },
       rotationRate: {
         min: -2 * Math.PI,
-        max: 2 * Math.PI
+        max: 2 * Math.PI,
       },
       quaternion: {
         min: -1,
-        max: 1
+        max: 1,
       },
       euler: {
         min: -Math.PI,
-        max: Math.PI
+        max: Math.PI,
       },
       mass: {
         min: 0,
-        max: 0.5
+        max: 0.5,
       },
       heelToToe: {
         min: 0.2,
-        max: 0.7
+        max: 0.7,
       },
       heelAndToe: {
         min: 0,
-        max: 256
-      }
+        max: 256,
+      },
     };
 
     const titles = {
@@ -631,14 +633,14 @@
       euler: "Euler Angles",
       heelAndToe: "Heel and Toe",
       heelToToe: "Heel to Toe",
-      mass: "Mass"
+      mass: "Mass",
     };
 
     const legends = {
       euler: ["pitch", "yaw", "roll"],
       rotationRate: ["pitch", "yaw", "roll"],
       mass: ["mass", "", ""],
-      heelToToe: ["heel to toe", "", ""]
+      heelToToe: ["heel to toe", "", ""],
     };
 
     const colors = {
@@ -649,7 +651,7 @@
       mass: "red",
       heel: "red",
       toe: "blue",
-      heelToToe: "green"
+      heelToToe: "green",
     };
 
     function draw(type) {
@@ -709,10 +711,10 @@
     }
 
     function drawAll() {
-      dataVisualizations.forEach(type => draw(type));
+      dataVisualizations.forEach((type) => draw(type));
     }
 
-    window.addEventListener("resize", event => {
+    window.addEventListener("resize", (event) => {
       for (const type in canvases) {
         const canvas = canvases[type];
         const { clientWidth, clientHeight } = document.body;
@@ -726,4 +728,5 @@
 
     drawAll();
   </script>
+
 </html>

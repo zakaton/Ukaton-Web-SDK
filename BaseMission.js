@@ -27,7 +27,7 @@ THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 
 class BaseMission {
   constructor() {
-    this.isLoggingEnabled = true;
+    this.isLoggingEnabled = !true;
     this._reconnectOnDisconnection = !true;
 
     this._batteryLevel = null;
@@ -35,6 +35,8 @@ class BaseMission {
     this._type = null;
 
     this._sensorDataConfigurations = null;
+
+    this._isUsingBNO080 = !false;
 
     this.motion = {
       acceleration: new THREE.Vector3(),
@@ -56,7 +58,7 @@ class BaseMission {
     });
     this._weightDataDelay = null;
     this._weight = null;
-    
+
     this._sensorDataTimestampOffset = 0;
     this._lastRawSensorDataTimestamp = 0;
 
@@ -76,7 +78,7 @@ class BaseMission {
       }
     });
   }
-  
+
   async _getFileBuffer(file) {
     let fileBuffer;
     if (file instanceof Array) {
@@ -88,12 +90,12 @@ class BaseMission {
       fileBuffer = await response.arrayBuffer();
     } else if (file instanceof File) {
       fileBuffer = await file.arrayBuffer();
-    } else if(file instanceof ArrayBuffer) {
-      fileBuffer = file
+    } else if (file instanceof ArrayBuffer) {
+      fileBuffer = file;
     } else {
-      throw {error: "not a valid file type", file}
+      throw { error: "not a valid file type", file };
     }
-    return fileBuffer
+    return fileBuffer;
   }
 
   log() {
@@ -118,24 +120,23 @@ class BaseMission {
   }
 
   _concatenateArrayBuffers(...arrayBuffers) {
-    arrayBuffers = arrayBuffers.filter(arrayBuffer => arrayBuffer)
-    arrayBuffers = arrayBuffers.map(arrayBuffer => {
+    arrayBuffers = arrayBuffers.filter((arrayBuffer) => arrayBuffer);
+    arrayBuffers = arrayBuffers.map((arrayBuffer) => {
       if (arrayBuffer instanceof ArrayBuffer) {
-        return arrayBuffer
+        return arrayBuffer;
+      } else if (
+        "buffer" in arrayBuffer &&
+        arrayBuffer.buffer instanceof ArrayBuffer
+      ) {
+        return arrayBuffer.buffer;
+      } else if (arrayBuffer instanceof DataView) {
+        return arrayBuffer.buffer;
+      } else if (arrayBuffer instanceof Array) {
+        return Uint8Array.from(arrayBuffer).buffer;
+      } else {
+        return arrayBuffer;
       }
-      else if ("buffer" in arrayBuffer && arrayBuffer.buffer instanceof ArrayBuffer) {
-        return arrayBuffer.buffer
-      }
-      else if (arrayBuffer instanceof DataView) {
-        return arrayBuffer.buffer
-      }
-      else if (arrayBuffer instanceof Array) {
-        return Uint8Array.from(arrayBuffer).buffer
-      }
-      else {
-        return arrayBuffer
-      }
-    })
+    });
     arrayBuffers = arrayBuffers.filter(
       (arrayBuffer) => arrayBuffer && "byteLength" in arrayBuffer
     );
@@ -162,6 +163,7 @@ class BaseMission {
       this._type == this.Types.RIGHT_INSOLE;
     if (this.isInsole) {
       this.isRightInsole = this._type == this.Types.RIGHT_INSOLE;
+      this.insoleSide = this.isRightInsole ? "right" : "left";
     }
     this.log(`type: ${this.getTypeString()}`);
     this.dispatchEvent({ type: "type", message: { type: this._type } });
@@ -172,7 +174,10 @@ class BaseMission {
   }
   _onWeightDataDelayUpdate() {
     this.log(`weight data delay: ${this._weightDataDelay}`);
-    this.dispatchEvent({ type: "weightdatadelay", message: { weightDataDelay: this._weightDataDelay } });
+    this.dispatchEvent({
+      type: "weightdatadelay",
+      message: { weightDataDelay: this._weightDataDelay },
+    });
   }
   _onWeightDataUpdate() {
     this.log(`weight: ${this._weight}`);
@@ -187,9 +192,10 @@ class BaseMission {
       motionCalibration[motionCalibrationTypeString] = value;
       isFullyCalibrated = isFullyCalibrated && value == 3;
     });
-    // TODO - remove isFullyCalibrated for new firmware
-    // TODO - use this.MotionCalibrationTypeStrings for calibration values
-    motionCalibration.isFullyCalibrated = isFullyCalibrated;
+
+    if (!this._isUsingBNO080) {
+      motionCalibration.isFullyCalibrated = isFullyCalibrated;
+    }
 
     //this.log("received motion calibration data", motionCalibration);
     this.motion.calibration = motionCalibration;
@@ -250,7 +256,10 @@ class BaseMission {
 
     this.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
       sensorTypeString = sensorTypeString.toLowerCase();
-      if ((sensorTypeString in configurations) && (sensorType != this.SensorTypes.PRESSURE || this.isInsole)) {
+      if (
+        sensorTypeString in configurations &&
+        (sensorType != this.SensorTypes.PRESSURE || this.isInsole)
+      ) {
         flattenedConfigurations = this._concatenateArrayBuffers(
           flattenedConfigurations,
           this._flattenSensorConfiguration(
@@ -311,12 +320,12 @@ class BaseMission {
   _parseSensorData(dataView, byteOffset = 0) {
     const rawTimestamp = dataView.getUint16(byteOffset, true);
     if (rawTimestamp < this._lastRawSensorDataTimestamp) {
-      this._sensorDataTimestampOffset += 2**16;
+      this._sensorDataTimestampOffset += 2 ** 16;
     }
     this._lastRawSensorDataTimestamp = rawTimestamp;
     const timestamp = rawTimestamp + this._sensorDataTimestampOffset;
     byteOffset += 2;
-    
+
     while (byteOffset < dataView.byteLength) {
       const sensorType = dataView.getUint8(byteOffset++);
       byteOffset = this._parseSensorDataType(
@@ -361,6 +370,7 @@ class BaseMission {
 
     return byteOffset;
   }
+  defaultEulerOrder = "YXZ";
   _parseMotionSensorData(dataView, byteOffset, finalByteOffset, timestamp) {
     while (byteOffset < finalByteOffset) {
       const motionSensorDataType = dataView.getUint8(byteOffset++);
@@ -398,7 +408,7 @@ class BaseMission {
           byteSize = 8;
 
           euler = new THREE.Euler().setFromQuaternion(quaternion);
-          euler.reorder("YXZ");
+          euler.reorder(this.defaultEulerOrder);
           this.motion.euler.copy(euler);
           this.dispatchEvent({
             type: "euler",
@@ -505,7 +515,7 @@ class BaseMission {
             message: {
               timestamp,
               [pressureSensorDataTypeString]: pressure,
-              pressure
+              pressure,
             },
           });
 
@@ -628,9 +638,11 @@ class BaseMission {
     return this.constructor.MotionCalibrationTypes;
   }
   get MotionCalibrationTypeStrings() {
-    return this.constructor.MotionCalibrationTypeStrings;
+    return this._isUsingBNO080
+      ? this.constructor._MotionCalibrationTypeStrings
+      : this.constructor.MotionCalibrationTypeStrings;
   }
-  
+
   get MotionCalibrationValues() {
     return this.constructor.MotionCalibrationValues;
   }
@@ -646,7 +658,9 @@ class BaseMission {
   }
 
   get MotionDataScalars() {
-    return this.constructor.MotionDataScalars;
+    return this._isUsingBNO080
+      ? this.constructor._MotionDataScalars
+      : this.constructor.MotionDataScalars;
   }
 
   get PressureDataTypes() {
@@ -675,9 +689,17 @@ class BaseMission {
     return this.constructor.InsoleCorrectionQuaternions;
   }
   get insoleCorrectionQuaternion() {
-    return this.InsoleCorrectionQuaternions[
-      this.isRightInsole ? "right" : "left"
-    ];
+    let side;
+    if (this._isUsingBNO080) {
+      side = !this.isRightInsole ? "right" : "left";
+    } else {
+      side = this.isRightInsole ? "right" : "left";
+    }
+    return this.InsoleCorrectionQuaternions[side];
+  }
+
+  get bno080CorrectionQuaternion() {
+    return this.constructor.bno080CorrectionQuaternion;
   }
 
   _getRawMotionData(dataView, offset, size) {
@@ -692,14 +714,26 @@ class BaseMission {
     const y = dataView.getInt16(offset + 2, true);
     const z = dataView.getInt16(offset + 4, true);
 
-    if (this.isInsole) {
-      if (this.isRightInsole) {
-        vector.set(z, y, x);
+    if (this._isUsingBNO080) {
+      if (this.isInsole) {
+        if (this.isRightInsole) {
+          vector.set(z, -x, y);
+        } else {
+          vector.set(-z, -x, -y);
+        }
       } else {
-        vector.set(-z, y, -x);
+        vector.set(-y, z, x);
       }
     } else {
-      vector.set(x, -z, -y);
+      if (this.isInsole) {
+        if (this.isRightInsole) {
+          vector.set(z, y, x);
+        } else {
+          vector.set(-z, y, -x);
+        }
+      } else {
+        vector.set(x, -z, -y);
+      }
     }
 
     vector.multiplyScalar(scalar);
@@ -707,31 +741,61 @@ class BaseMission {
   }
   _parseMotionEuler(dataView, offset, scalar = 1) {
     const euler = new THREE.Euler();
-    const x = THREE.Math.degToRad(dataView.getInt16(offset, true) * scalar);
-    const y = THREE.Math.degToRad(dataView.getInt16(offset + 2, true) * scalar);
-    const z = THREE.Math.degToRad(dataView.getInt16(offset + 4, true) * scalar);
-    if (this.isInsole) {
-      if (this.isRightInsole) {
-        euler.set(-z, -y, -x, "YXZ");
+    
+    let x = dataView.getInt16(offset, true) * scalar;
+    let y = dataView.getInt16(offset + 2, true) * scalar;
+    let z = dataView.getInt16(offset + 4, true) * scalar;
+    
+    if (!this._isUsingBNO080) {
+      x = THREE.Math.degToRad(x)
+      y = THREE.Math.degToRad(y)
+      z = THREE.Math.degToRad(z)
+    }
+
+    if (this._isUsingBNO080) {
+      // FIX
+      if (this.isInsole) {
+        if (this.isRightInsole) {
+          euler.set(-z, x, -y, "YXZ");
+        } else {
+          euler.set(z, x, y, "YXZ");
+        }
       } else {
-        euler.set(z, -y, x, "YXZ");
+        euler.set(y, -z, -x, "YXZ");
       }
     } else {
-      euler.set(-x, z, y, "YXZ");
+      if (this.isInsole) {
+        if (this.isRightInsole) {
+          euler.set(-z, -y, -x, "YXZ");
+        } else {
+          euler.set(z, -y, x, "YXZ");
+        }
+      } else {
+        euler.set(-x, z, y, "YXZ");
+      }
     }
+
     return euler;
   }
+
   _parseMotionQuaternion(dataView, offset, scalar = 1) {
     const quaternion = new THREE.Quaternion();
     const w = dataView.getInt16(offset, true) * scalar;
     const x = dataView.getInt16(offset + 2, true) * scalar;
     const y = dataView.getInt16(offset + 4, true) * scalar;
     const z = dataView.getInt16(offset + 6, true) * scalar;
-    quaternion.set(-y, -w, -x, z);
+
+    if (this._isUsingBNO080) {
+      quaternion.set(-z, -y, -w, -x);
+      //quaternion.multiply(this.bno080CorrectionQuaternion);
+    } else {
+      quaternion.set(-y, -w, -x, z);
+    }
 
     if (this.isInsole) {
       quaternion.multiply(this.insoleCorrectionQuaternion);
     }
+
     return quaternion;
   }
 
@@ -747,7 +811,6 @@ class BaseMission {
       message: { batteryLevel: this.batteryLevel },
     });
   }
-  
 
   // file transfer
   static FILE_TRANSFER_COMMANDS = {
@@ -755,7 +818,7 @@ class BaseMission {
     START_FILE_RECEIVE: 1,
     CANCEL_FILE_TRANSFER: 2,
     REMOVE_FILE: 3,
-    FORMAT_FILESYSTEM: 4
+    FORMAT_FILESYSTEM: 4,
   };
   get FILE_TRANSFER_COMMANDS() {
     return this.constructor.FILE_TRANSFER_COMMANDS;
@@ -769,19 +832,25 @@ class BaseMission {
     SENDING_FILE: 1,
     RECEIVING_FILE: 2,
     REMOVING_FILE: 3,
-    FORMATTING_FILESYSTEM: 4
+    FORMATTING_FILESYSTEM: 4,
   };
   get FILE_TRANSFER_STATUSES() {
     return this.constructor.FILE_TRANSFER_STATUSES;
   }
-  
+
   _onFileTransferStatusUpdate() {
     this.log(`file transfer status: ${this._fileTransferStatus}`);
-    this.dispatchEvent({ type: "filetransferstatus", message: { fileTransferStatus: this._fileTransferStatus } });
+    this.dispatchEvent({
+      type: "filetransferstatus",
+      message: { fileTransferStatus: this._fileTransferStatus },
+    });
   }
   _onFileTransferTypeUpdate() {
     this.log(`file transfer type: "${this._fileTransferType}"`);
-    this.dispatchEvent({ type: "filetransfertype", message: { fileTransferType: this._fileTransferType } });
+    this.dispatchEvent({
+      type: "filetransfertype",
+      message: { fileTransferType: this._fileTransferType },
+    });
   }
 }
 Object.assign(BaseMission, {
@@ -798,7 +867,7 @@ Object.assign(BaseMission, {
     "accelerometer",
     "magnetometer",
   ],
-  _MotionCalibrationTypeStrings: [ // TODO - NEW FIRMWARE STUFF
+  _MotionCalibrationTypeStrings: [
     "accelerometer",
     "gyroscope",
     "magnetometer",
@@ -823,7 +892,7 @@ Object.assign(BaseMission, {
     magnetometer: 1 / 16,
     quaternion: 1 / (1 << 14),
   },
-  _MotionDataScalars: { // TODO - NEW FIRMWARE STUFF
+  _MotionDataScalars: {
     acceleration: 2 ** -8,
     gravity: 2 ** -8,
     linearAcceleration: 2 ** -8,
@@ -841,9 +910,9 @@ Object.assign(BaseMission, {
   ],
 
   PressureDataScalars: {
-    pressureSingleByte: 1 / (2 ** 8),
-    pressureDoubleByte: 1 / (2 ** 12),
-    mass: 1 / (2 ** 16),
+    pressureSingleByte: 1 / 2 ** 8,
+    pressureDoubleByte: 1 / 2 ** 12,
+    mass: 1 / 2 ** 16,
   },
 
   PressurePositions: [
@@ -905,6 +974,7 @@ Object.assign(BaseMission, {
     left: new THREE.Quaternion(),
     right: new THREE.Quaternion(),
   },
+  bno080CorrectionQuaternion: new THREE.Quaternion(),
 });
 
 [
@@ -934,6 +1004,10 @@ BaseMission.SensorDataTypeStrings = {
 Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
 
 {
+  const bno080CorrectionEuler = new THREE.Euler();
+  bno080CorrectionEuler.set(0, -Math.PI / 2, 0, "YXZ");
+  BaseMission.bno080CorrectionQuaternion.setFromEuler(bno080CorrectionEuler);
+
   const insoleCorrectionEuler = new THREE.Euler();
   insoleCorrectionEuler.set(0, Math.PI / 2, -Math.PI / 2);
   BaseMission.InsoleCorrectionQuaternions.right.setFromEuler(
@@ -975,6 +1049,20 @@ class BaseMissions {
         this._updatePressure({ side, timestamp });
       });
     });
+  }
+
+  replaceInsole(device) {
+    if (device.isInsole) {
+      const side = device.insoleSide;
+      const existingDevice = this[side];
+      if (existingDevice != device) {
+        this[side] = device;
+        device.addEventListener("pressure", (event) => {
+          const { timestamp } = event.message;
+          this._updatePressure({ side, timestamp });
+        });
+      }
+    }
   }
 
   _updatePressure({ side, timestamp }) {

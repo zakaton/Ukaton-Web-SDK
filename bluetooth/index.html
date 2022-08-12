@@ -103,6 +103,7 @@
         <label data-calibration="magnetometer">
           magnetometer: <span>0</span></label
         >
+        <label data-calibration="quaternion"> quaternion: <span>0</span></label>
         <label data-calibration="isFullyCalibrated">
           fully calibrated: <span>0</span></label
         >
@@ -895,18 +896,18 @@
       vibrateOnChange = vibrateOnChangeInput.checked;
     });
     waveformContainer.querySelectorAll("input").forEach((input, index) => {
-      input.addEventListener("input", event => {
+      input.addEventListener("input", (event) => {
         if (vibrateOnChange) {
-          triggerWaveformButton.click()
+          triggerWaveformButton.click();
         }
-      })
+      });
     });
     sequenceContainer.querySelectorAll("input").forEach((input, index) => {
-      input.addEventListener("input", event => {
+      input.addEventListener("input", (event) => {
         if (vibrateOnChange) {
-          triggerSequenceButton.click()
+          triggerSequenceButton.click();
         }
-      })
+      });
     });
 
     triggerWaveformButton.addEventListener("click", (event) => {

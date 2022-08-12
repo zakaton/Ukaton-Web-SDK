@@ -1,0 +1,98 @@
+<html>
+  <head>
+    <title>Battery Visualization</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+  </head>
+  <style>
+    canvas {
+      border: solid black;
+    }
+  </style>
+  <body>
+    <h1>Battery Visualization</h1>
+
+    <div data-charging="positive">
+      <canvas></canvas>
+    </div>
+    <br />
+    <div data-charging="negative">
+      <canvas></canvas>
+    </div>
+  </body>
+  <script>
+    document.querySelectorAll("canvas").forEach(canvas => {
+      canvas.width = 800;
+      canvas.height = 200;
+    })
+    
+    const chargingData = {
+      positive: [
+        0, 0, 50, 700000, 1020000, 1300000, 1560000, 1790000, 2030000, 2270000,
+        2520000, 2690000, 2880000, 3070000, 3250000, 3420000, 3580000, 3740000,
+        3850000, 4000000, 4140000, 4280000, 4390000, 4490000, 4630000, 4720000,
+        4800000, 4930000, 5000000, 5080000, 5190000, 5260000, 5320000, 5420000,
+        5490000, 5550000, 5620000, 5700000, 5770000, 5820000, 5890000, 5960000,
+        6010000, 6080000, 6130000, 6200000, 6250000, 6320000, 6370000, 6430000,
+        6470000, 6530000, 6600000, 6640000, 6690000, 6740000, 6810000, 6860000,
+        6910000, 6960000, 7010000, 7060000, 7120000, 7180000, 7230000, 7290000,
+        7340000, 7400000, 7460000, 7520000, 7580000, 7640000, 7700000, 7760000,
+        7820000, 7880000, 7940000, 8020000, 8090000, 8160000, 8230000, 8310000,
+        8390000, 8480000, 8560000, 8670000, 8770000, 8880000, 9000000, 9130000,
+        9270000, 9410000, 9590000, 9760000, 9950000, 10200000, 10450000,
+        10740000, 11150000, 11610000,
+      ],
+      negative: [
+        0, 0, 0, 34720000, 32970000, 31860000, 31210000, 30710000, 30300000,
+        29920000, 29640000, 29290000, 28940000, 28620000, 28310000, 28010000,
+        27730000, 27530000, 27260000, 27010000, 26750000, 26550000, 26350000,
+        26050000, 25850000, 25650000, 25350000, 25150000, 24950000, 24640000,
+        24440000, 24240000, 23930000, 23720000, 23510000, 23240000, 22970000,
+        22700000, 22520000, 22250000, 21970000, 21780000, 21470000, 21270000,
+        20950000, 20740000, 20410000, 20200000, 19890000, 19680000, 19350000,
+        19020000, 18790000, 18460000, 18160000, 17740000, 17420000, 17080000,
+        16730000, 16350000, 15940000, 15350000, 14840000, 14330000, 13830000,
+        13410000, 12930000, 12460000, 11970000, 11540000, 11120000, 10690000,
+        10280000, 9860000, 9450000, 9050000, 8590000, 8200000, 7810000, 7420000,
+        7030000, 6650000, 6260000, 5870000, 5450000, 5050000, 4660000, 4290000,
+        3930000, 3600000, 3290000, 2930000, 2630000, 2340000, 2000000, 1720000,
+        1450000, 1130000, 860000, 570000,
+      ],
+    };
+    const chargingContainers = {
+      positive: document.querySelector("[data-charging='positive']"),
+      negative: document.querySelector("[data-charging='negative']"),
+    };
+
+    let maxTime = 0;
+    for (const direction in chargingContainers) {
+      const data = chargingData[direction];
+      maxTime = data.reduce((maxTime, time) => Math.max(maxTime, time), maxTime)
+    }
+
+    for (const direction in chargingContainers) {
+      const canvas = chargingContainers[direction].querySelector("canvas");
+      const context = canvas.getContext("2d");
+      const data = chargingData[direction];
+      context.strokeStyle = direction == "positive" ? "green" : "red";
+      if (direction == "positive") {
+        context.strokeStyle = "green"
+        context.lineTo(0, canvas.height)
+      }
+      else {
+        context.strokeStyle = "red"
+        context.lineTo(canvas.width, canvas.height)
+      }
+      data.forEach((time, batteryLevel) => {
+        if (time > 0) {
+          const x = time / maxTime;
+          const y = batteryLevel / 100;
+          context.lineTo(canvas.width * x, canvas.height * (1 - y));
+        }
+      });
+      context.stroke();
+    }
+  </script>
+</html>
