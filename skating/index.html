@@ -1,0 +1,127 @@
+<html>
+  <head>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+    <title>Skating | Ukaton Side Mission</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/PeerBluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="/skating/ukaton-skating.js"></script>
+  </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #overlay {
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #overlay .clickable {
+      pointer-events: all;
+    }
+    #overlay .hidden {
+      display: none;
+    }
+    #overlay:not(.connected) .connected {
+      display: none;
+    }
+  </style>
+  <body>
+    <div id="overlay">
+      <button class="clickable" onclick="connect()">connect</button>
+      <button class="clickable" onclick="addBluetoothDevice()">
+        add device
+      </button>
+      <button class="clickable" onclick="toggleTurn()">Toggle Turn</button>
+      <button class="clickable" onclick="toggleMovement()">Toggle Movement</button>
+      <button
+        class="clickable"
+        onclick="navigator.clipboard.writeText('ws://192.168.4.32,ws://192.168.4.33,ws://192.168.4.28')"
+      >
+        copy gateways
+      </button>
+    </div>
+
+    <a-scene
+      device-orientation-permission-ui="enabled: true"
+      embedded
+      vr-mode-ui="enabled: true"
+      renderer="colorManagement: true;"
+      ukaton-skating="auto-connect: false; gateway: 192.168.4.32, 192.168.4.33, 192.168.4.28"
+    >
+      <a-assets>
+        <a-asset-item
+          id="park"
+          src="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/park.glb?v=1659700338547"
+        ></a-asset-item>
+        <a-asset-item
+          id="city"
+          src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a/city.glb?v=1659701176351"
+        ></a-asset-item>
+      </a-assets>
+
+      <a-entity id="cameraJump" position="0 0 0" animation="startEvents: jump; autoplay: false; property: position; from: 0 0 0; to: 0 1.5 0; dur: 300; easing: easeOutQuad; dir: alternate; loop: 2;"
+        ><a-entity id="cameraPosition" position="0 0 4"
+          ><a-entity id="cameraRotation"
+            ><a-camera
+              id="camera"
+              look-controls="touchEnabled: false; mouseEnabled: true; magicWindowTrackingEnabled: false;"
+            ></a-camera></a-entity></a-entity
+      ></a-entity>
+      <a-entity visible="false"
+        ><a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
+        <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+        <a-cylinder
+          position="1 0.75 -3"
+          radius="0.5"
+          height="1.5"
+          color="#FFC65D"
+        ></a-cylinder>
+        <a-plane
+          position="0 0 -4"
+          rotation="-90 0 0"
+          width="4"
+          height="4"
+          color="#7BC8A4"
+        ></a-plane
+        ><a-sky color="#ECECEC"></a-sky
+      ></a-entity>
+      <a-entity visible="true" position="0 -14 -42"
+        ><a-entity scale="0.1 0.1 0.1"
+          ><a-entity gltf-model="#park"></a-entity></a-entity
+        ><a-sky color="#dbfdff"></a-sky
+      ></a-entity>
+      <a-entity visible="false" position="-200 5 400"
+        ><a-entity scale="400 400 400"
+          ><a-entity gltf-model="#city"></a-entity></a-entity
+        ><a-sky color="#dbfdff"></a-sky
+      ></a-entity>
+    </a-scene>
+  </body>
+  <script>
+    const scene = document.querySelector("a-scene");
+    function connect() {
+      scene.emit("skating-connect");
+    }
+    function addBluetoothDevice() {
+      scene.emit("skating-addbluetoothdevice");
+    }
+    function toggleTurn() {
+      skatingSystem.data.useTurn = !skatingSystem.data.useTurn;
+    }
+    function toggleMovement() {
+      skatingSystem.data.useMovement = !skatingSystem.data.useMovement;
+    }
+  </script>
+</html>

@@ -1,0 +1,1501 @@
+<html>
+  <head>
+    <title>Piano</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="./BaseMission.js"></script>
+    <script src="./BluetoothMissionDevice.js"></script>
+    <script src="./TapStrap.js"></script>
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap");
+
+    body {
+      font-family: "Roboto", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      flex-direction: column;
+      margin: 0;
+    }
+
+    #treeboard {
+      width: 855px;
+      display: flex;
+      flex-direction: column;
+
+      transition: opacity 0.25s;
+    }
+
+    #treeboard.hidden {
+      opacity: 0;
+    }
+
+    #treeboard .path {
+      text-align: left;
+      font-size: 20px;
+      text-decoration: underline;
+      user-select: none;
+    }
+
+    #treeboard .path span {
+      cursor: pointer;
+    }
+
+    #treeboard .path span:not(:first-child) {
+      margin-left: -4px;
+    }
+
+    #treeboard .path span::after {
+      content: "/";
+    }
+
+    #treeboard .options {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 27px;
+      user-select: none;
+    }
+
+    #treeboard .options > div {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    #treeboard .options div span {
+      text-align: center;
+      font-weight: bold;
+      margin: 0px 15px;
+      cursor: pointer;
+    }
+
+    ul {
+      list-style: none;
+      display: flex;
+      padding: 0;
+    }
+
+    ul [class*="key"] {
+      transition: background 0.2s;
+      animation-duration: 0.15s;
+      animation-direction: alternate;
+      animation-iteration-count: 2;
+      animation-timing-function: linear;
+    }
+
+    ul .key.unavailable {
+      background: lightgray;
+    }
+
+    ul .black-key.unavailable {
+      background: lightgray;
+    }
+
+    ul .key.left.highlighted {
+      background: hsl(176deg 100% 94%);
+    }
+
+    ul .black-key.left.highlighted {
+      background: hsl(176deg 100% 89%);
+    }
+
+    ul .key.right.highlighted {
+      background: hsl(39deg 100% 94%);
+    }
+
+    ul .black-key.right.highlighted {
+      background: hsl(39deg 100% 89%);
+    }
+
+    ul .key.left.play {
+      background: hsl(176deg 100% 78%);
+    }
+
+    ul .black-key.left.play {
+      background: hsl(176deg 100% 70%);
+    }
+
+    ul .key.right.play {
+      background: hsl(39deg 100% 78%);
+    }
+
+    ul .black-key.right.play {
+      background: hsl(39deg 100% 70%);
+    }
+
+    ul .key {
+      position: relative;
+      width: 60px;
+      height: 180px;
+      border: 1px solid black;
+      border-right: none;
+      background: white;
+      border-radius: 5px;
+      box-shadow: 0px 3px 5px #666;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 10px;
+      font-weight: bold;
+      font-size: 24px;
+    }
+
+    ul .key:last-child {
+      border-right: 1px solid black;
+    }
+
+    ul .black-key {
+      position: absolute;
+      top: -1px;
+      left: 37.5px;
+      width: 45px;
+      height: 120px;
+      background: black;
+      border-radius: 5px;
+      box-shadow: 0px 3px 5px #666;
+      z-index: 999;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 10px;
+      color: black;
+    }
+
+    ul .active {
+      box-shadow: 0px 1px 3px #666;
+    }
+
+    #info {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      width: 855px;
+    }
+
+    #info > div {
+      flex: 1;
+      user-select: none;
+      cursor: pointer;
+      text-align: left;
+    }
+    #info > div > span {
+      color: white;
+      background-color: black;
+      font-size: 24px;
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+    #info > div:last-child {
+      text-align: right;
+    }
+
+    #info .sustain {
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+
+    #info .sustain.allow.isSustaining {
+      opacity: 1;
+    }
+
+    #connections {
+      align-self: start;
+      bottom: 0;
+      position: absolute;
+    }
+  </style>
+
+  <body>
+    <div id="treeboard">
+      <audio
+        class="select"
+        src="https://cdn.glitch.global/1a6ec8f4-1300-4089-bebb-13102a0af4ee/Select.mp3?v=1650670600886"
+      ></audio>
+      <audio
+        class="deselect"
+        src="https://cdn.glitch.global/1a6ec8f4-1300-4089-bebb-13102a0af4ee/Deselect.mp3?v=1650670600804"
+      ></audio>
+      <div class="path">
+        /<span>path</span>
+        <span>to</span>
+        <span>thing</span>
+      </div>
+      <div class="options">
+        <div><span>A</span><span>B</span><span>C</span><span>D</span></div>
+        <div><span>E</span><span>F</span><span>G</span><span>H</span></div>
+      </div>
+    </div>
+    <ul id="piano">
+      <li data-note="C" class="key">
+        <div data-note="C#" class="black-key"></div>
+      </li>
+      <li data-note="D" class="key">
+        <div data-note="D#" class="black-key"></div>
+      </li>
+      <li data-note="E" class="key"></li>
+      <li data-note="F" class="key">
+        <div data-note="F#" class="black-key"></div>
+      </li>
+      <li data-note="G" class="key">
+        <div data-note="G#" class="black-key"></div>
+      </li>
+      <li data-note="A" class="key">
+        <div data-note="A#" class="black-key"></div>
+      </li>
+      <li data-note="B" class="key"></li>
+      <!-- break -->
+      <li data-note="C" class="key">
+        <div data-note="C#" class="black-key"></div>
+      </li>
+      <li data-note="D" class="key">
+        <div data-note="D#" class="black-key"></div>
+      </li>
+      <li data-note="E" class="key"></li>
+      <li data-note="F" class="key">
+        <div data-note="F#" class="black-key"></div>
+      </li>
+      <li data-note="G" class="key">
+        <div data-note="G#" class="black-key"></div>
+      </li>
+      <li data-note="A" class="key">
+        <div data-note="A#" class="black-key"></div>
+      </li>
+      <li data-note="B" class="key"></li>
+    </ul>
+    <div id="info">
+      <div class="left octave"><span>-1</span></div>
+      <div class="scale"><span>scale</span></div>
+      <div class="sustain"><span>sustain</span></div>
+      <div class="right octave"><span>-1</span></div>
+    </div>
+    <div id="connections">
+      <button data-name="Tap_D124264" class="tapStrap left">
+        left tap strap
+      </button>
+      <button data-name="Tap_D065264" class="tapStrap right">
+        right tap strap
+      </button>
+      <button class="insole left">left insole</button>
+      <button class="insole right">right insole</button>
+    </div>
+  </body>
+
+  <script>
+    const treeboard = {
+      init(root = document) {
+        this.container = root.querySelector("#treeboard");
+        this.pathContainer = this.container.querySelector(".path");
+        this.optionsContainer = this.container.querySelector(".options");
+
+        this.audio = {
+          select: this.container.querySelector("audio.select"),
+          deselect: this.container.querySelector("audio.deselect"),
+        };
+
+        this.optionsContainer.addEventListener("click", (event) => {
+          if (event.target.nodeName == "SPAN") {
+            const span = event.target;
+            this.select(span.innerText);
+          }
+        });
+
+        document.addEventListener("keypress", (event) => {
+          switch (event.key) {
+            case "8":
+              this.revert();
+              break;
+            case "9":
+              this.selectIndex(0);
+              break;
+            case "0":
+              this.selectIndex(1);
+              break;
+            case "-":
+              this.selectIndex(2);
+              break;
+            case "=":
+              this.selectIndex(3);
+              break;
+          }
+        });
+
+        this.updateUI({ animate: false });
+      },
+
+      _useSpeechSynthesis: false,
+      get useSpeechSynthesis() {
+        return this._useSpeechSynthesis;
+      },
+      set useSpeechSynthesis(newUseSpeechSynthesis) {
+        if (this.useSpeechSynthesis != newUseSpeechSynthesis) {
+          this._useSpeechSynthesis = newUseSpeechSynthesis;
+          if (this.useSpeechSynthesis) {
+            this.speak("speech synthesis enabled");
+          }
+        }
+      },
+
+      synth: window.speechSynthesis,
+      speak(text, cancel = false) {
+        if (this.useSpeechSynthesis) {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 2;
+          if (cancel) {
+            this.synth.cancel();
+          }
+          this.synth.speak(utterance);
+        }
+      },
+
+      tree: {
+        Apps: {
+          YouTube: () => {
+            console.log("youtube");
+          },
+          Google: () => {
+            console.log("google");
+          },
+          Twitter: () => {
+            console.log("twitter");
+          },
+          Facebook: () => {
+            console.log("facebook");
+          },
+        },
+        Settings: {
+          battery: () => {
+            console.log("battery: 100%");
+          },
+          name: () => {
+            console.log("treeboard");
+          },
+        },
+        Contacts: {
+          Umar: () => {
+            console.log("Umar");
+          },
+          Jimmy: () => {
+            console.log("Jimmy");
+          },
+          Zack: () => {
+            console.log("Zack");
+          },
+          Jonny: () => {
+            console.log("Jonny");
+          },
+        },
+        Settings: {
+          battery: () => {
+            console.log("100%");
+          },
+          name: () => {
+            console.log("treeboard");
+          },
+        },
+      },
+      setTree(newTree) {
+        this.tree = newTree;
+        this.updateUI({ animate: false });
+      },
+      path: [],
+
+      getCurrentBranch() {
+        var branch = this.tree;
+        for (var index = 0; index < this.path.length; index++) {
+          const option = this.path[index];
+          if (option in branch) {
+            branch = branch[option];
+          } else {
+            throw `didn't find option "${option}"`;
+          }
+        }
+        return branch;
+      },
+      getCurrentOptions() {
+        return Object.keys(this.getCurrentBranch());
+      },
+
+      selectIndex(optionIndex) {
+        const option = this.getCurrentOptions()[optionIndex];
+        if (option) {
+          this.select(option);
+        }
+      },
+      select(option) {
+        if (this.isHidden) {
+          return;
+        }
+
+        const currentBranch = this.getCurrentBranch();
+        if (option in currentBranch) {
+          this.speak("selected " + option, true);
+          if (typeof currentBranch[option] == "function") {
+            const callback = currentBranch[option];
+            callback();
+            this.path.length = 0;
+            this.updateUI({ isMovingDown: false });
+          } else {
+            this.path.push(option);
+            this.updateUI();
+          }
+        }
+      },
+      revert() {
+        if (this.path.length > 0) {
+          this.path.pop();
+          this.updateUI({ isMovingDown: false, isReverting: true });
+          this.speak("go back", true);
+        } else {
+          this.isHidden = !this.isHidden;
+        }
+      },
+
+      _isHidden: false,
+      get isHidden() {
+        return this._isHidden;
+      },
+      set isHidden(newIsHidden) {
+        if (this.isHidden != newIsHidden) {
+          this._isHidden = newIsHidden;
+          this.speak(this.isHidden ? "hide menu" : "show menu", true);
+          if (this.isHidden) {
+            this.container.classList.add("hidden");
+          } else {
+            this.path.length = 0;
+            this.updateUI({ animate: false });
+            this.container.classList.remove("hidden");
+          }
+          this.playAudio(this.isHidden ? "deselect" : "select");
+        }
+      },
+
+      updateUI(options = {}) {
+        options = Object.assign(
+          { animate: true, isMovingDown: true, isReverting: false },
+          options
+        );
+        this.updatePathUI();
+        this.updateOptionsUI(options);
+      },
+      updatePathUI() {
+        this.path.forEach((value, index) => {
+          var pathContainerSpan = this.pathContainer.children[index];
+          if (!pathContainerSpan) {
+            pathContainerSpan = document.createElement("span");
+            this.pathContainer.appendChild(pathContainerSpan);
+          }
+          pathContainerSpan.innerText = value;
+          pathContainerSpan.style.display = "";
+        });
+        for (
+          var index = this.path.length;
+          index < this.pathContainer.children.length;
+          index++
+        ) {
+          const pathContainerSpan = this.pathContainer.children[index];
+          pathContainerSpan.style.display = "none";
+        }
+      },
+      updateOptionsUI(options) {
+        if (options.animate) {
+          this.playAudio(options.isReverting ? "deselect" : "select");
+        }
+
+        const currentOptionsIndex = options.isMovingDown ? 1 : 0;
+        const previousOptionsIndex = 1 - currentOptionsIndex;
+
+        const currentOptionsContainer =
+          this.optionsContainer.children[currentOptionsIndex];
+        const previousOptionsContainer =
+          this.optionsContainer.children[previousOptionsIndex];
+
+        this.populateOptionsContainer(
+          previousOptionsContainer,
+          this.previousOptions || []
+        );
+        const currentOptions = this.getCurrentOptions();
+        this.populateOptionsContainer(currentOptionsContainer, currentOptions);
+        this.previousOptions = currentOptions;
+
+        this.speak("current options " + currentOptions.join(","));
+
+        if (options.animate) {
+          previousOptionsContainer.scrollIntoView({ behavior: "auto" });
+          currentOptionsContainer.scrollIntoView({ behavior: "smooth" });
+        } else {
+          currentOptionsContainer.scrollIntoView({ behavior: "auto" });
+        }
+      },
+      populateOptionsContainer(optionsContainer, options) {
+        options.forEach((option, index) => {
+          const optionContainerSpan = optionsContainer.children[index];
+          optionContainerSpan.style.display = "";
+          optionContainerSpan.innerText = option;
+        });
+        for (
+          var index = options.length;
+          index < optionsContainer.children.length;
+          index++
+        ) {
+          const optionContainerSpan = optionsContainer.children[index];
+          optionContainerSpan.style.display = "none";
+        }
+      },
+
+      playAudio(string) {
+        const audio = this.audio[string];
+        if (audio.paused) {
+          audio.play();
+        } else {
+          audio.currentTime = 0;
+        }
+      },
+    };
+    treeboard.init();
+  </script>
+
+  <script>
+    const tapStraps = {
+      left: new TapStrap(),
+      right: new TapStrap(),
+    };
+    function getBinaryString(number) {
+      var numberString = number.toString(2).split("").reverse().join("");
+      while (numberString.length < 5) {
+        numberString += "0";
+      }
+      return numberString;
+    }
+    function reverseBinaryNumber(number) {
+      var numberString = getBinaryString(number);
+      return Number("0b" + numberString);
+    }
+    for (const side in tapStraps) {
+      const tapStrap = tapStraps[side];
+
+      tapStrap.addEventListener("tapdata", (event) => {
+        const { message } = event;
+        const { tapDataBitMask } = message;
+        const bitmaskString = getBinaryString(tapDataBitMask);
+        let bitmaskArray = bitmaskString.split("").map((value) => value == "1");
+
+        if (!treeboard.isHidden) {
+          if (side == "left") {
+            bitmaskArray = [bitmaskArray[0]].concat(
+              bitmaskArray.slice(1).reverse()
+            );
+          }
+          if (side == treeboard.side) {
+            let numberOfTaps = 0;
+            bitmaskArray.forEach((value) => {
+              if (value) {
+                numberOfTaps++;
+              }
+            });
+
+            if (numberOfTaps == 1) {
+              const tapIndex = bitmaskArray.findIndex((value) => value);
+              if (tapIndex == 0) {
+                treeboard.revert();
+              } else {
+                treeboard.selectIndex(tapIndex - 1);
+              }
+            }
+          }
+        } else {
+          if (side == "left") {
+            bitmaskArray.reverse();
+          }
+          piano.playTaps(side, { bitmaskArray });
+        }
+      });
+      tapStrap.addEventListener("mouse", (event) => {
+        const { x, y } = event.message;
+        if (treeboard.hidden || treeboard.side == side) {
+          if (y < -120) {
+            treeboard.isHidden = true;
+          } else if (y > 120) {
+            treeboard.side = side;
+            treeboard.isHidden = false;
+          }
+        }
+
+        if (treeboard.isHidden) {
+          const handPosition = piano.handPositions[side];
+          handPosition.x += x;
+          handPosition.y += y;
+
+          const keyPosition = Math.floor(handPosition.x / 300); // FIX
+          piano.setHandKeyPosition(side, keyPosition);
+        }
+      });
+
+      const connectButton = document.querySelector(
+        `#connections button.${side}.tapStrap`
+      );
+      connectButton.addEventListener("click", async (event) => {
+        console.log(connectButton.dataset.name);
+        await tapStrap.connect(connectButton.dataset.name);
+        if (!treeboard.side) {
+          treeboard.side = side;
+        }
+        connectButton.remove();
+      });
+    }
+  </script>
+
+  <script>
+    const insoles = {
+      left: new BluetoothMissionDevice(),
+      right: new BluetoothMissionDevice(),
+    };
+    const sustainConfigurations = {};
+
+    var sustainFoot = "right";
+
+    for (const side in insoles) {
+      const insole = insoles[side];
+
+      sustainConfigurations[side] = {
+        thresholds: {
+          mass: 0.02,
+          heelToToe: 0.6,
+        },
+        didExceedThreshold({ mass, heelToToe }) {
+          return (
+            mass > this.thresholds.mass && heelToToe > this.thresholds.heelToToe
+          );
+        },
+        calibrate(mass, heelToToe) {
+          this.thresholds.mass = mass;
+          this.thresholds.heelToToe = heelToToe;
+        },
+      };
+
+      insole.addEventListener("heelToToe", (event) => {
+        const exceededThreshold = sustainConfigurations[
+          side
+        ].didExceedThreshold(insole.pressure);
+        piano.useSustain = { [side]: exceededThreshold };
+      });
+
+      const connectButton = document.querySelector(
+        `#connections button.${side}.insole`
+      );
+      if (connectButton) {
+        connectButton.addEventListener("click", async (event) => {
+          await insole.connect();
+          connectButton.remove();
+        });
+      }
+    }
+  </script>
+
+  <script>
+    function intersectArrays(a, b) {
+      const shorterArray = a.length < b.length ? a : b;
+      const longerArray = a.length > b.length ? a : b;
+      return shorterArray.filter(function (value) {
+        return longerArray.includes(value);
+      });
+    }
+    function unionArrays(a, b) {
+      return a.concat(b).filter(function (value, index, union) {
+        return union.indexOf(value) == index;
+      });
+    }
+    function differenceArrays(a, b) {
+      return a.filter(function (value) {
+        return !b.includes(value);
+      });
+    }
+
+    const piano = {
+      init() {
+        this.container = document.querySelector("#piano");
+        this.keyElements = Array.from(
+          this.container.querySelectorAll('ul [class*="key"]')
+        );
+        this.keyElements.forEach((keyElement, index) => {
+          keyElement.classList.add(index < 12 ? "left" : "right");
+          const span = document.createElement("span");
+          keyElement.insertBefore(span, keyElement.firstChild);
+        });
+        this.numberOfOctavesToDisplay = Math.floor(
+          this.keyElements.length / 12
+        );
+
+        this.infoContainer = document.querySelector("#info");
+        this.octaveContainers = {
+          left: this.infoContainer.querySelector(".octave.left span"),
+          right: this.infoContainer.querySelector(".octave.right span"),
+        };
+
+        this.sustainContainer = this.infoContainer.querySelector(".sustain");
+
+        for (const side in this.octaves) {
+          this.setOctave(side, this.defaultOctaves[side]);
+        }
+
+        this.scale.updateHandKeyPositions =
+          this.updateHandKeyPositions.bind(this);
+        this.scale.init();
+        this.updateHandKeyPositions();
+      },
+
+      handPositions: {
+        left: new THREE.Vector2(),
+        right: new THREE.Vector2(),
+      },
+      handKeyPositions: {
+        left: 0,
+        right: 0,
+      },
+      modulatedHandKeyPositions: {
+        left: 0,
+        right: 0,
+      },
+      resetHandPositions() {
+        for (const side in this.handPositions) {
+          this.handPositions[side].set(0, 0);
+          this.setHandKeyPosition(side, 0);
+        }
+      },
+      updateHandKeyPosition(side) {
+        this.setHandKeyPosition(side, this.handKeyPositions[side]);
+      },
+      updateHandKeyPositions() {
+        for (const side in this.handPositions) {
+          this.updateHandKeyPosition(side);
+        }
+      },
+      setHandKeyPosition(side, keyPosition) {
+        this.handKeyPositions[side] = keyPosition;
+
+        var octave = this.defaultOctaves[side];
+
+        var modulatedKeyOffset = keyPosition;
+        var shifts = 0;
+        while (modulatedKeyOffset < 0) {
+          if (modulatedKeyOffset <= -this.scale.keys.length) {
+            shifts--;
+          }
+          modulatedKeyOffset += this.scale.keys.length;
+        }
+        while (modulatedKeyOffset >= this.scale.keys.length) {
+          modulatedKeyOffset -= this.scale.keys.length;
+          shifts++;
+        }
+
+        var rootKeyNameIndex = this.scale.allKeys.indexOf(this.scale.keys[0]);
+        var offsetKeyName = this.scale.keys[modulatedKeyOffset];
+        var offsetKeyNameIndex = this.scale.allKeys.indexOf(offsetKeyName);
+        if (offsetKeyNameIndex < rootKeyNameIndex && keyPosition > 0) {
+          offsetKeyNameIndex += this.scale.allKeys.length;
+        } else if (offsetKeyNameIndex > rootKeyNameIndex && keyPosition < 0) {
+          offsetKeyNameIndex -= this.scale.allKeys.length;
+        }
+
+        while (offsetKeyNameIndex < 0) {
+          offsetKeyNameIndex += this.scale.allKeys.length;
+          octave--;
+        }
+        while (offsetKeyNameIndex >= this.scale.allKeys.length) {
+          offsetKeyNameIndex -= this.scale.allKeys.length;
+          octave++;
+        }
+
+        octave += shifts;
+
+        this.modulatedHandKeyPositions[side] = modulatedKeyOffset;
+
+        this.setOctave(side, octave);
+
+        const keyOffset =
+          side == "left" ? 0 : (this.numberOfOctavesToDisplay * 12) / 2;
+        const highlightedKeys = [];
+        for (var index = 0; index < 5; index++) {
+          const keyIndexInScale =
+            (modulatedKeyOffset + index) % this.scale.keys.length;
+          let keyIndex = this.scale.allKeys.indexOf(
+            this.scale.keys[keyIndexInScale]
+          );
+          keyIndex += keyOffset;
+          const keyElement = this.keyElements[keyIndex];
+          highlightedKeys.push(keyElement);
+        }
+
+        this.keyElements
+          .filter((keyElement) => keyElement.classList.contains(side))
+          .forEach((keyElement, index) => {
+            if (highlightedKeys.includes(keyElement)) {
+              this.highlightKeyElement(
+                keyElement,
+                highlightedKeys.indexOf(keyElement) + 1
+              );
+            } else {
+              this.unhighlightKeyElement(keyElement);
+            }
+
+            if (this.scale.keys.includes(this.scale.allKeys[index])) {
+              this.enableKeyElement(keyElement);
+            } else {
+              this.disableKeyElement(keyElement);
+            }
+          });
+      },
+
+      octaves: {
+        left: -1,
+        right: -1,
+      },
+      defaultOctaves: {
+        left: 3,
+        right: 4,
+      },
+      octaveRange: {
+        min: 0,
+        max: 8,
+      },
+      setOctave(side, octave) {
+        octave = THREE.Math.clamp(
+          octave,
+          this.octaveRange.min,
+          this.octaveRange.max
+        );
+        if (this.octaves[side] != octave) {
+          this.octaves[side] = octave;
+          this.octaveContainers[side].innerText = octave.toString();
+        }
+      },
+
+      _allowSustain: false,
+      get allowSustain() {
+        return this._allowSustain;
+      },
+      set allowSustain(newAllowSustain) {
+        if (this.allowSustain != newAllowSustain) {
+          this._allowSustain = newAllowSustain;
+          if (this.allowSustain) {
+            this.sustainContainer.classList.add("allow");
+          } else {
+            this.sustainContainer.classList.remove("allow");
+          }
+
+          const rate = this.allowSustain ? 80 : 0;
+          const sensorDataConfigurations = {
+            pressure: { mass: rate, heelToToe: rate },
+          };
+          for (const side in insoles) {
+            const insole = insoles[side];
+            if (insole.isConnected) {
+              insole.setSensorDataConfigurations(sensorDataConfigurations);
+            } else {
+              insole.addEventListener(
+                "connected",
+                (event) => {
+                  insole.setSensorDataConfigurations(sensorDataConfigurations);
+                },
+                { once: true }
+              );
+            }
+          }
+
+          if (!this.allowSustain) {
+            this.useSustain = false;
+          }
+        }
+      },
+      _useSustain: { left: false, right: false },
+      get useSustain() {
+        return this._useSustain;
+      },
+      set useSustain(newUseSustain) {
+        let didChange = false;
+        for (side in newUseSustain) {
+          const useSustainForSide = newUseSustain[side];
+          if (this.useSustain[side] != useSustainForSide) {
+            this._useSustain[side] = useSustainForSide;
+
+            didChange = true;
+
+            if (!useSustainForSide) {
+              this.container
+                .querySelectorAll(`.play.${side}`)
+                .forEach((keyElement) => {
+                  this.releaseKeyElement(keyElement);
+                });
+
+              const synth = synths[side];
+              synth._pendingPitches.forEach((pitches) => {
+                synth.triggerRelease(pitches);
+              });
+              synth._pendingPitches.length = 0;
+            }
+          }
+        }
+
+        if (didChange) {
+          if (this.useSustain.left || this.useSustain.right) {
+            let innerText = "sustain (";
+            innerText += ["left", "right"]
+              .filter((side) => this.useSustain[side])
+              .join("/");
+            innerText += ")";
+            this.sustainContainer.querySelector("span").innerText = innerText;
+            this.sustainContainer.classList.add("isSustaining");
+          } else {
+            this.sustainContainer.classList.remove("isSustaining");
+          }
+        }
+      },
+
+      usePerfectChords: false,
+      usePerfectTone: false,
+
+      increaseOctaveOnOverflow: true,
+      playTaps(side, tapData) {
+        // convert taps to keys
+        const keys = [];
+        let latestKeyIndexInScale;
+        let latestTapIndex = 0;
+        const octaveShifts = [];
+        let firstTapKeyIndex;
+        tapData.bitmaskArray.forEach((isTapped, tapIndex) => {
+          if (isTapped || tapIndex == 0) {
+            let keyIndexInScale;
+            let octaveShift = 0;
+
+            if (this.usePerfectChords && keys.length > 0) {
+              var tapInterval = tapIndex - latestTapIndex;
+              keyIndexInScale = latestKeyIndexInScale + tapInterval + 1;
+            } else {
+              keyIndexInScale = tapIndex;
+              keyIndexInScale += this.modulatedHandKeyPositions[side];
+            }
+
+            latestTapIndex = tapIndex;
+            keyIndexInScale %= this.scale.keys.length;
+            latestKeyIndexInScale = keyIndexInScale;
+
+            var key = this.scale.keys[keyIndexInScale];
+            var keyIndex = this.scale.allKeys.indexOf(key);
+            if (tapIndex > 0 && keyIndex < firstTapKeyIndex) {
+              octaveShift = 1;
+            }
+            if (tapIndex == 0) {
+              firstTapKeyIndex = keyIndex;
+            }
+
+            if (isTapped) {
+              keys.push(key);
+              octaveShifts.push(octaveShift);
+            }
+          }
+        });
+
+        // convert keys to pitch
+        var pitches = [];
+        if (this.usePerfectTone) {
+          var rootPitch = 0;
+          var rootKeyIndex = 0;
+          pitches = keys.map((key, index) => {
+            var pitch = 0;
+            if (index == 0) {
+              rootKeyIndex = this.scale.allKeys.indexOf(key);
+              var noteString = (key instanceof Array ? key[0] : [key])[0];
+              var octave = this.octaves[side];
+              if (this.increaseOctaveOnOverflow) {
+                octave += octaveShifts[index];
+              }
+              pitch = noteString + octave;
+              rootPitch = Tone.Midi(pitch).toFrequency();
+            } else {
+              keyIndex = this.scale.allKeys.indexOf(key);
+              var interval = keyIndex - rootKeyIndex;
+              if (interval < 0) {
+                interval += this.scale.allKeys.length;
+              }
+              pitch = rootPitch * this.scale.idealIntervals[interval];
+            }
+
+            return pitch;
+          });
+        } else {
+          pitches = keys.map((key, index) => {
+            var keyIndex = this.scale.allKeys.indexOf(key);
+            key = key instanceof Array ? key[0] : key;
+            var octave = this.octaves[side];
+            if (this.increaseOctaveOnOverflow) {
+              octave += octaveShifts[index];
+            }
+            const pitch = key + octave;
+            return pitch;
+          });
+        }
+
+        keys.forEach((key, index) => {
+          var keyElementIndex = this.scale.allKeys.indexOf(key);
+          keyElementIndex +=
+            side == "left" ? 0 : (this.numberOfOctavesToDisplay * 12) / 2;
+
+          const keyElement = this.keyElements[keyElementIndex];
+          this.attackKeyElement(keyElement);
+          if (!this.useSustain[side]) {
+            this.releaseKeyElement(keyElement, this.defaultReleaseTime);
+          }
+        });
+
+        console.log(pitches);
+
+        if (this.useSustain[side]) {
+          synths[side].triggerAttack(pitches);
+          synths[side]._pendingPitches.push(pitches);
+        } else {
+          synths[side].triggerAttackRelease(pitches, this.defaultReleaseTime);
+        }
+
+        // update keys if auto-scale is enabled
+        if (this.scale.isAuto) {
+          this.scale.updatePossibleScales(keys);
+        }
+      },
+
+      defaultReleaseTime: 0.1,
+
+      highlightKeyElement(keyElement, index) {
+        keyElement.classList.add("highlighted");
+        if (index) {
+          keyElement.children[0].innerText = index;
+        }
+      },
+      unhighlightKeyElement(keyElement) {
+        keyElement.classList.remove("highlighted");
+        keyElement.children[0].innerText = "";
+      },
+      attackKeyElement(keyElement) {
+        this.clearKeyElementTimouts(keyElement);
+        keyElement.classList.add("play");
+      },
+      releaseKeyElement(keyElement, time) {
+        this.clearKeyElementTimouts(keyElement);
+        keyElement._timeoutHandler = setTimeout(() => {
+          keyElement.classList.remove("play");
+        }, time * 1000);
+      },
+      enableKeyElement(keyElement) {
+        keyElement.classList.remove("unavailable");
+      },
+      disableKeyElement(keyElement) {
+        keyElement.classList.add("unavailable");
+      },
+      clearKeyElementTimouts(keyElement) {
+        if (!isNaN(keyElement._timeoutHandler)) {
+          clearTimeout(keyElement._timeoutHandler);
+          delete keyElement._timeoutHandler;
+        }
+      },
+
+      scale: {
+        init() {
+          this.container = document.querySelector("#info .scale span");
+
+          this.initAllScales();
+          this.initKeyToScales();
+          this.update();
+        },
+
+        _root: "C",
+        get root() {
+          return this._root;
+        },
+        set root(newRoot) {
+          if (this._root != newRoot) {
+            this._root = newRoot;
+            this.update();
+          }
+        },
+        _pitch: "natural",
+        get pitch() {
+          return this._pitch;
+        },
+        set pitch(newPitch) {
+          if (this._pitch != newPitch) {
+            this._pitch = newPitch;
+            this.update();
+          }
+        },
+
+        _isMajor: true,
+        get isMajor() {
+          return this._isMajor;
+        },
+        set isMajor(newIsMajor) {
+          if (this._isMajor != newIsMajor) {
+            this._isMajor = newIsMajor;
+            this.update();
+          }
+        },
+        _isPentatonic: false,
+        get isPentatonic() {
+          return this._isPentatonic;
+        },
+        set isPentatonic(newIsPentatonic) {
+          if (this._isPentatonic != newIsPentatonic) {
+            this._isPentatonic = newIsPentatonic;
+            this.update();
+          }
+        },
+
+        _isAuto: false,
+        get isAuto() {
+          return this._isAuto;
+        },
+        set isAuto(newIsAuto) {
+          if (this._isAuto != newIsAuto) {
+            this._isAuto = newIsAuto;
+            this.update();
+          }
+        },
+        _isPerfect: false,
+        get isPerfect() {
+          return this._isPerfect;
+        },
+        set isPerfect(newIsPerfect) {
+          if (this._isPerfect != newIsPerfect) {
+            this._isPerfect = newIsPerfect;
+            this.update();
+          }
+        },
+
+        _name: "",
+        get name() {
+          return this._name;
+        },
+        updateName() {
+          let name = this.root;
+          switch (this.pitch) {
+            case "flat":
+              name += "b";
+              break;
+            case "sharp":
+              name += "#";
+              break;
+          }
+          if (!this.isMajor) {
+            name += "m";
+          }
+          if (this.isPentatonic) {
+            name += "p";
+          }
+
+          if (!this.allScales[name]) {
+            throw `invalid scale "${name}"`;
+            name = "C";
+          }
+
+          this._name = name;
+          this.container.innerText = this.name;
+        },
+
+        allKeys: [
+          "C",
+          ["C#", "Db"],
+          "D",
+          ["D#", "Eb"],
+          "E",
+          "F",
+          ["F#", "Gb"],
+          "G",
+          ["G#", "Ab"],
+          "A",
+          ["A#", "Bb"],
+          "B",
+        ],
+        keys: [],
+
+        idealIntervals: [
+          1,
+          17 / 16,
+          9 / 8,
+          6 / 5,
+          5 / 4,
+          4 / 3,
+          7 / 5,
+          3 / 2,
+          8 / 5,
+          5 / 3,
+          7 / 4,
+          15 / 8,
+        ],
+
+        allScales: {},
+        patterns: {
+          major: [2, 2, 1, 2, 2, 2],
+          minor: [2, 1, 2, 2, 1, 2],
+          pentatonicMajor: [2, 2, 3, 2],
+          pentatonicMinor: [3, 2, 2, 3],
+        },
+        initAllScales() {
+          this.allKeys.forEach((rootKey, rootKeyIndex) => {
+            var rootKeys = rootKey instanceof Array ? rootKey : [rootKey];
+
+            for (var patternName in this.patterns) {
+              var scale = [rootKey];
+
+              var pattern = this.patterns[patternName];
+              var netKeyOffset = rootKeyIndex;
+              pattern.forEach((keyOffset) => {
+                netKeyOffset = (netKeyOffset + keyOffset) % 12;
+                scale.push(this.allKeys[netKeyOffset]);
+              });
+
+              var lowercasePatternName = patternName.toLowerCase();
+              rootKeys.forEach((rootKeyName) => {
+                var scaleName = rootKeyName;
+                scaleName += lowercasePatternName.includes("major") ? "" : "m";
+                scaleName += lowercasePatternName.includes("pentatonic")
+                  ? "p"
+                  : "";
+                this.allScales[scaleName] = scale;
+              });
+            }
+          });
+        },
+
+        keyToScales: {},
+        initKeyToScales() {
+          this.allKeys.forEach((keyName) => {
+            const scales = [];
+            for (var scaleName in this.allScales) {
+              const scale = this.allScales[scaleName];
+              if (scale.includes(keyName)) {
+                scales.push(scaleName);
+              }
+            }
+            this.keyToScales[keyName] = scales;
+          });
+        },
+
+        lastNKeysPlayed: [],
+        lastNKeysPlayedMax: 10,
+        possibleScales: [],
+        updatePossibleScales(keys) {
+          keys = keys instanceof Array ? keys : [keys];
+          this.lastNKeysPlayed = this.lastNKeysPlayed.concat(keys);
+          while (this.lastNKeysPlayed.length > this.lastNKeysPlayedMax) {
+            this.lastNKeysPlayed.shift();
+          }
+
+          let possibleScales =
+            this.keyToScales[this.lastNKeysPlayed[0]].slice();
+          for (var index = 1; index < this.lastNKeysPlayed.length; index++) {
+            possibleScales = intersectArrays(
+              possibleScales,
+              this.keyToScales[this.lastNKeysPlayed[index]]
+            );
+          }
+          this.possibleScales = possibleScales;
+          this.container.innerText = `auto (${possibleScales
+            .filter((scale) => !scale.includes("p"))
+            .join(", ")})`;
+          this.computeKeys();
+        },
+
+        update() {
+          if (this.isAuto) {
+            this.lastNKeysPlayed = [];
+            this.container.innerText = "auto";
+          } else {
+            this.updateName();
+          }
+
+          this.computeKeys();
+        },
+        computeKeys() {
+          var keys;
+          if (this.isAuto) {
+            keys = this.possibleScales.length == 0 ? this.keys.slice() : [];
+            for (
+              var index = 0;
+              index < this.possibleScales.length && keys.length < 12;
+              index++
+            ) {
+              var possibleScale = this.possibleScales[index];
+              keys = unionArrays(keys, this.allScales[possibleScale]);
+            }
+            keys = keys.sort((a, b) => {
+              return this.allKeys.indexOf(a) - this.allKeys.indexOf(b);
+            });
+          } else if (this.isPerfect) {
+            keys = this.allScales[this.name];
+          } else {
+            keys = this.allKeys.slice();
+          }
+          this.keys = keys;
+          this.updateHandKeyPositions();
+        },
+      },
+    };
+
+    piano.init();
+  </script>
+
+  <script>
+    const synths = {};
+    function setOscillatorType(type) {
+      for (const side in synths) {
+        synths[side].set({ oscillator: { type } });
+      }
+    }
+    for (const side in tapStraps) {
+      synths[side] = new Tone.PolySynth().toDestination();
+      synths[side]._pendingPitches = [];
+      setOscillatorType("sine");
+    }
+
+    document.addEventListener("click", async (event) => {
+      await Tone.start();
+    });
+
+    treeboard.setTree({
+      scale: {
+        "set scale": {
+          root: {
+            "A to D": {
+              A: () => {
+                piano.scale.root = "A";
+              },
+              B: () => {
+                piano.scale.root = "B";
+              },
+              C: () => {
+                piano.scale.root = "C";
+              },
+              D: () => {
+                piano.scale.root = "D";
+              },
+            },
+            "E to G": {
+              E: () => {
+                piano.scale.root = "E";
+              },
+              F: () => {
+                piano.scale.root = "F";
+              },
+              G: () => {
+                piano.scale.root = "G";
+              },
+            },
+          },
+          pitch: {
+            natural: () => {
+              piano.scale.pitch = "natural";
+            },
+            flat: () => {
+              piano.scale.pitch = "flat";
+            },
+            sharp: () => {
+              piano.scale.pitch = "sharp";
+            },
+          },
+          isMajor: {
+            major: () => {
+              piano.scale.isMajor = true;
+            },
+            minor: () => {
+              piano.scale.isMajor = false;
+            },
+          },
+          pentatonic: {
+            pentatonic: () => {
+              piano.scale.isPentatonic = true;
+            },
+            "not pentatonic": () => {
+              piano.scale.isPentatonic = true;
+            },
+          },
+        },
+        perfect: {
+          enable: () => {
+            piano.scale.isPerfect = true;
+          },
+          disable: () => {
+            piano.scale.isPerfect = false;
+          },
+        },
+        chords: {
+          enable: () => {
+            piano.usePerfectChords = true;
+          },
+          disable: () => {
+            piano.usePerfectChords = false;
+          },
+        },
+        auto: {
+          enable: () => {
+            piano.scale.isAuto = true;
+          },
+          disable: () => {
+            piano.scale.isAuto = false;
+          },
+        },
+      },
+      tone: {
+        synth: {
+          Sine: () => {
+            setOscillatorType("sine");
+          },
+          Triangle: () => {
+            setOscillatorType("triangle");
+          },
+          Square: () => {
+            setOscillatorType("square");
+          },
+          Sawtooth: () => {
+            setOscillatorType("sawtooth");
+          },
+        },
+        "perfect tone": {
+          enable: () => {
+            piano.usePerfectTone = true;
+          },
+          disable: () => {
+            piano.usePerfectTone = false;
+          },
+        },
+      },
+      pedal: {
+        calibrate: () => {
+          sustainConfigurations.right.calibrate();
+        },
+        "set enabled": {
+          enable: () => {
+            piano.allowSustain = true;
+          },
+          disable: () => {
+            piano.allowSustain = false;
+          },
+        },
+      },
+      speech: {
+        "set enabled": {
+          enable: () => {
+            treeboard.useSpeechSynthesis = true;
+          },
+          disable: () => {
+            treeboard.useSpeechSynthesis = false;
+          },
+        },
+      },
+    });
+  </script>
+</html>

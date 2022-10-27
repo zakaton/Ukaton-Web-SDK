@@ -1,0 +1,1511 @@
+<html>
+  <head>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+    <title>Battery | Ukaton Side Mission</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/PeerBluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div>
+      <canvas id="myChart"></canvas>
+    </div>
+
+    <div id="notConnected">
+      <button id="connectBluetooth">connect bluetooth</button>
+      <label>gateway <input id="gateway" placeholder="0.0.0.0" /></label>
+      <button id="connectWebsockets">connect websockets</button>
+    </div>
+    <div id="connected" hidden>
+      <button onclick="setRecordingType('charging')">Record Charging</button>
+      <button onclick="setRecordingType('bluetoothIdle')">
+        Record Bluetooth Idle
+      </button>
+      <button onclick="setRecordingType('bluetoothData')">
+        Record Bluetooth Data
+      </button>
+      <button onclick="setRecordingType('websocketIdle')">
+        Record WebSockets Idle
+      </button>
+      <button onclick="setRecordingType('websocketData')">
+        Record WebSockets Data
+      </button>
+    </div>
+  </body>
+  <script>
+    const data = {
+      datasets: [
+        {
+          label: "Charging",
+          backgroundColor: "rgb(0, 255, 13)",
+          borderColor: "rgb(0, 255, 13)",
+          data: [
+            {
+              x: 0,
+              y: 1,
+            },
+            {
+              x: 0.029163055555555557,
+              y: 2,
+            },
+            {
+              x: 0.12639583333333335,
+              y: 3,
+            },
+            {
+              x: 0.25694555555555554,
+              y: 4,
+            },
+            {
+              x: 0.3430783333333333,
+              y: 5,
+            },
+            {
+              x: 0.4152766666666667,
+              y: 6,
+            },
+            {
+              x: 0.48749194444444444,
+              y: 7,
+            },
+            {
+              x: 0.5513908333333334,
+              y: 8,
+            },
+            {
+              x: 0.6152744444444445,
+              y: 9,
+            },
+            {
+              x: 0.684725,
+              y: 10,
+            },
+            {
+              x: 0.7513913888888889,
+              y: 11,
+            },
+            {
+              x: 0.7986097222222223,
+              y: 12,
+            },
+            {
+              x: 0.8569405555555556,
+              y: 13,
+            },
+            {
+              x: 0.9152747222222222,
+              y: 14,
+            },
+            {
+              x: 0.9680580555555556,
+              y: 15,
+            },
+            {
+              x: 1.0236072222222221,
+              y: 16,
+            },
+            {
+              x: 1.0736072222222222,
+              y: 17,
+            },
+            {
+              x: 1.1236075,
+              y: 18,
+            },
+            {
+              x: 1.1569419444444444,
+              y: 19,
+            },
+            {
+              x: 1.2013888888888888,
+              y: 20,
+            },
+            {
+              x: 1.2458227777777777,
+              y: 21,
+            },
+            {
+              x: 1.2902708333333333,
+              y: 22,
+            },
+            {
+              x: 1.3236058333333334,
+              y: 23,
+            },
+            {
+              x: 1.3541577777777778,
+              y: 24,
+            },
+            {
+              x: 1.3958222222222223,
+              y: 25,
+            },
+            {
+              x: 1.4236077777777778,
+              y: 26,
+            },
+            {
+              x: 1.4486041666666667,
+              y: 27,
+            },
+            {
+              x: 1.48472,
+              y: 28,
+            },
+            {
+              x: 1.5097222222222222,
+              y: 29,
+            },
+            {
+              x: 1.5319394444444445,
+              y: 30,
+            },
+            {
+              x: 1.5652719444444445,
+              y: 31,
+            },
+            {
+              x: 1.5847208333333334,
+              y: 32,
+            },
+            {
+              x: 1.6041558333333332,
+              y: 33,
+            },
+            {
+              x: 1.6347230555555556,
+              y: 34,
+            },
+            {
+              x: 1.6513733333333334,
+              y: 35,
+            },
+            {
+              x: 1.6708202777777779,
+              y: 36,
+            },
+            {
+              x: 1.6930394444444445,
+              y: 37,
+            },
+            {
+              x: 1.71527,
+              y: 38,
+            },
+            {
+              x: 1.7347047222222223,
+              y: 39,
+            },
+            {
+              x: 1.7486047222222223,
+              y: 40,
+            },
+            {
+              x: 1.7708225,
+              y: 41,
+            },
+            {
+              x: 1.79027,
+              y: 42,
+            },
+            {
+              x: 1.8069366666666666,
+              y: 43,
+            },
+            {
+              x: 1.8291555555555556,
+              y: 44,
+            },
+            {
+              x: 1.843038888888889,
+              y: 45,
+            },
+            {
+              x: 1.8652691666666668,
+              y: 46,
+            },
+            {
+              x: 1.8791522222222221,
+              y: 47,
+            },
+            {
+              x: 1.9013725,
+              y: 48,
+            },
+            {
+              x: 1.9152725,
+              y: 49,
+            },
+            {
+              x: 1.9347055555555555,
+              y: 50,
+            },
+            {
+              x: 1.9458219444444445,
+              y: 51,
+            },
+            {
+              x: 1.9652694444444445,
+              y: 52,
+            },
+            {
+              x: 1.9847027777777777,
+              y: 53,
+            },
+            {
+              x: 1.9986025,
+              y: 54,
+            },
+            {
+              x: 2.015290277777778,
+              y: 55,
+            },
+            {
+              x: 2.0291569444444444,
+              y: 56,
+            },
+            {
+              x: 2.051388333333333,
+              y: 57,
+            },
+            {
+              x: 2.065271666666667,
+              y: 58,
+            },
+            {
+              x: 2.0819405555555557,
+              y: 59,
+            },
+            {
+              x: 2.0958236111111113,
+              y: 60,
+            },
+            {
+              x: 2.1124936111111112,
+              y: 61,
+            },
+            {
+              x: 2.1263769444444445,
+              y: 62,
+            },
+            {
+              x: 2.1486147222222223,
+              y: 63,
+            },
+            {
+              x: 2.165281388888889,
+              y: 64,
+            },
+            {
+              x: 2.1819475,
+              y: 65,
+            },
+            {
+              x: 2.2013830555555556,
+              y: 66,
+            },
+            {
+              x: 2.218049722222222,
+              y: 67,
+            },
+            {
+              x: 2.234715,
+              y: 68,
+            },
+            {
+              x: 2.2513852777777776,
+              y: 69,
+            },
+            {
+              x: 2.273620833333333,
+              y: 70,
+            },
+            {
+              x: 2.290287222222222,
+              y: 71,
+            },
+            {
+              x: 2.3097216666666665,
+              y: 72,
+            },
+            {
+              x: 2.3263883333333335,
+              y: 73,
+            },
+            {
+              x: 2.3458405555555557,
+              y: 74,
+            },
+            {
+              x: 2.3625072222222223,
+              y: 75,
+            },
+            {
+              x: 2.3819566666666665,
+              y: 76,
+            },
+            {
+              x: 2.3986230555555554,
+              y: 77,
+            },
+            {
+              x: 2.4208425,
+              y: 78,
+            },
+            {
+              x: 2.440291111111111,
+              y: 79,
+            },
+            {
+              x: 2.456957777777778,
+              y: 80,
+            },
+            {
+              x: 2.4763941666666667,
+              y: 81,
+            },
+            {
+              x: 2.4958441666666666,
+              y: 82,
+            },
+            {
+              x: 2.515293888888889,
+              y: 83,
+            },
+            {
+              x: 2.534729722222222,
+              y: 84,
+            },
+            {
+              x: 2.5569625,
+              y: 85,
+            },
+            {
+              x: 2.581966388888889,
+              y: 86,
+            },
+            {
+              x: 2.6069661111111113,
+              y: 87,
+            },
+            {
+              x: 2.6319641666666667,
+              y: 88,
+            },
+            {
+              x: 2.6597322222222224,
+              y: 89,
+            },
+            {
+              x: 2.690298888888889,
+              y: 90,
+            },
+            {
+              x: 2.7208533333333333,
+              y: 91,
+            },
+            {
+              x: 2.7541836111111113,
+              y: 92,
+            },
+            {
+              x: 2.7930691666666667,
+              y: 93,
+            },
+            {
+              x: 2.829186111111111,
+              y: 94,
+            },
+            {
+              x: 2.8708541666666667,
+              y: 95,
+            },
+            {
+              x: 2.920853888888889,
+              y: 96,
+            },
+            {
+              x: 2.9708575,
+              y: 97,
+            },
+            {
+              x: 3.0236408333333333,
+              y: 98,
+            },
+            {
+              x: 3.095858888888889,
+              y: 99,
+            },
+            {
+              x: 3.1680747222222223,
+              y: 100,
+            },
+            {
+              x: 3.251412222222222,
+              y: 101,
+            },
+          ],
+          showLine: true,
+        },
+        {
+          label: "Bluetooth (idle)",
+          backgroundColor: "rgb(0, 238, 255)",
+          borderColor: "rgb(0, 238, 255)",
+          data: [
+            {
+              x: 0,
+              y: 102,
+            },
+            {
+              x: 0.005449166666666666,
+              y: 102,
+            },
+            {
+              x: 0.04919916666666667,
+              y: 101,
+            },
+            {
+              x: 0.17974861111111112,
+              y: 100,
+            },
+            {
+              x: 0.26308166666666666,
+              y: 99,
+            },
+            {
+              x: 0.3325313888888889,
+              y: 98,
+            },
+            {
+              x: 0.41031416666666665,
+              y: 97,
+            },
+            {
+              x: 0.4741972222222222,
+              y: 96,
+            },
+            {
+              x: 0.5380802777777778,
+              y: 95,
+            },
+            {
+              x: 0.6075302777777778,
+              y: 94,
+            },
+            {
+              x: 0.6686466666666666,
+              y: 93,
+            },
+            {
+              x: 0.7297463888888889,
+              y: 92,
+            },
+            {
+              x: 0.7991961111111111,
+              y: 91,
+            },
+            {
+              x: 0.8603125,
+              y: 90,
+            },
+            {
+              x: 0.9241955555555555,
+              y: 89,
+            },
+            {
+              x: 0.9908619444444444,
+              y: 88,
+            },
+            {
+              x: 1.0575283333333334,
+              y: 87,
+            },
+            {
+              x: 1.1269777777777779,
+              y: 86,
+            },
+            {
+              x: 1.1991944444444445,
+              y: 85,
+            },
+            {
+              x: 1.2714108333333334,
+              y: 84,
+            },
+            {
+              x: 1.3408769444444444,
+              y: 83,
+            },
+            {
+              x: 1.4075269444444445,
+              y: 82,
+            },
+            {
+              x: 1.4741933333333332,
+              y: 81,
+            },
+            {
+              x: 1.5408597222222222,
+              y: 80,
+            },
+            {
+              x: 1.6102927777777778,
+              y: 79,
+            },
+            {
+              x: 1.6769591666666666,
+              y: 78,
+            },
+            {
+              x: 1.746408888888889,
+              y: 77,
+            },
+            {
+              x: 1.8269586111111111,
+              y: 76,
+            },
+            {
+              x: 1.8991916666666666,
+              y: 75,
+            },
+            {
+              x: 1.9686247222222222,
+              y: 74,
+            },
+            {
+              x: 2.0436244444444442,
+              y: 73,
+            },
+            {
+              x: 2.1158575,
+              y: 72,
+            },
+            {
+              x: 2.188073888888889,
+              y: 71,
+            },
+            {
+              x: 2.263073611111111,
+              y: 70,
+            },
+            {
+              x: 2.33529,
+              y: 69,
+            },
+            {
+              x: 2.421406111111111,
+              y: 68,
+            },
+            {
+              x: 2.5019561111111113,
+              y: 67,
+            },
+            {
+              x: 2.5714055555555557,
+              y: 66,
+            },
+            {
+              x: 2.654738611111111,
+              y: 65,
+            },
+            {
+              x: 2.740854722222222,
+              y: 64,
+            },
+            {
+              x: 2.826954722222222,
+              y: 63,
+            },
+            {
+              x: 2.9158375,
+              y: 62,
+            },
+            {
+              x: 3.021403888888889,
+              y: 61,
+            },
+            {
+              x: 3.09362,
+              y: 60,
+            },
+            {
+              x: 3.165836666666667,
+              y: 59,
+            },
+            {
+              x: 3.2325030555555556,
+              y: 58,
+            },
+            {
+              x: 3.296402777777778,
+              y: 57,
+            },
+            {
+              x: 3.3575025,
+              y: 56,
+            },
+            {
+              x: 3.438068888888889,
+              y: 55,
+            },
+            {
+              x: 3.499168611111111,
+              y: 54,
+            },
+            {
+              x: 3.5630680555555556,
+              y: 53,
+            },
+            {
+              x: 3.6075013888888887,
+              y: 52,
+            },
+            {
+              x: 3.6741680555555556,
+              y: 51,
+            },
+            {
+              x: 3.7380677777777778,
+              y: 50,
+            },
+            {
+              x: 3.7797341666666666,
+              y: 49,
+            },
+            {
+              x: 3.840833888888889,
+              y: 48,
+            },
+            {
+              x: 3.885283888888889,
+              y: 47,
+            },
+            {
+              x: 3.9491669444444444,
+              y: 46,
+            },
+            {
+              x: 3.9936166666666666,
+              y: 45,
+            },
+            {
+              x: 4.057499722222222,
+              y: 44,
+            },
+            {
+              x: 4.0991663888888885,
+              y: 43,
+            },
+            {
+              x: 4.163066111111111,
+              y: 42,
+            },
+            {
+              x: 4.201949166666667,
+              y: 41,
+            },
+            {
+              x: 4.257498888888889,
+              y: 40,
+            },
+            {
+              x: 4.313065277777778,
+              y: 39,
+            },
+            {
+              x: 4.351948611111111,
+              y: 38,
+            },
+            {
+              x: 4.404731666666667,
+              y: 37,
+            },
+            {
+              x: 4.460281388888889,
+              y: 36,
+            },
+            {
+              x: 4.515831388888889,
+              y: 35,
+            },
+            {
+              x: 4.560281111111111,
+              y: 34,
+            },
+            {
+              x: 4.6019475,
+              y: 33,
+            },
+            {
+              x: 4.665830833333334,
+              y: 32,
+            },
+            {
+              x: 4.710280555555555,
+              y: 31,
+            },
+            {
+              x: 4.751946944444445,
+              y: 30,
+            },
+            {
+              x: 4.815830277777778,
+              y: 29,
+            },
+            {
+              x: 4.857496666666667,
+              y: 28,
+            },
+            {
+              x: 4.899163055555555,
+              y: 27,
+            },
+            {
+              x: 4.963046111111111,
+              y: 26,
+            },
+            {
+              x: 5.004712777777778,
+              y: 25,
+            },
+            {
+              x: 5.046379166666667,
+              y: 24,
+            },
+            {
+              x: 5.1074955555555555,
+              y: 23,
+            },
+            {
+              x: 5.149162222222222,
+              y: 22,
+            },
+            {
+              x: 5.190828611111111,
+              y: 21,
+            },
+            {
+              x: 5.246378333333333,
+              y: 20,
+            },
+            {
+              x: 5.2991616666666665,
+              y: 19,
+            },
+            {
+              x: 5.351944722222222,
+              y: 18,
+            },
+            {
+              x: 5.393611111111111,
+              y: 17,
+            },
+            {
+              x: 5.449161111111111,
+              y: 16,
+            },
+            {
+              x: 5.507494166666667,
+              y: 15,
+            },
+            {
+              x: 5.568610555555556,
+              y: 14,
+            },
+            {
+              x: 5.629710277777778,
+              y: 13,
+            },
+            {
+              x: 5.69361,
+              y: 12,
+            },
+            {
+              x: 5.760276388888889,
+              y: 11,
+            },
+            {
+              x: 5.810276111111111,
+              y: 10,
+            },
+            {
+              x: 5.8797258333333335,
+              y: 9,
+            },
+            {
+              x: 5.951942222222222,
+              y: 8,
+            },
+            {
+              x: 6.032491944444445,
+              y: 7,
+            },
+            {
+              x: 6.126925,
+              y: 6,
+            },
+            {
+              x: 6.263041111111111,
+              y: 5,
+            },
+            {
+              x: 6.460256944444445,
+              y: 4,
+            },
+            {
+              x: 6.735255833333333,
+              y: 3,
+            },
+            {
+              x: 7.624152222222222,
+              y: 2,
+            },
+            {
+              x: 9.238012777777778,
+              y: 1,
+            },
+            {
+              x: 10.8381175,
+              y: 0,
+            },
+            {
+              x: 11.143863055555556,
+              y: 0,
+            },
+          ],
+          showLine: true,
+        },
+        {
+          label: "Bluetooth (data)",
+          backgroundColor: "rgb(0, 102, 255)",
+          borderColor: "rgb(0, 102, 255)",
+          data: [
+            {
+              x: 0.0033519444444444443,
+              y: 101,
+            },
+            {
+              x: 0.10056944444444445,
+              y: 100,
+            },
+            {
+              x: 0.21447027777777777,
+              y: 99,
+            },
+            {
+              x: 0.2866875,
+              y: 98,
+            },
+            {
+              x: 0.3561377777777778,
+              y: 97,
+            },
+            {
+              x: 0.4061383333333333,
+              y: 96,
+            },
+            {
+              x: 0.4533552777777778,
+              y: 95,
+            },
+            {
+              x: 0.5061386111111111,
+              y: 94,
+            },
+            {
+              x: 0.5505725,
+              y: 93,
+            },
+            {
+              x: 0.5922555555555555,
+              y: 92,
+            },
+            {
+              x: 0.6450227777777777,
+              y: 91,
+            },
+            {
+              x: 0.6866894444444445,
+              y: 90,
+            },
+            {
+              x: 0.7311394444444445,
+              y: 89,
+            },
+            {
+              x: 0.7811394444444445,
+              y: 88,
+            },
+            {
+              x: 0.8283730555555555,
+              y: 87,
+            },
+            {
+              x: 0.8783563888888889,
+              y: 86,
+            },
+            {
+              x: 0.9283566666666667,
+              y: 85,
+            },
+            {
+              x: 0.9811397222222222,
+              y: 84,
+            },
+            {
+              x: 1.0283566666666666,
+              y: 83,
+            },
+            {
+              x: 1.0783566666666666,
+              y: 82,
+            },
+            {
+              x: 1.1283566666666667,
+              y: 81,
+            },
+            {
+              x: 1.1783566666666667,
+              y: 80,
+            },
+            {
+              x: 1.2283733333333333,
+              y: 79,
+            },
+            {
+              x: 1.2783566666666666,
+              y: 78,
+            },
+            {
+              x: 1.3311397222222223,
+              y: 77,
+            },
+            {
+              x: 1.397806388888889,
+              y: 76,
+            },
+            {
+              x: 1.4533558333333334,
+              y: 75,
+            },
+            {
+              x: 1.508906388888889,
+              y: 74,
+            },
+            {
+              x: 1.5672397222222223,
+              y: 73,
+            },
+            {
+              x: 1.6255727777777778,
+              y: 72,
+            },
+            {
+              x: 1.6866891666666666,
+              y: 71,
+            },
+            {
+              x: 1.7450225,
+              y: 70,
+            },
+            {
+              x: 1.8033725,
+              y: 69,
+            },
+            {
+              x: 1.8728222222222222,
+              y: 68,
+            },
+            {
+              x: 1.936688888888889,
+              y: 67,
+            },
+            {
+              x: 1.992238888888889,
+              y: 66,
+            },
+            {
+              x: 2.0561380555555555,
+              y: 65,
+            },
+            {
+              x: 2.122788611111111,
+              y: 64,
+            },
+            {
+              x: 2.1866880555555555,
+              y: 63,
+            },
+            {
+              x: 2.256121388888889,
+              y: 62,
+            },
+            {
+              x: 2.3366875,
+              y: 61,
+            },
+            {
+              x: 2.395020833333333,
+              y: 60,
+            },
+            {
+              x: 2.4505875,
+              y: 59,
+            },
+            {
+              x: 2.5061369444444446,
+              y: 58,
+            },
+            {
+              x: 2.5561202777777776,
+              y: 57,
+            },
+            {
+              x: 2.60892,
+              y: 56,
+            },
+            {
+              x: 2.6727866666666666,
+              y: 55,
+            },
+            {
+              x: 2.720019722222222,
+              y: 54,
+            },
+            {
+              x: 2.772786388888889,
+              y: 53,
+            },
+            {
+              x: 2.8116861111111113,
+              y: 52,
+            },
+            {
+              x: 2.8672358333333334,
+              y: 51,
+            },
+            {
+              x: 2.9228019444444446,
+              y: 50,
+            },
+            {
+              x: 2.958902222222222,
+              y: 49,
+            },
+            {
+              x: 3.011668888888889,
+              y: 48,
+            },
+            {
+              x: 3.050568611111111,
+              y: 47,
+            },
+            {
+              x: 3.1089016666666667,
+              y: 46,
+            },
+            {
+              x: 3.1450016666666665,
+              y: 45,
+            },
+            {
+              x: 3.2005680555555553,
+              y: 44,
+            },
+            {
+              x: 3.2366680555555556,
+              y: 43,
+            },
+            {
+              x: 3.289451111111111,
+              y: 42,
+            },
+            {
+              x: 3.3255675,
+              y: 41,
+            },
+            {
+              x: 3.3727841666666665,
+              y: 40,
+            },
+            {
+              x: 3.4200005555555557,
+              y: 39,
+            },
+            {
+              x: 3.4505669444444442,
+              y: 38,
+            },
+            {
+              x: 3.497783888888889,
+              y: 37,
+            },
+            {
+              x: 3.5450002777777776,
+              y: 36,
+            },
+            {
+              x: 3.58945,
+              y: 35,
+            },
+            {
+              x: 3.6255663888888887,
+              y: 34,
+            },
+            {
+              x: 3.661666388888889,
+              y: 33,
+            },
+            {
+              x: 3.714465833333333,
+              y: 32,
+            },
+            {
+              x: 3.7477827777777777,
+              y: 31,
+            },
+            {
+              x: 3.7838991666666666,
+              y: 30,
+            },
+            {
+              x: 3.8366658333333334,
+              y: 29,
+            },
+            {
+              x: 3.869998888888889,
+              y: 28,
+            },
+            {
+              x: 3.9061155555555556,
+              y: 27,
+            },
+            {
+              x: 3.9588983333333334,
+              y: 26,
+            },
+            {
+              x: 3.9922316666666666,
+              y: 25,
+            },
+            {
+              x: 4.025564722222223,
+              y: 24,
+            },
+            {
+              x: 4.078331388888889,
+              y: 23,
+            },
+            {
+              x: 4.111664722222222,
+              y: 22,
+            },
+            {
+              x: 4.144997777777777,
+              y: 21,
+            },
+            {
+              x: 4.192247222222222,
+              y: 20,
+            },
+            {
+              x: 4.233897222222223,
+              y: 19,
+            },
+            {
+              x: 4.278330555555556,
+              y: 18,
+            },
+            {
+              x: 4.311663888888889,
+              y: 17,
+            },
+            {
+              x: 4.356129722222223,
+              y: 16,
+            },
+            {
+              x: 4.406113333333334,
+              y: 15,
+            },
+            {
+              x: 4.456113055555556,
+              y: 14,
+            },
+            {
+              x: 4.506129444444444,
+              y: 13,
+            },
+            {
+              x: 4.558895833333334,
+              y: 12,
+            },
+            {
+              x: 4.6116625,
+              y: 11,
+            },
+            {
+              x: 4.6533291666666665,
+              y: 10,
+            },
+            {
+              x: 4.708895555555555,
+              y: 9,
+            },
+            {
+              x: 4.764445277777778,
+              y: 8,
+            },
+            {
+              x: 4.828345,
+              y: 7,
+            },
+            {
+              x: 4.897777777777778,
+              y: 6,
+            },
+            {
+              x: 4.992211111111111,
+              y: 5,
+            },
+            {
+              x: 5.117226944444444,
+              y: 4,
+            },
+            {
+              x: 5.281109722222222,
+              y: 3,
+            },
+            {
+              x: 5.8477741666666665,
+              y: 2,
+            },
+            {
+              x: 7.256101666666667,
+              y: 1,
+            },
+            {
+              x: 8.667294444444444,
+              y: 0,
+            },
+            {
+              x: 8.907023888888888,
+              y: 0,
+            },
+          ],
+          showLine: true,
+        },
+        /*
+        {
+          label: "WebSockets (idle)",
+          backgroundColor: "rgb(255, 209, 122)",
+          borderColor: "rgb(255, 209, 122)",
+          data: [],
+          showLine: true,
+        },
+        {
+          label: "WebSockets (data)",
+          backgroundColor: "rgb(255, 167, 0)",
+          borderColor: "rgb(255, 167, 0)",
+          data: [],
+          showLine: true,
+        },
+        */
+      ],
+    };
+
+    const config = {
+      type: "scatter",
+      data: data,
+      options: {
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Hours",
+              font: {size: 24}
+            },
+            ticks: {
+                font: {
+                    size: 18,
+                }
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: "Percentage",
+              font: {size: 24}
+            },
+            ticks: {
+                font: {
+                    size: 18,
+                }
+            },
+            min: 0,
+            max: 100,
+          },
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: "Battery Life",
+            font: {
+                size: 24,
+              },
+          },
+          legend: {
+            labels: {
+              // This more specific font property overrides the global property
+              font: {
+                size: 18,
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const recordingTypes = [
+      "charging",
+      "bluetoothIdle",
+      "bluetoothData",
+      //"websocketIdle",
+      //"websocketData",
+    ];
+    recordingTypes.forEach((recordingType, recordingIndex) => {
+      const dataString = localStorage.getItem(recordingType);
+      if (dataString) {
+        const _data = JSON.parse(dataString);
+        console.log("loading data", recordingType, _data, recordingIndex);
+        _data.forEach((dataPoint) => {
+          //dataPoint.x *= 60
+          //dataPoint.x = Math.floor(dataPoint.x)
+          data.datasets[recordingIndex].data.push(dataPoint);
+        });
+      }
+    });
+
+    const myChart = new Chart(document.getElementById("myChart"), config);
+
+    document
+      .getElementById("connectBluetooth")
+      .addEventListener("click", async (event) => {
+        const bluetoothMissionDevice = new BluetoothMissionDevice();
+        bluetoothMissionDevice.addEventListener("connected", (event) => {
+          setupMissionDevice(bluetoothMissionDevice);
+        });
+        await bluetoothMissionDevice.connect();
+      });
+    document
+      .getElementById("connectWebsockets")
+      .addEventListener("click", async (event) => {
+        const gateway = document.getElementById("gateway").value;
+        window.gateway = gateway;
+        console.log("connecting to gateway", gateway);
+        if (gateway?.length > 0) {
+          const websocketMissionDevice = new WebSocketMissionDevice();
+          websocketMissionDevice.addEventListener("connected", (event) => {
+            setupMissionDevice(websocketMissionDevice);
+          });
+          await websocketMissionDevice.connect(gateway);
+        }
+      });
+
+    let missionDevice;
+    let startTime;
+    let recordingType;
+    const setupMissionDevice = (_missionDevice) => {
+      missionDevice = _missionDevice;
+      document.getElementById("notConnected").hidden = true;
+      document.getElementById("connected").hidden = false;
+    };
+
+    const millisecondsToHours = (milliseconds) => {
+      return milliseconds / (1000 * 60 * 60);
+    };
+    const rawData = [];
+    const setRecordingType = async (type) => {
+      if (!recordingTypes.includes(type)) {
+        console.log("invalid recording type", type);
+        return;
+      }
+
+      console.log("recording", type);
+
+      const recordingIndex = recordingTypes.indexOf(type);
+      data.datasets[recordingIndex].data.length = 0;
+
+      const addDataPoint = (dataPoint) => {
+        console.log("dataPoint", dataPoint);
+        rawData.push(dataPoint);
+        localStorage.setItem(recordingType, JSON.stringify(rawData));
+        data.datasets[recordingIndex].data.push(dataPoint);
+        myChart.update();
+      };
+
+      recordingType = type;
+      startTime = Date.now();
+      addDataPoint({ x: 0, y: missionDevice.batteryLevel });
+      missionDevice.addEventListener("batterylevel", (event) => {
+        const { batteryLevel } = event.message;
+        const dataPoint = {
+          x: millisecondsToHours(Date.now() - startTime),
+          y: batteryLevel,
+        };
+        addDataPoint(dataPoint);
+      });
+      const reconnect = async () => {
+        setTimeout(async () => {
+          console.log("reconnecting...");
+          await missionDevice.connect(window.gateway);
+          if (missionDevice.isConnected) {
+            console.log("reconnected");
+            switch (recordingType) {
+              case "bluetoothData":
+              case "websocketData":
+                console.log("enabling data");
+                await missionDevice.setSensorDataConfigurations({
+                  motion: { quaternion: 40 },
+                  pressure: { pressureSingleByte: 40 },
+                });
+                break;
+            }
+          } else {
+            console.log("will try again");
+            reconnect();
+          }
+        }, 2000);
+      };
+      missionDevice.addEventListener("disconnected", (e) => {
+        missionDevice.dispatchEvent({
+          type: "batterylevel",
+          message: { batteryLevel: 0 },
+        });
+        if (missionDevice._webSocket) {
+          reconnect();
+        }
+      });
+
+      switch (recordingType) {
+        case "bluetoothData":
+        case "websocketData":
+          console.log("enabling data");
+          await missionDevice.setSensorDataConfigurations({
+            motion: { quaternion: 40 },
+            pressure: { pressureSingleByte: 40 },
+          });
+          break;
+      }
+      document.getElementById("connected").hidden = true;
+    };
+  </script>
+</html>

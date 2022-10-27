@@ -68,6 +68,8 @@ class BluetoothMissionDevice extends BaseMission {
       this.log("starting battery level notifications...");
       await this._batteryLevelCharacteristic.startNotifications();
       this.log("started battery level notifications!");
+      
+      await this._batteryLevelCharacteristic.readValue()
     }
 
     this.log("getting service...");
