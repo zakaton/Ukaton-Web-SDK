@@ -1,5 +1,4 @@
 /* global AFRAME, THREE, WebSocketMissionDevice, BluetoothMissionDevice */
-
 AFRAME.registerSystem("ukaton-body-tracking", {
   init: function () {
     this.entities = [];

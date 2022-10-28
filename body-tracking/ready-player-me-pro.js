@@ -1,5 +1,7 @@
 /* global AFRAME, THREE, WebSocketMissionDevice, BluetoothMissionDevice */
 
+THREE.Math = THREE.MathUtils
+
 AFRAME.registerSystem("ready-player-me", {
   init: function () {
     this.entities = [];
@@ -1646,6 +1648,7 @@ AFRAME.registerComponent("ready-player-me", {
       },
     };
 
+    this.gripDown = {}
     this.sides.forEach((side) => {
       const handControls = this.data[`${side}HandControls`];
       if (handControls) {
@@ -1654,6 +1657,18 @@ AFRAME.registerComponent("ready-player-me", {
         });
         handControls.addEventListener("controllerdisconnected", (event) => {
           this.isHandControlsConnected[side] = false;
+        });
+        handControls.addEventListener("gripdown", (event) => {
+          this.gripDown[side] = true
+          if (this.gripDown.left && this.gripDown.right) {
+            this.gripCalibrateTimeoutId = window.setTimeout(() => {
+              this.calibrate();
+            }, 1000)
+          }
+        });
+        handControls.addEventListener("gripup", (event) => {
+          this.gripDown[side] = false
+          window.clearTimeout(this.gripCalibrateTimeoutId)
         });
       }
     });
@@ -2070,6 +2085,29 @@ AFRAME.registerComponent("ready-player-me", {
   },
   _calibrate: function () {
     console.log("calibrating");
+    this.isCalibrating = true;
+    
+    if (this.data.camera) {
+      const { position, rotation } = this.el.object3D;
+      const cameraObject = this.data.camera.object3D;
+
+      if (this.data.mirrorMode) {
+        rotation.y = cameraObject.rotation.y;
+      } else {
+        rotation.y = cameraObject.rotation.y + Math.PI;
+      }
+
+      this.cameraCalibration.position.copy(cameraObject.position);
+      this.cameraCalibration.rotation.copy(cameraObject.rotation);
+    }
+    if (false && this.data.camera) {
+      const { position, rotation, quaternion } = this.cameraCalibration;
+      const cameraObject = this.data.camera.object3D;
+      cameraObject.getWorldPosition(position);
+      cameraObject.getWorldQuaternion(quaternion);
+      rotation.setFromQuaternion(quaternion);
+    }
+    //this.overrideHeadUpdate = true;
 
     this.names.forEach((name) => {
       this.quaternionOffsets[name].copy(this.quaternions[name]).invert();
@@ -2087,23 +2125,8 @@ AFRAME.registerComponent("ready-player-me", {
       this.pitchRollQuaternionOffsets[name].setFromEuler(euler);
     });
 
-    this.overrideHeadUpdate = true;
-
     this._hasCalibratedAtLeastOnce = true;
 
-    if (this.data.camera) {
-      const { position, rotation } = this.el.object3D;
-      const cameraObject = this.data.camera.object3D;
-
-      if (this.data.mirrorMode) {
-        rotation.y = cameraObject.rotation.y;
-      } else {
-        rotation.y = cameraObject.rotation.y + Math.PI;
-      }
-
-      this.cameraCalibration.position.copy(cameraObject.position);
-      this.cameraCalibration.rotation.copy(cameraObject.rotation);
-    }
 
     this.anchorConfiguration.isAnchored = false;
     Object.assign(this.anchorConfiguration.masses, { left: 0, right: 0 });
@@ -2115,14 +2138,7 @@ AFRAME.registerComponent("ready-player-me", {
     this.sides.forEach((side) => {
       this.anchors[side].entity.object3D.visible = false;
     });
-
-    if (this.data.camera) {
-      const { position, rotation, quaternion } = this.cameraCalibration;
-      const cameraObject = this.data.camera.object3D;
-      cameraObject.getWorldPosition(position);
-      cameraObject.getWorldQuaternion(quaternion);
-      rotation.setFromQuaternion(quaternion);
-    }
+    this.isCalibrating = false;
   },
   startRecording: function () {
     this.recordedData.length = 0; // [...{timestamp, position?, quaternions: {deviceName: quaternion}}]
@@ -2146,6 +2162,10 @@ AFRAME.registerComponent("ready-player-me", {
     });
   },
   tick: function (time, timeDelta) {
+    if (this.isCalibrating) {
+      return
+    }
+    
     if (this.data.camera?.object3D) {
       this._updatePositionFromCamera();
       this._updateHeadFromCamera();
@@ -2226,7 +2246,7 @@ AFRAME.registerComponent("ready-player-me", {
 
       // apply reflected camera offset to model
       newPosition.add(positionOffset);
-      newPosition.y = 0;
+      newPosition.y = cameraObject.position.y - 1.75
       
       if (position.distanceTo(newPosition) > 0.001) {
         position.copy(newPosition);
