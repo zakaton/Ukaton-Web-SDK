@@ -1,7 +1,7 @@
 Ready Player Me Pro
-  head rotation
-  map position to headset (+ mirrorMode)
-  calibrate position
+  map position to headset
+  get hand controls to work on Pro
+  fix weird flip bug
 
 IP
   rightForearm: 192.168.4.52

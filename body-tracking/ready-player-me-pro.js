@@ -46,7 +46,6 @@ AFRAME.registerComponent("ready-player-me", {
     rightHandControls: { type: "selector" },
     camera: { type: "selector" },
     mirrorMode: { type: "boolean", default: true },
-    
   },
   init: function () {
     window._rig = this;
@@ -86,6 +85,18 @@ AFRAME.registerComponent("ready-player-me", {
       pinky3: "Pinky3",
       pinky_null: "Pinky4",
     };
+
+    this.cameraCalibration = {
+      position: new THREE.Vector3(),
+      rotation: new THREE.Euler(),
+      quaternion: new THREE.Quaternion(),
+      reflection: new THREE.Vector3()
+    };
+    this.lastCameraQuaternion = new THREE.Quaternion();
+    this.overrideHeadUpdate = true;
+    this._cameraPosition = new THREE.Vector3();
+    this._cameraPositionOffset = new THREE.Vector3();
+    this._cameraPositionEulerOffset = new THREE.Euler();
 
     this.handTrackingControlsEulers = {};
     this.handTrackingControlsQuaternions = {};
@@ -2076,11 +2087,22 @@ AFRAME.registerComponent("ready-player-me", {
       this.pitchRollQuaternionOffsets[name].setFromEuler(euler);
     });
 
+    this.overrideHeadUpdate = true;
+
     this._hasCalibratedAtLeastOnce = true;
 
-    {
-      const { position } = this.el.object3D;
-      position.x = position.z = 0;
+    if (this.data.camera) {
+      const { position, rotation } = this.el.object3D;
+      const cameraObject = this.data.camera.object3D;
+
+      if (this.data.mirrorMode) {
+        rotation.y = cameraObject.rotation.y;
+      } else {
+        rotation.y = cameraObject.rotation.y + Math.PI;
+      }
+
+      this.cameraCalibration.position.copy(cameraObject.position);
+      this.cameraCalibration.rotation.copy(cameraObject.rotation);
     }
 
     this.anchorConfiguration.isAnchored = false;
@@ -2093,6 +2115,14 @@ AFRAME.registerComponent("ready-player-me", {
     this.sides.forEach((side) => {
       this.anchors[side].entity.object3D.visible = false;
     });
+
+    if (this.data.camera) {
+      const { position, rotation, quaternion } = this.cameraCalibration;
+      const cameraObject = this.data.camera.object3D;
+      cameraObject.getWorldPosition(position);
+      cameraObject.getWorldQuaternion(quaternion);
+      rotation.setFromQuaternion(quaternion);
+    }
   },
   startRecording: function () {
     this.recordedData.length = 0; // [...{timestamp, position?, quaternions: {deviceName: quaternion}}]
@@ -2116,6 +2146,11 @@ AFRAME.registerComponent("ready-player-me", {
     });
   },
   tick: function (time, timeDelta) {
+    if (this.data.camera?.object3D) {
+      this._updatePositionFromCamera();
+      this._updateHeadFromCamera();
+    }
+
     if (this._tickFlag) {
       this._tick(...arguments);
       delete this._tickFlag;
@@ -2136,6 +2171,65 @@ AFRAME.registerComponent("ready-player-me", {
       timeline.tick(timeline._time);
       if (timeline.completed) {
         delete this.timelines[key];
+      }
+    }
+  },
+  _updateHeadFromCamera: function () {
+    if (this.data.camera?.object3D && this.model) {
+      const { quaternion } = this.data.camera.object3D;
+      if (
+        !this.overrideHeadUpdate &&
+        quaternion.angleTo(this.lastCameraQuaternion) < 0.001
+      ) {
+        return;
+      }
+      this.overrideHeadUpdate = false;
+      this.lastCameraQuaternion.copy(quaternion);
+
+      const name = "head";
+      this.quaternions[name].multiplyQuaternions(
+        quaternion,
+        this.correctionQuaternions[name]
+      );
+      this.updatedQuaternion[name] = true;
+
+      this._tickFlag = true;
+    }
+  },
+  _updatePositionFromCamera: function () {
+    if (this.data.camera) {
+      const { position, rotation } = this.el.object3D;
+      const cameraObject = this.data.camera.object3D;
+
+      const newPosition = this._cameraPosition;
+      const positionOffset = this._cameraPositionOffset;
+      const positionEulerOffset = this._cameraPositionEulerOffset;
+
+      // default model position
+      newPosition.copy(this.cameraCalibration.position);
+      positionOffset.set(0, 0, -1);
+      positionEulerOffset.set(0, this.cameraCalibration.rotation.y, 0);
+      positionOffset.applyEuler(positionEulerOffset);
+      newPosition.add(positionOffset);
+
+      // current camera position relative to calibrated camera position
+      positionOffset.subVectors(
+        cameraObject.position,
+        this.cameraCalibration.position
+      );
+
+      // reflect along 'z' axis
+      const reflection = this.cameraCalibration.reflection
+      reflection.set(0, 0, -1)
+      reflection.applyEuler(positionEulerOffset)
+      positionOffset.reflect(reflection)
+
+      // apply reflected camera offset to model
+      newPosition.add(positionOffset);
+      newPosition.y = 0;
+      
+      if (position.distanceTo(newPosition) > 0.001) {
+        position.copy(newPosition);
       }
     }
   },
@@ -2182,7 +2276,7 @@ AFRAME.registerComponent("ready-player-me", {
     const euler = new THREE.Euler();
     const postCorrectionEuler = new THREE.Euler().reorder("YXZ");
     const postCorrectionQuaternion = new THREE.Quaternion();
-    this.el.components["gltf-model"].model.traverse((object) => {
+    this.el.components["gltf-model"].model?.traverse((object) => {
       if (object.type == "Bone") {
         const bone = object;
         const name = bone._key;
@@ -2203,7 +2297,6 @@ AFRAME.registerComponent("ready-player-me", {
 
           euler.setFromQuaternion(bone.quaternion);
           postCorrectionEuler.set(0, 0, 0);
-
           switch (name) {
             case "head":
               break;
@@ -2260,14 +2353,15 @@ AFRAME.registerComponent("ready-player-me", {
                 euler.y *= -1;
                 euler.z *= -1;
                 break;
+              case "head":
+              case "upperTorso":
+              case "lowerTorso":
               case "rightThigh":
               case "rightShin":
               case "leftThigh":
               case "leftShin":
               case "leftFoot":
               case "rightFoot":
-              case "upperTorso":
-              case "lowerTorso":
                 euler.reorder("YXZ");
                 euler.y *= -1;
                 euler.z *= -1;
