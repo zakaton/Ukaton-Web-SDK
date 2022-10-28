@@ -1,3 +1,20 @@
 Ready Player Me Pro
-  test Motion Modules
-  map position to VR headset
+  head rotation
+  map position to headset (+ mirrorMode)
+  calibrate position
+
+IP
+  rightForearm: 192.168.4.52
+  rightBicep: 192.168.4.53
+  upperTorso: 192.168.4.54
+  leftBicep: 192.168.4.55
+  leftForearm: 192.168.4.56
+  lowerTorso: 192.168.4.57
+  rightThigh: 192.168.4.58
+  leftThigh: 192.168.4.59
+  leftShin: 192.168.4.60
+  rightShin: 192.168.4.61
+  rightFoot: 192.168.6.11
+  leftFoot: 192.168.6.12
+  leftHand: 192.168.4.28
+  rightHand: 192.168.4.62

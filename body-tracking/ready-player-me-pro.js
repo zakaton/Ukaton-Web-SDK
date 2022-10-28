@@ -35,17 +35,18 @@ AFRAME.registerComponent("ready-player-me", {
   dependencies: ["gltf-model"],
   schema: {
     hidePressure: { type: "boolean", default: true },
-    flip: { type: "boolean", default: true },
-    manualArticulation: { type: "boolean", default: true },
-    pressureAnchoringEnabled: { type: "boolean", default: true },
+    flip: { type: "boolean", default: !true },
+    manualArticulation: { type: "boolean", default: !true },
+    pressureAnchoringEnabled: { type: "boolean", default: !true },
     gateway: { type: "array", default: [] },
-    rate: { type: "number", default: 20 },
+    rate: { type: "number", default: 60 },
     leftHandTrackingControls: { type: "selector" },
     rightHandTrackingControls: { type: "selector" },
     leftHandControls: { type: "selector" },
     rightHandControls: { type: "selector" },
     camera: { type: "selector" },
     mirrorMode: { type: "boolean", default: true },
+    
   },
   init: function () {
     window._rig = this;
@@ -1692,6 +1693,8 @@ AFRAME.registerComponent("ready-player-me", {
     this.quaternions = {};
     this.updatedQuaternion = {};
     this.correctionQuaternions = {};
+    this.mirrorModeEulers = {};
+    this.mirrorModeQuaternions = {};
     {
       const { correctionQuaternions } = this;
 
@@ -1821,6 +1824,9 @@ AFRAME.registerComponent("ready-player-me", {
       this.pitchRollQuaternionOffsets[name] = new THREE.Quaternion();
       this.positions[name] = new THREE.Vector3();
       this.positionOffsets[name] = new THREE.Vector3();
+
+      this.mirrorModeQuaternions[name] = new THREE.Quaternion();
+      this.mirrorModeEulers[name] = new THREE.Euler();
     });
 
     this.bones = {};
@@ -1975,24 +1981,34 @@ AFRAME.registerComponent("ready-player-me", {
       if (this.names.includes(name)) {
         this._tickFlag = true;
 
+        let _name = name;
+        if (this.data.mirrorMode) {
+          if (name.includes("left")) {
+            _name = _name.replace("left", "right");
+          } else {
+            _name = _name.replace("right", "left");
+          }
+        }
+
         const { quaternion } = event.message;
-        if (name in this.correctionQuaternions) {
+        if (_name in this.correctionQuaternions) {
           if (this.data.flip) {
-            if (name.includes("Foot")) {
+            if (_name.includes("Foot")) {
               quaternion.multiply(this.flipFootQuaternion);
             } else {
               quaternion.multiply(this.flipQuaternion);
             }
           }
 
-          this.quaternions[name].multiplyQuaternions(
+          this.quaternions[_name].multiplyQuaternions(
             quaternion,
-            this.correctionQuaternions[name]
+            this.correctionQuaternions[_name]
           );
         } else {
-          this.quaternions[name].copy(quaternion);
+          this.quaternions[_name].copy(quaternion);
         }
-        this.updatedQuaternion[name] = true;
+
+        this.updatedQuaternion[_name] = true;
       }
     });
 
@@ -2231,6 +2247,39 @@ AFRAME.registerComponent("ready-player-me", {
           }
 
           delete bone.modifiedQuaternion;
+
+          if (this.data.mirrorMode) {
+            const euler = this.mirrorModeEulers[name];
+            euler.setFromQuaternion(bone.quaternion);
+            let updateBone = true;
+            switch (name) {
+              case "leftForearm":
+              case "leftBicep":
+              case "rightForearm":
+              case "rightBicep":
+                euler.y *= -1;
+                euler.z *= -1;
+                break;
+              case "rightThigh":
+              case "rightShin":
+              case "leftThigh":
+              case "leftShin":
+              case "leftFoot":
+              case "rightFoot":
+              case "upperTorso":
+              case "lowerTorso":
+                euler.reorder("YXZ");
+                euler.y *= -1;
+                euler.z *= -1;
+                break;
+              default:
+                updateBone = false;
+                break;
+            }
+            if (updateBone) {
+              bone.quaternion.setFromEuler(euler);
+            }
+          }
         }
 
         bone.updateMatrix();
