@@ -2308,6 +2308,42 @@ AFRAME.registerComponent("ready-player-me", {
             const q = new THREE.Quaternion().setFromEuler(window._defaultEuler);
             modifiedQuaternion.multiply(q);
           }
+          
+          // FIX
+          if (this.data.mirrorMode) {
+            const euler = this.mirrorModeEulers[name];
+            euler.setFromQuaternion(modifiedQuaternion);
+            let updateBone = true;
+            switch (name) {
+              case "leftForearm":
+              case "leftBicep":
+              case "rightForearm":
+              case "rightBicep":
+                euler.reorder("YXZ");
+                euler.x *= -1;
+                euler.y *= -1;
+                break;
+              case "head":
+              case "upperTorso":
+              case "lowerTorso":
+              case "rightThigh":
+              case "rightShin":
+              case "leftThigh":
+              case "leftShin":
+              case "leftFoot":
+              case "rightFoot":
+                euler.reorder("YXZ");
+                euler.z *= -1;
+                euler.y *= -1;
+                break;
+              default:
+                updateBone = false;
+                break;
+            }
+            if (updateBone) {
+              modifiedQuaternion.setFromEuler(euler);
+            }
+          }
 
           bone.parent
             .getWorldQuaternion(bone.quaternion)
@@ -2360,40 +2396,6 @@ AFRAME.registerComponent("ready-player-me", {
           }
 
           delete bone.modifiedQuaternion;
-
-          if (this.data.mirrorMode) {
-            const euler = this.mirrorModeEulers[name];
-            euler.setFromQuaternion(bone.quaternion);
-            let updateBone = true;
-            switch (name) {
-              case "leftForearm":
-              case "leftBicep":
-              case "rightForearm":
-              case "rightBicep":
-                euler.y *= -1;
-                euler.z *= -1;
-                break;
-              case "head":
-              case "upperTorso":
-              case "lowerTorso":
-              case "rightThigh":
-              case "rightShin":
-              case "leftThigh":
-              case "leftShin":
-              case "leftFoot":
-              case "rightFoot":
-                euler.reorder("YXZ");
-                euler.y *= -1;
-                euler.z *= -1;
-                break;
-              default:
-                updateBone = false;
-                break;
-            }
-            if (updateBone) {
-              bone.quaternion.setFromEuler(euler);
-            }
-          }
         }
 
         bone.updateMatrix();
