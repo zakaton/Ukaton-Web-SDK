@@ -92,7 +92,7 @@ AFRAME.registerComponent("ready-player-me", {
       position: new THREE.Vector3(),
       rotation: new THREE.Euler(),
       quaternion: new THREE.Quaternion(),
-      reflection: new THREE.Vector3()
+      reflection: new THREE.Vector3(),
     };
     this.lastCameraQuaternion = new THREE.Quaternion();
     this.overrideHeadUpdate = true;
@@ -1769,6 +1769,7 @@ AFRAME.registerComponent("ready-player-me", {
       correctionQuaternions.leftShin = new THREE.Quaternion().setFromEuler(
         _euler
       );
+      
       _euler.set(0, Math.PI, 0, "XYZ");
       correctionQuaternions.leftFoot = new THREE.Quaternion().setFromEuler(
         _euler
@@ -2330,10 +2331,14 @@ AFRAME.registerComponent("ready-player-me", {
               case "rightShin":
               case "leftThigh":
               case "leftShin":
+                euler.reorder("YXZ");
+                euler.z *= -1;
+                euler.y *= -1;
+                break;
               case "leftFoot":
               case "rightFoot":
                 euler.reorder("YXZ");
-                euler.z *= -1;
+                euler.x *= -1;
                 euler.y *= -1;
                 break;
               default:
@@ -2585,7 +2590,10 @@ AFRAME.registerComponent("ready-player-me", {
           const correctionQuaternion =
             this.handTrackingControlsCorrectionQuaternions[toBoneName];
 
-          const { x, y, z, order } = fromBone.rotation;
+          euler.copy(fromBone.rotation)
+          euler.reorder("YXZ")
+          euler.y -= this.cameraCalibration.rotation.y
+          const { x, y, z, order } = euler
           switch (boneSuffix) {
             case "wrist":
               if (this.data.mirrorMode) {
@@ -2623,6 +2631,7 @@ AFRAME.registerComponent("ready-player-me", {
             default:
               break;
           }
+          euler.y += this.cameraCalibration.rotation.y
           quaternion.setFromEuler(euler);
 
           toBone.parent.getWorldQuaternion(inverseQuaternion);
@@ -2662,7 +2671,10 @@ AFRAME.registerComponent("ready-player-me", {
         const correctionQuaternion =
           this.handControlsCorrectionQuaternions[wristBoneName];
 
-        const { x, y, z, order } = handControlsElement.object3D.rotation;
+        euler.copy(handControlsElement.object3D.rotation)
+        euler.reorder("YXZ")
+        euler.y -= this.cameraCalibration.rotation.y
+        const { x, y, z, order } = euler
         switch (suffix) {
           case "wrist":
             if (this.data.mirrorMode) {
@@ -2675,8 +2687,9 @@ AFRAME.registerComponent("ready-player-me", {
           default:
             break;
         }
+        euler.y += this.cameraCalibration.rotation.y
         quaternion.setFromEuler(euler);
-
+        
         wristBone.parent.getWorldQuaternion(inverseQuaternion);
         inverseQuaternion.invert();
         quaternion.premultiply(inverseQuaternion);
