@@ -1,4 +1,4 @@
-/* global AFRAME, THREE, WebSocketMissionDevice, BluetoothMissionDevice */
+/* global AFRAME, THREE */
 
 THREE.Math = THREE.MathUtils
 
@@ -1944,6 +1944,20 @@ AFRAME.registerComponent("ready-player-me", {
     this.system.addEntity(this);
   },
   connect: async function () {
+    this.data.gateway.reduce(async (promise, gateway) => {
+      await promise
+      console.log(promise, gateway)
+      let websocketMissionDevice = this.webSocketMissionDevices[gateway];
+      if (websocketMissionDevice) {
+        console.log("connecting")
+        return websocketMissionDevice.connect(gateway);
+      } else {
+        console.log("_addWebSocketDevice")
+        return this._addWebSocketDevice(gateway);
+      }
+    }, Promise.resolve())
+    
+    return
     this.data.gateway.forEach(async (gateway) => {
       let websocketMissionDevice = this.webSocketMissionDevices[gateway];
       if (websocketMissionDevice) {
