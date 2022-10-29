@@ -1,4 +1,6 @@
-/* global AFRAME, THREE, WebSocketMissionDevice, BluetoothMissionDevice */
+/* global AFRAME, THREE */
+
+THREE.Math = THREE.MathUtils
 
 AFRAME.registerSystem("ready-player-me", {
   init: function () {
@@ -35,11 +37,11 @@ AFRAME.registerComponent("ready-player-me", {
   dependencies: ["gltf-model"],
   schema: {
     hidePressure: { type: "boolean", default: true },
-    flip: { type: "boolean", default: true },
-    manualArticulation: { type: "boolean", default: true },
-    pressureAnchoringEnabled: { type: "boolean", default: true },
+    flip: { type: "boolean", default: !true },
+    manualArticulation: { type: "boolean", default: !true },
+    pressureAnchoringEnabled: { type: "boolean", default: !true },
     gateway: { type: "array", default: [] },
-    rate: { type: "number", default: 20 },
+    rate: { type: "number", default: 60 },
     leftHandTrackingControls: { type: "selector" },
     rightHandTrackingControls: { type: "selector" },
     leftHandControls: { type: "selector" },
@@ -85,6 +87,18 @@ AFRAME.registerComponent("ready-player-me", {
       pinky3: "Pinky3",
       pinky_null: "Pinky4",
     };
+
+    this.cameraCalibration = {
+      position: new THREE.Vector3(),
+      rotation: new THREE.Euler(),
+      quaternion: new THREE.Quaternion(),
+      reflection: new THREE.Vector3(),
+    };
+    this.lastCameraQuaternion = new THREE.Quaternion();
+    this.overrideHeadUpdate = true;
+    this._cameraPosition = new THREE.Vector3();
+    this._cameraPositionOffset = new THREE.Vector3();
+    this._cameraPositionEulerOffset = new THREE.Euler();
 
     this.handTrackingControlsEulers = {};
     this.handTrackingControlsQuaternions = {};
@@ -1634,6 +1648,7 @@ AFRAME.registerComponent("ready-player-me", {
       },
     };
 
+    this.gripDown = {}
     this.sides.forEach((side) => {
       const handControls = this.data[`${side}HandControls`];
       if (handControls) {
@@ -1642,6 +1657,18 @@ AFRAME.registerComponent("ready-player-me", {
         });
         handControls.addEventListener("controllerdisconnected", (event) => {
           this.isHandControlsConnected[side] = false;
+        });
+        handControls.addEventListener("gripdown", (event) => {
+          this.gripDown[side] = true
+          if (this.gripDown.left && this.gripDown.right) {
+            this.gripCalibrateTimeoutId = window.setTimeout(() => {
+              this.calibrate();
+            }, 1000)
+          }
+        });
+        handControls.addEventListener("gripup", (event) => {
+          this.gripDown[side] = false
+          window.clearTimeout(this.gripCalibrateTimeoutId)
         });
       }
     });
@@ -1692,6 +1719,8 @@ AFRAME.registerComponent("ready-player-me", {
     this.quaternions = {};
     this.updatedQuaternion = {};
     this.correctionQuaternions = {};
+    this.mirrorModeEulers = {};
+    this.mirrorModeQuaternions = {};
     {
       const { correctionQuaternions } = this;
 
@@ -1740,6 +1769,7 @@ AFRAME.registerComponent("ready-player-me", {
       correctionQuaternions.leftShin = new THREE.Quaternion().setFromEuler(
         _euler
       );
+      
       _euler.set(0, Math.PI, 0, "XYZ");
       correctionQuaternions.leftFoot = new THREE.Quaternion().setFromEuler(
         _euler
@@ -1821,6 +1851,9 @@ AFRAME.registerComponent("ready-player-me", {
       this.pitchRollQuaternionOffsets[name] = new THREE.Quaternion();
       this.positions[name] = new THREE.Vector3();
       this.positionOffsets[name] = new THREE.Vector3();
+
+      this.mirrorModeQuaternions[name] = new THREE.Quaternion();
+      this.mirrorModeEulers[name] = new THREE.Euler();
     });
 
     this.bones = {};
@@ -1911,6 +1944,20 @@ AFRAME.registerComponent("ready-player-me", {
     this.system.addEntity(this);
   },
   connect: async function () {
+    this.data.gateway.reduce(async (promise, gateway) => {
+      await promise
+      console.log(promise, gateway)
+      let websocketMissionDevice = this.webSocketMissionDevices[gateway];
+      if (websocketMissionDevice) {
+        console.log("connecting")
+        return websocketMissionDevice.connect(gateway);
+      } else {
+        console.log("_addWebSocketDevice")
+        return this._addWebSocketDevice(gateway);
+      }
+    }, Promise.resolve())
+    
+    return
     this.data.gateway.forEach(async (gateway) => {
       let websocketMissionDevice = this.webSocketMissionDevices[gateway];
       if (websocketMissionDevice) {
@@ -1975,24 +2022,34 @@ AFRAME.registerComponent("ready-player-me", {
       if (this.names.includes(name)) {
         this._tickFlag = true;
 
+        let _name = name;
+        if (this.data.mirrorMode) {
+          if (name.includes("left")) {
+            _name = _name.replace("left", "right");
+          } else {
+            _name = _name.replace("right", "left");
+          }
+        }
+
         const { quaternion } = event.message;
-        if (name in this.correctionQuaternions) {
+        if (_name in this.correctionQuaternions) {
           if (this.data.flip) {
-            if (name.includes("Foot")) {
+            if (_name.includes("Foot")) {
               quaternion.multiply(this.flipFootQuaternion);
             } else {
               quaternion.multiply(this.flipQuaternion);
             }
           }
 
-          this.quaternions[name].multiplyQuaternions(
+          this.quaternions[_name].multiplyQuaternions(
             quaternion,
-            this.correctionQuaternions[name]
+            this.correctionQuaternions[_name]
           );
         } else {
-          this.quaternions[name].copy(quaternion);
+          this.quaternions[_name].copy(quaternion);
         }
-        this.updatedQuaternion[name] = true;
+
+        this.updatedQuaternion[_name] = true;
       }
     });
 
@@ -2043,6 +2100,29 @@ AFRAME.registerComponent("ready-player-me", {
   },
   _calibrate: function () {
     console.log("calibrating");
+    this.isCalibrating = true;
+    
+    if (this.data.camera) {
+      const { position, rotation } = this.el.object3D;
+      const cameraObject = this.data.camera.object3D;
+
+      if (this.data.mirrorMode) {
+        rotation.y = cameraObject.rotation.y;
+      } else {
+        rotation.y = cameraObject.rotation.y + Math.PI;
+      }
+
+      this.cameraCalibration.position.copy(cameraObject.position);
+      this.cameraCalibration.rotation.copy(cameraObject.rotation);
+    }
+    if (false && this.data.camera) {
+      const { position, rotation, quaternion } = this.cameraCalibration;
+      const cameraObject = this.data.camera.object3D;
+      cameraObject.getWorldPosition(position);
+      cameraObject.getWorldQuaternion(quaternion);
+      rotation.setFromQuaternion(quaternion);
+    }
+    //this.overrideHeadUpdate = true;
 
     this.names.forEach((name) => {
       this.quaternionOffsets[name].copy(this.quaternions[name]).invert();
@@ -2062,10 +2142,6 @@ AFRAME.registerComponent("ready-player-me", {
 
     this._hasCalibratedAtLeastOnce = true;
 
-    {
-      const { position } = this.el.object3D;
-      position.x = position.z = 0;
-    }
 
     this.anchorConfiguration.isAnchored = false;
     Object.assign(this.anchorConfiguration.masses, { left: 0, right: 0 });
@@ -2077,6 +2153,7 @@ AFRAME.registerComponent("ready-player-me", {
     this.sides.forEach((side) => {
       this.anchors[side].entity.object3D.visible = false;
     });
+    this.isCalibrating = false;
   },
   startRecording: function () {
     this.recordedData.length = 0; // [...{timestamp, position?, quaternions: {deviceName: quaternion}}]
@@ -2100,6 +2177,15 @@ AFRAME.registerComponent("ready-player-me", {
     });
   },
   tick: function (time, timeDelta) {
+    if (this.isCalibrating) {
+      return
+    }
+    
+    if (this.data.camera?.object3D) {
+      this._updatePositionFromCamera();
+      this._updateHeadFromCamera();
+    }
+
     if (this._tickFlag) {
       this._tick(...arguments);
       delete this._tickFlag;
@@ -2120,6 +2206,65 @@ AFRAME.registerComponent("ready-player-me", {
       timeline.tick(timeline._time);
       if (timeline.completed) {
         delete this.timelines[key];
+      }
+    }
+  },
+  _updateHeadFromCamera: function () {
+    if (this.data.camera?.object3D && this.model) {
+      const { quaternion } = this.data.camera.object3D;
+      if (
+        !this.overrideHeadUpdate &&
+        quaternion.angleTo(this.lastCameraQuaternion) < 0.001
+      ) {
+        return;
+      }
+      this.overrideHeadUpdate = false;
+      this.lastCameraQuaternion.copy(quaternion);
+
+      const name = "head";
+      this.quaternions[name].multiplyQuaternions(
+        quaternion,
+        this.correctionQuaternions[name]
+      );
+      this.updatedQuaternion[name] = true;
+
+      this._tickFlag = true;
+    }
+  },
+  _updatePositionFromCamera: function () {
+    if (this.data.camera) {
+      const { position, rotation } = this.el.object3D;
+      const cameraObject = this.data.camera.object3D;
+
+      const newPosition = this._cameraPosition;
+      const positionOffset = this._cameraPositionOffset;
+      const positionEulerOffset = this._cameraPositionEulerOffset;
+
+      // default model position
+      newPosition.copy(this.cameraCalibration.position);
+      positionOffset.set(0, 0, -1);
+      positionEulerOffset.set(0, this.cameraCalibration.rotation.y, 0);
+      positionOffset.applyEuler(positionEulerOffset);
+      newPosition.add(positionOffset);
+
+      // current camera position relative to calibrated camera position
+      positionOffset.subVectors(
+        cameraObject.position,
+        this.cameraCalibration.position
+      );
+
+      // reflect along 'z' axis
+      const reflection = this.cameraCalibration.reflection
+      reflection.set(0, 0, -1)
+      reflection.applyEuler(positionEulerOffset)
+      positionOffset.reflect(reflection)
+
+      // apply reflected camera offset to model
+      newPosition.add(positionOffset);
+      newPosition.y = cameraObject.position.y - 1.75
+      
+      if (position.distanceTo(newPosition) > 0.001) {
+        position.copy(newPosition);
       }
     }
   },
@@ -2166,7 +2311,7 @@ AFRAME.registerComponent("ready-player-me", {
     const euler = new THREE.Euler();
     const postCorrectionEuler = new THREE.Euler().reorder("YXZ");
     const postCorrectionQuaternion = new THREE.Quaternion();
-    this.el.components["gltf-model"].model.traverse((object) => {
+    this.el.components["gltf-model"].model?.traverse((object) => {
       if (object.type == "Bone") {
         const bone = object;
         const name = bone._key;
@@ -2178,6 +2323,46 @@ AFRAME.registerComponent("ready-player-me", {
             const q = new THREE.Quaternion().setFromEuler(window._defaultEuler);
             modifiedQuaternion.multiply(q);
           }
+          
+          // FIX
+          if (this.data.mirrorMode) {
+            const euler = this.mirrorModeEulers[name];
+            euler.setFromQuaternion(modifiedQuaternion);
+            let updateBone = true;
+            switch (name) {
+              case "leftForearm":
+              case "leftBicep":
+              case "rightForearm":
+              case "rightBicep":
+                euler.reorder("YXZ");
+                euler.x *= -1;
+                euler.y *= -1;
+                break;
+              case "head":
+              case "upperTorso":
+              case "lowerTorso":
+              case "rightThigh":
+              case "rightShin":
+              case "leftThigh":
+              case "leftShin":
+                euler.reorder("YXZ");
+                euler.z *= -1;
+                euler.y *= -1;
+                break;
+              case "leftFoot":
+              case "rightFoot":
+                euler.reorder("YXZ");
+                euler.x *= -1;
+                euler.y *= -1;
+                break;
+              default:
+                updateBone = false;
+                break;
+            }
+            if (updateBone) {
+              modifiedQuaternion.setFromEuler(euler);
+            }
+          }
 
           bone.parent
             .getWorldQuaternion(bone.quaternion)
@@ -2187,7 +2372,6 @@ AFRAME.registerComponent("ready-player-me", {
 
           euler.setFromQuaternion(bone.quaternion);
           postCorrectionEuler.set(0, 0, 0);
-
           switch (name) {
             case "head":
               break;
@@ -2420,7 +2604,10 @@ AFRAME.registerComponent("ready-player-me", {
           const correctionQuaternion =
             this.handTrackingControlsCorrectionQuaternions[toBoneName];
 
-          const { x, y, z, order } = fromBone.rotation;
+          euler.copy(fromBone.rotation)
+          euler.reorder("YXZ")
+          euler.y -= this.cameraCalibration.rotation.y
+          const { x, y, z, order } = euler
           switch (boneSuffix) {
             case "wrist":
               if (this.data.mirrorMode) {
@@ -2458,6 +2645,7 @@ AFRAME.registerComponent("ready-player-me", {
             default:
               break;
           }
+          euler.y += this.cameraCalibration.rotation.y
           quaternion.setFromEuler(euler);
 
           toBone.parent.getWorldQuaternion(inverseQuaternion);
@@ -2497,7 +2685,10 @@ AFRAME.registerComponent("ready-player-me", {
         const correctionQuaternion =
           this.handControlsCorrectionQuaternions[wristBoneName];
 
-        const { x, y, z, order } = handControlsElement.object3D.rotation;
+        euler.copy(handControlsElement.object3D.rotation)
+        euler.reorder("YXZ")
+        euler.y -= this.cameraCalibration.rotation.y
+        const { x, y, z, order } = euler
         switch (suffix) {
           case "wrist":
             if (this.data.mirrorMode) {
@@ -2510,8 +2701,9 @@ AFRAME.registerComponent("ready-player-me", {
           default:
             break;
         }
+        euler.y += this.cameraCalibration.rotation.y
         quaternion.setFromEuler(euler);
-
+        
         wristBone.parent.getWorldQuaternion(inverseQuaternion);
         inverseQuaternion.invert();
         quaternion.premultiply(inverseQuaternion);

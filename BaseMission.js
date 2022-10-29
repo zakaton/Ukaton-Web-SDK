@@ -25,8 +25,10 @@ THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
   };
 }
 
-class BaseMission {
+class BaseMission extends THREE.EventDispatcher {
   constructor() {
+    super()
+    
     this.isLoggingEnabled = !true;
     this._reconnectOnDisconnection = !true;
 
@@ -36,7 +38,7 @@ class BaseMission {
 
     this._sensorDataConfigurations = null;
 
-    this._isUsingBNO080 = !false;
+    this._isUsingBNO080 = false;
 
     this.motion = {
       acceleration: new THREE.Vector3(),
@@ -1001,7 +1003,7 @@ BaseMission.SensorDataTypeStrings = {
   MOTION: BaseMission.MotionDataTypeStrings,
   PRESSURE: BaseMission.PressureDataTypeStrings,
 };
-Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
+//Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
 
 {
   const bno080CorrectionEuler = new THREE.Euler();
@@ -1020,7 +1022,7 @@ Object.assign(BaseMission.prototype, THREE.EventDispatcher.prototype);
   );
 }
 
-class BaseMissions {
+class BaseMissions extends THREE.EventDispatcher {
   log() {
     if (this.isLoggingEnabled) {
       console.groupCollapsed(`[${this.constructor.name}]`, ...arguments);
@@ -1030,6 +1032,8 @@ class BaseMissions {
   }
 
   constructor() {
+    super();
+    
     this.left = new this.constructor.MissionDevice();
     this.right = new this.constructor.MissionDevice();
 
@@ -1088,4 +1092,4 @@ class BaseMissions {
     });
   }
 }
-Object.assign(BaseMissions.prototype, THREE.EventDispatcher.prototype);
+//Object.assign(BaseMissions.prototype, THREE.EventDispatcher.prototype);
