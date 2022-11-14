@@ -1,0 +1,20 @@
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  </head>
+  <body>
+    <a-scene
+      shadow="type: pcfsoft"
+      renderer=" colorManagement:true; toneMapping:ACESFilmic;"
+    >
+      <a-assets>
+        <a-asset-item
+          id="tree"
+          src="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/apartment.glb?v=1668198348941"
+        ></a-asset-item>
+      </a-assets>
+
+      <a-entity gltf-model="#tree" scale="10 10 10"></a-entity>
+    </a-scene>
+  </body>
+</html>

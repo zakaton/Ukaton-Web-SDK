@@ -5,7 +5,7 @@
       rel="icon"
       href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
     />
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
     <script src="./BaseMission.js"></script>
     <script src="./WebSocketMissionDevice.js"></script>
@@ -26,20 +26,19 @@
     .device {
       margin-bottom: 20px;
     }
+    .hidden {
+      display: none;
+    }
   </style>
 
   <body>
-    <h1>
-      WebSocket Mission Device | Ukaton Missions
-    </h1>
+    <h1>WebSocket Mission Device | Ukaton Missions</h1>
 
     <div id="connection">
       <label class="ip">
-        <b>ip address:</b> <input value="192.168.1.199" />
+        <b>ip address:</b> <input value="192.168.6.13" />
       </label>
-      <button class="connect">
-        connect
-      </button>
+      <button class="connect">connect</button>
     </div>
 
     <br /><br />
@@ -47,9 +46,7 @@
     <div id="device">
       <div class="name">
         <label><b>name:</b> <input /> </label>
-        <button>
-          change name
-        </button>
+        <button>change name</button>
       </div>
 
       <div class="type">
@@ -155,7 +152,7 @@
         <div data-type="mass">mass: <span></span></div>
         <div data-type="heelToToe">heel to toe: <span></span></div>
       </div>
-      
+
       <div class="weight delay configuration">
         <b>weight delay</b>
         <label data-configuration="weight"
@@ -167,9 +164,9 @@
         <div data-type="weight">weight (kg): <span></span></div>
       </div>
     </div>
-    
-    <hr>
-    
+
+    <hr />
+
     <div id="fileTransfer">
       <h2>File Transfer</h2>
 
@@ -182,19 +179,15 @@
       <button class="transfer" disabled>transfer file</button>
 
       <progress value="0"></progress>
-      
-      <br>
-      <button class="remove">
-        remove file
-      </button>
-      
-      <button class="format">
-        format filesystem
-      </button>
+
+      <br />
+      <button class="remove">remove file</button>
+
+      <button class="format">format filesystem</button>
     </div>
-    
-    <hr>
-    
+
+    <hr />
+
     <div id="firmware">
       <h2>Firmware</h2>
 
@@ -207,19 +200,48 @@
         <progress value="0"></progress>
       </div>
     </div>
+
+    <hr />
+
+    <div id="hue">
+      <h2>Philips Hue</h2>
+
+      <div class="hue connect">
+        <button>connect</button>
+      </div>
+
+      <div class="hue connected hidden">
+        <div class="toggle">
+          <button>toggle</button>
+        </div>
+        <div class="brightness">
+          <label
+            >brightness <input type="number" min="1" max="254" step="1"
+          /></label>
+        </div>
+        <div class="temperature">
+          <label
+            >temperature <input type="number" min="153" max="301" step="1"
+          /></label>
+        </div>
+        <div class="color">
+          <label>color <input type="color" /></label>
+        </div>
+      </div>
+    </div>
   </body>
 
   <script>
     const missionDevice = new WebSocketMissionDevice();
     const deviceContainer = document.getElementById("device");
 
-    missionDevice.addEventListener("connected", event => {
+    missionDevice.addEventListener("connected", (event) => {
       document.getElementById("connection").remove();
       deviceContainer.removeAttribute("hidden");
     });
     document
       .querySelector("#connection .connect")
-      .addEventListener("click", event => {
+      .addEventListener("click", (event) => {
         connect();
       });
     async function connect() {
@@ -227,25 +249,24 @@
       await missionDevice.connect(ipAddress);
     }
 
-    missionDevice.addEventListener("batterylevel", event => {
+    missionDevice.addEventListener("batterylevel", (event) => {
       const { batteryLevel } = event.message;
-      deviceContainer.querySelector(
-        ".batteryLevel span"
-      ).innerText = batteryLevel;
+      deviceContainer.querySelector(".batteryLevel span").innerText =
+        batteryLevel;
     });
 
-    missionDevice.addEventListener("name", event => {
+    missionDevice.addEventListener("name", (event) => {
       const { name } = event.message;
       deviceContainer.querySelector(".name input").value = name;
     });
     deviceContainer
       .querySelector(".name button")
-      .addEventListener("click", event => {
+      .addEventListener("click", (event) => {
         const name = deviceContainer.querySelector(".name input").value;
         missionDevice.setName(name);
       });
 
-    missionDevice.addEventListener("type", event => {
+    missionDevice.addEventListener("type", (event) => {
       const { type } = event.message;
       if (type == missionDevice.Types.MOTION_MODULE) {
         deviceContainer.classList.add("motion");
@@ -257,12 +278,12 @@
     });
     deviceContainer
       .querySelector(".type select")
-      .addEventListener("input", event => {
+      .addEventListener("input", (event) => {
         const type = event.target.value;
         missionDevice.setType(type);
       });
 
-    missionDevice.addEventListener("motioncalibration", event => {
+    missionDevice.addEventListener("motioncalibration", (event) => {
       const { motionCalibration } = event.message;
       for (const type in motionCalibration) {
         deviceContainer.querySelector(
@@ -271,7 +292,7 @@
       }
     });
 
-    missionDevice.addEventListener("sensordataconfigurations", event => {
+    missionDevice.addEventListener("sensordataconfigurations", (event) => {
       const { sensorDataConfigurations } = event.message;
       for (const sensorType in sensorDataConfigurations) {
         for (const sensorDataType in sensorDataConfigurations[sensorType]) {
@@ -284,15 +305,17 @@
 
     missionDevice.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
       missionDevice.SensorDataTypeStrings[sensorTypeString].forEach(
-        sensorDataTypeString => {
+        (sensorDataTypeString) => {
           const configurationContainer = document.querySelector(
             `.${sensorTypeString.toLowerCase()}.configuration [data-configuration="${sensorDataTypeString}"]`
           );
           const input = configurationContainer.querySelector("input");
-          input.addEventListener("input", event => {
+          input.addEventListener("input", (event) => {
             const rate = Number(event.target.value);
             missionDevice.setSensorDataConfigurations({
-              [sensorTypeString.toLowerCase()]: { [sensorDataTypeString]: rate }
+              [sensorTypeString.toLowerCase()]: {
+                [sensorDataTypeString]: rate,
+              },
             });
           });
 
@@ -300,7 +323,7 @@
             `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
           );
           const span = dataContainer.querySelector("span");
-          missionDevice.addEventListener(sensorDataTypeString, event => {
+          missionDevice.addEventListener(sensorDataTypeString, (event) => {
             const value = event.message[sensorDataTypeString];
 
             const { timestamp } = event.message;
@@ -310,14 +333,14 @@
               case missionDevice.SensorTypes.MOTION:
                 string += value
                   .toArray()
-                  .map(x => (x.toFixed ? x.toFixed(2) : x))
+                  .map((x) => (x.toFixed ? x.toFixed(2) : x))
                   .toString();
                 break;
               case missionDevice.SensorTypes.PRESSURE:
                 switch (sensorDataTypeString) {
                   case "pressureSingleByte":
                   case "pressureDoubleByte":
-                    string += value.map(sensor => sensor.value).toString();
+                    string += value.map((sensor) => sensor.value).toString();
                     break;
                   case "mass":
                   case "heelToToe":
@@ -326,7 +349,7 @@
                   case "centerOfMass":
                     string += [
                       value.x.toFixed(2),
-                      value.y.toFixed(2)
+                      value.y.toFixed(2),
                     ].toString();
                     break;
                 }
@@ -342,7 +365,7 @@
               `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
             );
             const span = dataContainer.querySelector("span");
-            missionDevice.addEventListener(sensorDataTypeString, event => {
+            missionDevice.addEventListener(sensorDataTypeString, (event) => {
               const value = event.message[sensorDataTypeString];
 
               const { timestamp } = event.message;
@@ -352,14 +375,14 @@
                 case missionDevice.SensorTypes.MOTION:
                   string += value
                     .toArray()
-                    .map(x => (x.toFixed ? x.toFixed(2) : x))
+                    .map((x) => (x.toFixed ? x.toFixed(2) : x))
                     .toString();
                   break;
                 case missionDevice.SensorTypes.PRESSURE:
                   switch (sensorDataTypeString) {
                     case "pressureSingleByte":
                     case "pressureDoubleByte":
-                      string += value.map(sensor => sensor.value).toString();
+                      string += value.map((sensor) => sensor.value).toString();
                       break;
                     case "mass":
                     case "heelToToe":
@@ -368,7 +391,7 @@
                     case "centerOfMass":
                       string += [
                         value.x.toFixed(2),
-                        value.y.toFixed(2)
+                        value.y.toFixed(2),
                       ].toString();
                       break;
                   }
@@ -381,17 +404,21 @@
         }
       );
     });
-    
+
     // Weight stuff
-    deviceContainer.querySelector(".weight.delay input").addEventListener("input", event => {
-      const delay = Number(event.target.value);
-      missionDevice.setWeightDataDelay(delay);
-    })
-    missionDevice.addEventListener("weight", event => {
-      const {weight} = event.message;
-      deviceContainer.querySelector(".weight.data [data-type='weight'] span").innerText = weight;
+    deviceContainer
+      .querySelector(".weight.delay input")
+      .addEventListener("input", (event) => {
+        const delay = Number(event.target.value);
+        missionDevice.setWeightDataDelay(delay);
+      });
+    missionDevice.addEventListener("weight", (event) => {
+      const { weight } = event.message;
+      deviceContainer.querySelector(
+        ".weight.data [data-type='weight'] span"
+      ).innerText = weight;
     });
-    
+
     // File Transfer
     const fileTransferContainer = document.querySelector("#fileTransfer");
     const fileTransferCheckbox = fileTransferContainer.querySelector(
@@ -433,15 +460,15 @@
       updateFileTransferButton();
     });
     fileTransferInput.addEventListener("input", (event) => {
-      const file = event.target.files[0]
+      const file = event.target.files[0];
       if (file) {
-        fileTransferFilePathInput.value = '/' + file.name
+        fileTransferFilePathInput.value = "/" + file.name;
       }
-      fileTransferFilePathInput.value
+      fileTransferFilePathInput.value;
       updateFileTransferButton();
     });
     missionDevice.addEventListener("connected", async (event) => {
-      const maxFileTransferFilePathLength = 31
+      const maxFileTransferFilePathLength = 31;
       fileTransferFilePathInput.maxLength = maxFileTransferFilePathLength;
       fileTransferFilePathInput.size = maxFileTransferFilePathLength;
     });
@@ -459,16 +486,16 @@
         console.log("file received", file);
       }
     });
-    
-    removeFileButton.addEventListener("click", async event => {
-      event.target.disabled = true
+
+    removeFileButton.addEventListener("click", async (event) => {
+      event.target.disabled = true;
       const fileTransferFilePath = fileTransferFilePathInput.value;
       await missionDevice.removeFile(fileTransferFilePath);
-      event.target.disabled = false
-    })
-    formatFilesystemButton.addEventListener("click", event => {
+      event.target.disabled = false;
+    });
+    formatFilesystemButton.addEventListener("click", (event) => {
       missionDevice.formatFilesystem();
-    })
+    });
 
     missionDevice.addEventListener("filetransferprogress", (event) => {
       const { progress } = event.message;
@@ -476,34 +503,37 @@
     });
     missionDevice.addEventListener("filetransfercomplete", async (event) => {
       if (event.message.type == "receive") {
-        const { file } = event.message
+        const { file } = event.message;
         const link = document.createElement("a");
-        link.download = file.name
+        link.download = file.name;
         link.href = URL.createObjectURL(file);
         link.click();
       }
     });
-    
+
     function sendArrayBuffer(length = 100, filePath = "/test.txt") {
-      const array = []
+      const array = [];
       while (array.length < length) {
-        array.push(array.length)
+        array.push(array.length);
       }
-      const arrayBuffer = Uint8Array.from(array).buffer
-      missionDevice.sendFile(arrayBuffer, filePath)
+      const arrayBuffer = Uint8Array.from(array).buffer;
+      missionDevice.sendFile(arrayBuffer, filePath);
     }
-    
+
     // Firmware update
     const firmwareContainer = document.getElementById("firmware");
-    
-    const firmwareVersionInput = firmwareContainer.querySelector(".version input");
-    missionDevice.addEventListener("connected", async event => {
+
+    const firmwareVersionInput =
+      firmwareContainer.querySelector(".version input");
+    missionDevice.addEventListener("connected", async (event) => {
       const version = await missionDevice.getFirmwareVersion();
       firmwareVersionInput.value = version;
     });
-    
-    const updateFirmwareButton = firmwareContainer.querySelector(".update button");
-    const updateFirmwareProgress = firmwareContainer.querySelector(".update progress");
+
+    const updateFirmwareButton =
+      firmwareContainer.querySelector(".update button");
+    const updateFirmwareProgress =
+      firmwareContainer.querySelector(".update progress");
     missionDevice.addEventListener("firmwareupdateprogress", (event) => {
       const { progress } = event.message;
       updateFirmwareProgress.value = progress;
@@ -521,9 +551,67 @@
         "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/firmware.bin?v=1647219503819"
       );
     }
-    
-    missionDevice.addEventListener("disconnected", event => {
-      window.location = window.location
-    })
+
+    missionDevice.addEventListener("disconnected", (event) => {
+      //window.location = window.location
+    });
+
+    function throttle(functionToThrottle, minimumInterval, optionalContext) {
+      var lastTime;
+      if (optionalContext) {
+        functionToThrottle = module.exports.bind(
+          functionToThrottle,
+          optionalContext
+        );
+      }
+      return function () {
+        var time = Date.now();
+        var sinceLastTime =
+          typeof lastTime === "undefined" ? minimumInterval : time - lastTime;
+        if (
+          typeof lastTime === "undefined" ||
+          sinceLastTime >= minimumInterval
+        ) {
+          lastTime = time;
+          functionToThrottle.apply(null, arguments);
+        }
+      };
+    }
+
+    // PHILIPS HUE
+    const connectHueButton = document.querySelector(".hue.connect button");
+    const hueControlsContainer = document.querySelector(".hue.connected");
+    const toggleHueButton =
+      hueControlsContainer.querySelector(".toggle button");
+    const hueBrightnessInput =
+      hueControlsContainer.querySelector(".brightness input");
+    const hueTemperatureInput =
+      hueControlsContainer.querySelector(".temperature input");
+    const hueColorInput = hueControlsContainer.querySelector(".color input");
+    connectHueButton.addEventListener("click", async (event) => {
+      await missionDevice.setBLEGenericPeerConnection(true);
+    });
+    missionDevice.addEventListener("bleGenericPeerConnection", (event) => {
+      const { message } = event;
+      if (message.isConnected) {
+        connectHueButton.classList.add("hidden");
+        hueControlsContainer.classList.remove("hidden");
+      } else {
+        connectHueButton.classList.remove("hidden");
+        hueControlsContainer.classList.add("hidden");
+      }
+    });
+    toggleHueButton.addEventListener("click", (event) => {
+      // FILL
+    });
+    hueBrightnessInput.addEventListener("input", (event) => {
+      // FILL
+    });
+    hueTemperatureInput.addEventListener("input", (event) => {
+      // FILL
+    });
+    hueColorInput.addEventListener("input", (event) => {
+      // FILL
+    });
   </script>
 </html>

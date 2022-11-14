@@ -7,12 +7,23 @@ class WebSocketMissionDevice extends BaseMission {
   get MessageTypeStrings() {
     return this.constructor.MessageTypeStrings;
   }
+  get BLEGenericPeerMessageTypes() {
+    return this.constructor.BLEGenericPeerMessageTypes;
+  }
+  get BLEGenericPeerMessageTypeStrings() {
+    return this.constructor.BLEGenericPeerMessageTypeStrings;
+  }
 
   constructor() {
     super();
 
     this._messageMap = new Map();
     this._messagePromiseMap = new Map();
+
+    this._bleGenericPeerMessageMap = new Map();
+    this._bleGenericPeerMessagePromiseMap = new Map();
+    this._isConnectedToBLEGenericPeer = null;
+    this._bleGenericPeerCharacteristicValues = [];
   }
 
   get isConnected() {
@@ -56,6 +67,7 @@ class WebSocketMissionDevice extends BaseMission {
       this.getFirmwareVersion(false),
       this.getName(false),
       this.getSensorDataConfigurations(false),
+      this.getBLEGenericPeerConnection(false),
     ];
     this.log("sending initial payload...");
     this.send();
@@ -184,6 +196,20 @@ class WebSocketMissionDevice extends BaseMission {
             });
           }
           break;
+        case this.MessageTypes.BLE_GENERIC_PEER:
+          {
+            const bleGenericPeerLength = dataView.getUint8(byteOffset++);
+            this._onBLEGenericPeerUpdate(
+              new DataView(
+                dataView.buffer.slice(
+                  byteOffset,
+                  byteOffset + bleGenericPeerLength
+                )
+              )
+            );
+            byteOffset += bleGenericPeerLength;
+          }
+          break;
         default:
           this.log(`uncaught message type #${messageType}`);
           byteOffset = dataView.byteLength;
@@ -214,8 +240,29 @@ class WebSocketMissionDevice extends BaseMission {
       const flattenedDatum = this._flattenMessageDatum(datum);
       arrayBuffers.push(flattenedDatum);
     });
+
+    const bleGenericPeerArrayBuffers = [];
+    let bleGenericPeerArrayBufferSize = 0;
+    this._bleGenericPeerMessageMap.forEach((datum, key) => {
+      bleGenericPeerArrayBuffers.push(Uint8Array.from([key]));
+      bleGenericPeerArrayBufferSize++;
+      const flattenedDatum = this._flattenMessageDatum(datum);
+      bleGenericPeerArrayBufferSize += flattenedDatum.byteLength;
+      bleGenericPeerArrayBuffers.push(flattenedDatum);
+    });
+    if (bleGenericPeerArrayBufferSize > 0) {
+      bleGenericPeerArrayBuffers.unshift(
+        Uint8Array.from([
+          this.MessageTypes.BLE_GENERIC_PEER,
+          bleGenericPeerArrayBufferSize,
+        ])
+      );
+      arrayBuffers.push(...bleGenericPeerArrayBuffers);
+    }
+
     const flattenedData = this._concatenateArrayBuffers(...arrayBuffers);
     this._messageMap.clear();
+    this._bleGenericPeerMessageMap.clear();
     return flattenedData;
   }
   _flattenMessageDatum(datum) {
@@ -614,7 +661,7 @@ class WebSocketMissionDevice extends BaseMission {
       }
     }, 500);
   }
-  _receivedInitialFileReceivePayload = false
+  _receivedInitialFileReceivePayload = false;
   _receivedFileTransferArray = null;
   _receivingFileSize = null;
   _receivingFilePath = null;
@@ -627,7 +674,7 @@ class WebSocketMissionDevice extends BaseMission {
     this._isTransferringFile = true;
     this._receivedFileTransferArray = null;
     this._receivingFileSize = null;
-    this._receivedInitialFileReceivePayload = false
+    this._receivedInitialFileReceivePayload = false;
 
     this.log(`requesting file "${filePath}"`);
 
@@ -655,7 +702,7 @@ class WebSocketMissionDevice extends BaseMission {
       const filePath = this.textDecoder.decode(
         dataView.buffer.slice(byteOffset, byteOffset + filePathLength)
       );
-      this._receivingFilePath = filePath
+      this._receivingFilePath = filePath;
       byteOffset += filePathLength;
 
       const fileSize = dataView.getUint32(byteOffset, true);
@@ -663,7 +710,7 @@ class WebSocketMissionDevice extends BaseMission {
       byteOffset += 4;
 
       this.log(`anticipating "${filePath}" (${fileSize} bytes)`);
-      this._receivedInitialFileReceivePayload = true
+      this._receivedInitialFileReceivePayload = true;
     } else {
       this.log("received file data", dataView);
       this._receivedFileTransferArray = this._concatenateArrayBuffers(
@@ -693,7 +740,7 @@ class WebSocketMissionDevice extends BaseMission {
           message: { file, type: "receive" },
         });
       }
-      byteOffset = dataView.byteLength
+      byteOffset = dataView.byteLength;
     }
     return byteOffset;
   }
@@ -803,6 +850,229 @@ class WebSocketMissionDevice extends BaseMission {
       }
     }, 500);
   }
+
+  // BLE GENERIC PEER
+  async getBLEGenericPeerConnection(sendImmediately = true) {
+    this._assertConnection();
+
+    if (this._isConnectedToBLEGenericPeer !== null) {
+      return this._isConnectedToBLEGenericPeer;
+    } else {
+      if (
+        this._bleGenericPeerMessagePromiseMap.has(
+          this.BLEGenericPeerMessageTypes.GET_CONNECTION
+        )
+      ) {
+        return this._bleGenericPeerMessagePromiseMap.get(
+          this.BLEGenericPeerMessageTypes.GET_CONNECTION
+        );
+      } else {
+        const promise = new Promise((resolve, reject) => {
+          this.addEventListener(
+            "bleGenericPeerConnection",
+            (event) => {
+              const { error, message } = event;
+              if (error) {
+                reject(error);
+              } else {
+                resolve(message.type);
+              }
+
+              this._bleGenericPeerMessagePromiseMap.delete(
+                this.BLEGenericPeerMessageTypes.GET_CONNECTION
+              );
+            },
+            { once: true }
+          );
+        });
+
+        this._bleGenericPeerMessageMap.set(
+          this.BLEGenericPeerMessageTypes.GET_CONNECTION
+        );
+        if (sendImmediately) {
+          this.send();
+        }
+
+        this._bleGenericPeerMessagePromiseMap.set(
+          this.BLEGenericPeerMessageTypes.GET_CONNECTION,
+          promise
+        );
+        return promise;
+      }
+    }
+  }
+  async setBLEGenericPeerConnection(newShouldConnect, sendImmediately = true) {
+    this._assertConnection();
+
+    newShouldConnect = Boolean(newShouldConnect);
+    this.log(`setting bleGenericPeer connection to ${newShouldConnect}...`);
+
+    const promise = new Promise((resolve, reject) => {
+      this.addEventListener(
+        "bleGenericPeerConnection",
+        (event) => {
+          const { error, message } = event;
+          if (error) {
+            reject(error);
+          } else {
+            resolve(message.type);
+          }
+        },
+        { once: true }
+      );
+    });
+
+    this._bleGenericPeerMessageMap.delete(
+      this.BLEGenericPeerMessageTypes.GET_CONNECTION
+    );
+    this._bleGenericPeerMessageMap.set(
+      this.BLEGenericPeerMessageTypes.SET_CONNECTION,
+      newShouldConnect
+    );
+    if (sendImmediately) {
+      this.send();
+    }
+
+    return promise;
+  }
+  async getBLEGenericPeerCharacteristicValue(
+    characteristicIndex,
+    sendImmediately = true
+  ) {
+    this._assertConnection();
+
+    if (isNaN(characteristicIndex)) {
+      throw `type "${characteristicIndex}" is not a number!`;
+    }
+    characteristicIndex = Number(characteristicIndex);
+    this.log(
+      `getting bleGenericCharacteristicValue for index #${characteristicIndex}...`
+    );
+
+    const messageEnum = this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE;
+
+    if (this._bleGenericPeerCharacteristicValues[characteristicIndex]) {
+      return this._bleGenericPeerCharacteristicValues[characteristicIndex];
+    } else {
+      if (this._bleGenericPeerMessagePromiseMap.has(messageEnum)) {
+        return this._bleGenericPeerMessagePromiseMap.get(messageEnum);
+      } else {
+        const promise = new Promise((resolve, reject) => {
+          this.addEventListener(
+            "bleGenericPeerCharacteristicValue",
+            (event) => {
+              const { error, message } = event;
+              if (error) {
+                reject(error);
+              } else {
+                resolve(message.type);
+              }
+
+              this._bleGenericPeerMessagePromiseMap.delete(messageEnum);
+            },
+            { once: true }
+          );
+        });
+
+        this._bleGenericPeerMessageMap.set(messageEnum, characteristicIndex);
+        if (sendImmediately) {
+          this.send();
+        }
+
+        this._bleGenericPeerMessagePromiseMap.set(messageEnum, promise);
+        return promise;
+      }
+    }
+  }
+  async setBLEGenericPeerCharacteristicValue(
+    characteristicIndex,
+    newValue,
+    sendImmediately = true
+  ) {
+    this._assertConnection();
+
+    if (isNaN(characteristicIndex)) {
+      throw `type "${characteristicIndex}" is not a number!`;
+    }
+    characteristicIndex = Number(characteristicIndex);
+    this.log(
+      `setting bleGenericCharacteristicValue for index #${characteristicIndex}`,
+      newValue
+    );
+
+    const getMessageEnum = this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE;
+    const setMessageEnum = this.BLEGenericPeerMessageTypes.SET_REMOTE_CHARACTERISTIC_VALUE;
+
+    const promise = new Promise((resolve, reject) => {
+      this.addEventListener(
+        "bleGenericPeerCharacteristicValue",
+        (event) => {
+          const { error, message } = event;
+          if (error) {
+            reject(error);
+          } else {
+            resolve(message.type);
+          }
+        },
+        { once: true }
+      );
+    });
+
+    this._bleGenericPeerMessageMap.delete(getMessageEnum);
+    this._bleGenericPeerMessageMap.set(setMessageEnum, [characteristicIndex, newValue]);
+    if (sendImmediately) {
+      this.send();
+    }
+
+    return promise;
+  }
+  _onBLEGenericPeerUpdate(dataView) {
+    let byteOffset = 0;
+    console.log("dataView", dataView);
+    while (byteOffset < dataView.byteLength) {
+      const messageType = dataView.getUint8(byteOffset++);
+      const messageTypeString =
+        this.BLEGenericPeerMessageTypeStrings[messageType];
+      this.log(`bleGenericPeerMessage type: ${messageTypeString}`);
+      switch (messageType) {
+        case this.BLEGenericPeerMessageTypes.GET_CONNECTION:
+        case this.BLEGenericPeerMessageTypes.SET_CONNECTION:
+          const isConnected = Boolean(dataView.getUint8(byteOffset++));
+          this.log("isConnectedToBLEGenericPeer", isConnected);
+          this._isConnectedToBLEGenericPeer = isConnected;
+          this.dispatchEvent({
+            type: "bleGenericPeerConnection",
+            message: { isConnected },
+          });
+          break;
+        case this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE:
+        case this.BLEGenericPeerMessageTypes.SET_REMOTE_CHARACTERISTIC_VALUE:
+          const characteristicIndex = dataView.getUint8(byteOffset++);
+          this.log("characteristicIndex", characteristicIndex);
+          const characteristicValueSize = dataView.getUint8(byteOffset++);
+          this.log("characteristicValueSize", characteristicValueSize);
+          const characteristicDataView = new DataView(
+            dataView.buffer.slice(
+              byteOffset,
+              byteOffset + characteristicValueSize
+            )
+          );
+          this.log("characteristicDataView", characteristicDataView);
+          this._bleGenericPeerCharacteristicValues[characteristicIndex] =
+            characteristicDataView;
+          this.dispatchEvent({
+            type: `bleGenericPeerCharacteristicValue${characteristicIndex}`,
+            message: { value: dataView },
+          });
+          byteOffset += characteristicValueSize;
+          break;
+        default:
+          this.log(`uncaught message type #${messageType}`);
+          byteOffset = dataView.byteLength;
+          break;
+      }
+    }
+  }
 }
 
 Object.assign(BaseMission, {
@@ -834,10 +1104,19 @@ Object.assign(BaseMission, {
 
     "GET_FIRMWARE_VERSION",
     "FIRMWARE_UPDATE",
+
+    "BLE_GENERIC_PEER",
+  ],
+  BLEGenericPeerMessageTypeStrings: [
+    "GET_CONNECTION",
+    "SET_CONNECTION",
+
+    "GET_REMOTE_CHARACTERISTIC_VALUE",
+    "SET_REMOTE_CHARACTERISTIC_VALUE",
   ],
 });
 
-["MessageType"].forEach((name) => {
+["MessageType", "BLEGenericPeerMessageType"].forEach((name) => {
   WebSocketMissionDevice[name + "s"] = WebSocketMissionDevice[
     name + "Strings"
   ].reduce((object, name, index) => {
