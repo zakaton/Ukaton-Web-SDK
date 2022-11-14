@@ -27,9 +27,9 @@ THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 
 class BaseMission extends THREE.EventDispatcher {
   constructor() {
-    super()
-    
-    this.isLoggingEnabled = !true;
+    super();
+
+    this.isLoggingEnabled = true;
     this._reconnectOnDisconnection = !true;
 
     this._batteryLevel = null;
@@ -39,6 +39,7 @@ class BaseMission extends THREE.EventDispatcher {
     this._sensorDataConfigurations = null;
 
     this._isUsingBNO080 = false;
+    this._isUsingBNO085 = true;
 
     this.motion = {
       acceleration: new THREE.Vector3(),
@@ -186,6 +187,9 @@ class BaseMission extends THREE.EventDispatcher {
     this.dispatchEvent({ type: "weight", message: { weight: this._weight } });
   }
 
+  get _isUsingBNO08x() {
+    return this._isUsingBNO080 || this._isUsingBNO085;
+  }
   _parseMotionCalibration(dataView, byteOffset = 0) {
     let isFullyCalibrated = true;
     const motionCalibration = {};
@@ -195,7 +199,7 @@ class BaseMission extends THREE.EventDispatcher {
       isFullyCalibrated = isFullyCalibrated && value == 3;
     });
 
-    if (!this._isUsingBNO080) {
+    if (!this._isUsingBNO08x) {
       motionCalibration.isFullyCalibrated = isFullyCalibrated;
     }
 
@@ -640,7 +644,7 @@ class BaseMission extends THREE.EventDispatcher {
     return this.constructor.MotionCalibrationTypes;
   }
   get MotionCalibrationTypeStrings() {
-    return this._isUsingBNO080
+    return this._isUsingBNO08x
       ? this.constructor._MotionCalibrationTypeStrings
       : this.constructor.MotionCalibrationTypeStrings;
   }
@@ -660,7 +664,7 @@ class BaseMission extends THREE.EventDispatcher {
   }
 
   get MotionDataScalars() {
-    return this._isUsingBNO080
+    return this._isUsingBNO08x
       ? this.constructor._MotionDataScalars
       : this.constructor.MotionDataScalars;
   }
@@ -703,6 +707,18 @@ class BaseMission extends THREE.EventDispatcher {
   get bno080CorrectionQuaternion() {
     return this.constructor.bno080CorrectionQuaternion;
   }
+  get bno085CorrectionQuaternions() {
+    return this.constructor.bno085CorrectionQuaternions;
+  }
+  get bno085CorrectionQuaternion() {
+    if (this.isInsole) {
+      return this.isRightInsole
+        ? this.bno085CorrectionQuaternions.insoles.right
+        : this.bno085CorrectionQuaternions.insoles.left;
+    } else {
+      return this.bno085CorrectionQuaternions.motionModule;
+    }
+  }
 
   _getRawMotionData(dataView, offset, size) {
     return Array.from(
@@ -726,6 +742,16 @@ class BaseMission extends THREE.EventDispatcher {
       } else {
         vector.set(-y, z, x);
       }
+    } else if (this._isUsingBNO085) {
+      if (this.isInsole) {
+        if (this.isRightInsole) {
+          vector.set(z, x, y);
+        } else {
+          vector.set(-z, x, -y);
+        }
+      } else {
+        vector.set(-y, -z, -x);
+      }
     } else {
       if (this.isInsole) {
         if (this.isRightInsole) {
@@ -743,19 +769,18 @@ class BaseMission extends THREE.EventDispatcher {
   }
   _parseMotionEuler(dataView, offset, scalar = 1) {
     const euler = new THREE.Euler();
-    
+
     let x = dataView.getInt16(offset, true) * scalar;
     let y = dataView.getInt16(offset + 2, true) * scalar;
     let z = dataView.getInt16(offset + 4, true) * scalar;
-    
-    if (!this._isUsingBNO080) {
-      x = THREE.Math.degToRad(x)
-      y = THREE.Math.degToRad(y)
-      z = THREE.Math.degToRad(z)
+
+    if (!this._isUsingBNO08x) {
+      x = THREE.Math.degToRad(x);
+      y = THREE.Math.degToRad(y);
+      z = THREE.Math.degToRad(z);
     }
 
     if (this._isUsingBNO080) {
-      // FIX
       if (this.isInsole) {
         if (this.isRightInsole) {
           euler.set(-z, x, -y, "YXZ");
@@ -764,6 +789,16 @@ class BaseMission extends THREE.EventDispatcher {
         }
       } else {
         euler.set(y, -z, -x, "YXZ");
+      }
+    } else if (this._isUsingBNO085) {
+      if (this.isInsole) {
+        if (this.isRightInsole) {
+          euler.set(z, y, x, "YXZ");
+        } else {
+          euler.set(-z, y, -x, "YXZ");
+        }
+      } else {
+        euler.set(y, -z, x, "YXZ");
       }
     } else {
       if (this.isInsole) {
@@ -790,12 +825,18 @@ class BaseMission extends THREE.EventDispatcher {
     if (this._isUsingBNO080) {
       quaternion.set(-z, -y, -w, -x);
       //quaternion.multiply(this.bno080CorrectionQuaternion);
+    } else if (this._isUsingBNO085) {
+      quaternion.set(-y, -w, -x, z);
     } else {
       quaternion.set(-y, -w, -x, z);
     }
 
     if (this.isInsole) {
       quaternion.multiply(this.insoleCorrectionQuaternion);
+    }
+
+    if (this._isUsingBNO085) {
+      quaternion.multiply(this.bno085CorrectionQuaternion);
     }
 
     return quaternion;
@@ -853,6 +894,25 @@ class BaseMission extends THREE.EventDispatcher {
       type: "filetransfertype",
       message: { fileTransferType: this._fileTransferType },
     });
+  }
+
+  _throttle(functionToThrottle, minimumInterval, optionalContext) {
+    var lastTime;
+    if (optionalContext) {
+      functionToThrottle = module.exports.bind(
+        functionToThrottle,
+        optionalContext
+      );
+    }
+    return function () {
+      var time = Date.now();
+      var sinceLastTime =
+        typeof lastTime === "undefined" ? minimumInterval : time - lastTime;
+      if (typeof lastTime === "undefined" || sinceLastTime >= minimumInterval) {
+        lastTime = time;
+        functionToThrottle.apply(null, arguments);
+      }
+    };
   }
 }
 Object.assign(BaseMission, {
@@ -977,6 +1037,13 @@ Object.assign(BaseMission, {
     right: new THREE.Quaternion(),
   },
   bno080CorrectionQuaternion: new THREE.Quaternion(),
+  bno085CorrectionQuaternions: {
+    motionModule: new THREE.Quaternion(),
+    insoles: {
+      left: new THREE.Quaternion(),
+      right: new THREE.Quaternion(),
+    },
+  },
 });
 
 [
@@ -1021,6 +1088,22 @@ BaseMission.SensorDataTypeStrings = {
     insoleCorrectionEuler
   );
 }
+{
+  const bno085CorrectionEuler = new THREE.Euler();
+  bno085CorrectionEuler.set(0, -Math.PI / 2, 0);
+  BaseMission.bno085CorrectionQuaternions.motionModule.setFromEuler(
+    bno085CorrectionEuler
+  );
+
+  bno085CorrectionEuler.set(0, Math.PI, 0);
+  BaseMission.bno085CorrectionQuaternions.insoles.left.setFromEuler(
+    bno085CorrectionEuler
+  );
+  bno085CorrectionEuler.set(0, Math.PI, 0);
+  BaseMission.bno085CorrectionQuaternions.insoles.right.setFromEuler(
+    bno085CorrectionEuler
+  );
+}
 
 class BaseMissions extends THREE.EventDispatcher {
   log() {
@@ -1033,7 +1116,7 @@ class BaseMissions extends THREE.EventDispatcher {
 
   constructor() {
     super();
-    
+
     this.left = new this.constructor.MissionDevice();
     this.right = new this.constructor.MissionDevice();
 
