@@ -50,7 +50,7 @@
       </button>
       <button
         class="clickable"
-        onclick="navigator.clipboard.writeText('ws://192.168.4.52, ws://192.168.4.53, ws://192.168.4.54, ws://192.168.4.55, ws://192.168.4.56, ws://192.168.4.57, ws://192.168.4.58, ws://192.168.4.59, ws://192.168.4.60, ws://192.168.4.61, ws://192.168.6.11, ws://192.168.6.12')"
+        onclick="navigator.clipboard.writeText('ws://192.168.6.22, ws://192.168.6.17, ws://192.168.6.23, ws://192.168.6.24, ws://192.168.6.21, ws://192.168.6.25, ws://192.168.6.26, ws://192.168.6.27, ws://192.168.6.20, ws://192.168.6.28, ws://192.168.6.19, ws://192.168.6.29')"
       >
         copy gateways
       </button>
@@ -73,17 +73,19 @@
       ></a-light>
 
       <a-camera id="camera" position="0 1.6 2"></a-camera>
-      
+
       <a-entity
-          id="leftHandTrackingControls"
-          hand-tracking-controls="hand: left; modelColor: #e3b67f"
-          hand-tracking-extras
-        ></a-entity>
-        <a-entity
-          id="rightHandTrackingControls"
-          hand-tracking-controls="hand: right; modelColor: #e3b67f"
-          hand-tracking-extras
-        ></a-entity>
+        id="leftHandTrackingControls"
+        hand-tracking-controls="hand: left; modelColor: #e3b67f"
+        hand-tracking-extras
+        visible="false"
+      ></a-entity>
+      <a-entity
+        id="rightHandTrackingControls"
+        hand-tracking-controls="hand: right; modelColor: #e3b67f"
+        hand-tracking-extras
+        visible="false"
+      ></a-entity>
 
       <a-entity visible="false">
         <a-entity
@@ -107,7 +109,7 @@
         id="rig"
         position="0 0 -1"
         gltf-model="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/avatar.glb?v=1646356912673"
-        ready-player-me="gateway: 192.168.4.52, 192.168.4.53, 192.168.4.54, 192.168.4.55, 192.168.4.56, 192.168.4.57, 192.168.4.58, 192.168.4.59, 192.168.4.60, 192.168.4.61, 192.168.6.11, 192.168.6.12; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera"
+        ready-player-me="gateway: 192.168.6.22, 192.168.6.17, 192.168.6.23, 192.168.6.24, 192.168.6.21, 192.168.6.25, 192.168.6.26, 192.168.6.27, 192.168.6.20, 192.168.6.28, 192.168.6.19, 192.168.6.29; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera; mirrorMode: true;"
         shadow
       ></a-entity>
       <a-plane
@@ -121,7 +123,7 @@
       ></a-plane>
 
       <a-plane
-               visible="false"
+        visible="false"
         position="0 0 -4"
         rotation="-90 0 0"
         width="4"

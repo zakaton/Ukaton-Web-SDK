@@ -13,6 +13,8 @@
 //    Zoom - middle mouse, or mousewheel / touch: two finger spread or squish
 //    Pan - right mouse, or arrow keys / touch: three finger swipe
 
+/* global THREE */
+
 THREE.OrbitControls = function ( object, domElement ) {
 
 	this.object = object;
@@ -523,7 +525,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	function handleKeyDown( event ) {
 
-		//console.log( 'handleKeyDown' );
+		// console.log( 'handleKeyDown' );
 
 		switch ( event.keyCode ) {
 
@@ -657,7 +659,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 	//
 
 	function onMouseDown( event ) {
-
+    if (!scope.enableKeys) return;
 		if ( scope.enabled === false ) return;
 
 		event.preventDefault();
@@ -708,7 +710,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 	}
 
 	function onMouseMove( event ) {
-
+    if (!scope.enableKeys) return;
 		if ( scope.enabled === false ) return;
 
 		event.preventDefault();
@@ -744,7 +746,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 	}
 
 	function onMouseUp( event ) {
-
+    if (!scope.enableKeys) return;
 		if ( scope.enabled === false ) return;
 
 		handleMouseUp( event );
@@ -773,9 +775,9 @@ THREE.OrbitControls = function ( object, domElement ) {
 	}
 
 	function onKeyDown( event ) {
-
+    if (!scope.enableKeys) return;
 		if ( scope.enabled === false || scope.enableKeys === false || scope.enablePan === false ) return;
-
+    
 		handleKeyDown( event );
 
 	}

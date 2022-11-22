@@ -29,8 +29,8 @@ class BaseMission extends THREE.EventDispatcher {
   constructor() {
     super();
 
-    this.isLoggingEnabled = true;
-    this._reconnectOnDisconnection = !true;
+    this.isLoggingEnabled = !true;
+    this._reconnectOnDisconnection = true;
 
     this._batteryLevel = null;
     this._name = null;
@@ -843,15 +843,15 @@ class BaseMission extends THREE.EventDispatcher {
   }
 
   _parseBatteryLevel(dataView, byteOffset = 0) {
-    this.batteryLevel = dataView.getUint8(byteOffset++);
+    this._batteryLevel = dataView.getUint8(byteOffset++);
     this._onBatteryLevel();
     return byteOffset;
   }
   _onBatteryLevel() {
-    this.log(`Got battery level`, this.batteryLevel);
+    this.log(`Got battery level`, this._batteryLevel);
     this.dispatchEvent({
       type: "batterylevel",
-      message: { batteryLevel: this.batteryLevel },
+      message: { batteryLevel: this._batteryLevel },
     });
   }
 

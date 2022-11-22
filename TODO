@@ -1,5 +1,3 @@
-fix imu bugs
-
 IP
   rightForearm: 192.168.4.52
   rightBicep: 192.168.4.53
@@ -15,3 +13,16 @@ IP
   leftFoot: 192.168.6.12
   leftHand: 192.168.4.28
   rightHand: 192.168.4.62
+  
+  leftFoot: 192.168.6.22
+  rightFoot: 192.168.6.17
+  upperTorso: 192.168.6.23
+  lowerTorso: 192.168.6.24
+  leftBicep: 192.168.6.21
+  rightBicep: 192.168.6.25
+  leftForearm: 192.168.6.26
+  rightForearm: 192.168.6.27
+  leftThigh: 192.168.6.20
+  rightThigh: 192.168.6.28
+  leftShin: 192.168.6.19
+  rightShin: 192.168.6.29

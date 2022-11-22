@@ -1,6 +1,6 @@
 /* global AFRAME, THREE */
 
-THREE.Math = THREE.MathUtils
+THREE.Math = THREE.MathUtils;
 
 AFRAME.registerSystem("ready-player-me", {
   init: function () {
@@ -37,9 +37,9 @@ AFRAME.registerComponent("ready-player-me", {
   dependencies: ["gltf-model"],
   schema: {
     hidePressure: { type: "boolean", default: true },
-    flip: { type: "boolean", default: !true },
-    manualArticulation: { type: "boolean", default: !true },
-    pressureAnchoringEnabled: { type: "boolean", default: !true },
+    flip: { type: "boolean", default: false },
+    manualArticulation: { type: "boolean", default: false },
+    pressureAnchoringEnabled: { type: "boolean", default: false },
     gateway: { type: "array", default: [] },
     rate: { type: "number", default: 60 },
     leftHandTrackingControls: { type: "selector" },
@@ -47,7 +47,8 @@ AFRAME.registerComponent("ready-player-me", {
     leftHandControls: { type: "selector" },
     rightHandControls: { type: "selector" },
     camera: { type: "selector" },
-    mirrorMode: { type: "boolean", default: true },
+    mirrorMode: { type: "boolean", default: false },
+    layer: { type: "number", default: 1 },
   },
   init: function () {
     window._rig = this;
@@ -88,11 +89,15 @@ AFRAME.registerComponent("ready-player-me", {
       pinky_null: "Pinky4",
     };
 
+    this.cameraWorldPosition = new THREE.Vector3();
+    this.cameraWorldQuaternion = new THREE.Quaternion();
+    this.cameraWorldEuler = new THREE.Euler();
     this.cameraCalibration = {
       position: new THREE.Vector3(),
-      rotation: new THREE.Euler(),
+      rotation: new THREE.Euler(0, 0, 0, "YXZ"),
       quaternion: new THREE.Quaternion(),
       reflection: new THREE.Vector3(),
+      _rotation: new THREE.Euler(0, 0, 0, "YXZ"),
     };
     this.lastCameraQuaternion = new THREE.Quaternion();
     this.overrideHeadUpdate = true;
@@ -1648,7 +1653,7 @@ AFRAME.registerComponent("ready-player-me", {
       },
     };
 
-    this.gripDown = {}
+    this.gripDown = {};
     this.sides.forEach((side) => {
       const handControls = this.data[`${side}HandControls`];
       if (handControls) {
@@ -1659,16 +1664,16 @@ AFRAME.registerComponent("ready-player-me", {
           this.isHandControlsConnected[side] = false;
         });
         handControls.addEventListener("gripdown", (event) => {
-          this.gripDown[side] = true
+          this.gripDown[side] = true;
           if (this.gripDown.left && this.gripDown.right) {
             this.gripCalibrateTimeoutId = window.setTimeout(() => {
               this.calibrate();
-            }, 1000)
+            }, 1000);
           }
         });
         handControls.addEventListener("gripup", (event) => {
-          this.gripDown[side] = false
-          window.clearTimeout(this.gripCalibrateTimeoutId)
+          this.gripDown[side] = false;
+          window.clearTimeout(this.gripCalibrateTimeoutId);
         });
       }
     });
@@ -1769,7 +1774,7 @@ AFRAME.registerComponent("ready-player-me", {
       correctionQuaternions.leftShin = new THREE.Quaternion().setFromEuler(
         _euler
       );
-      
+
       _euler.set(0, Math.PI, 0, "XYZ");
       correctionQuaternions.leftFoot = new THREE.Quaternion().setFromEuler(
         _euler
@@ -1893,6 +1898,7 @@ AFRAME.registerComponent("ready-player-me", {
     this.el.addEventListener("model-loaded", (event) => {
       this.model = this.el.components["gltf-model"].model;
       this.el.components["gltf-model"].model.traverse((object) => {
+        object.layers.set(this.data.mask);
         if (object.type == "Bone") {
           const bone = object;
           this.allBones[bone.name] = bone;
@@ -1940,32 +1946,61 @@ AFRAME.registerComponent("ready-player-me", {
     this.el.addEventListener("calibrate", (event) =>
       this.calibrate(event.detail.delay)
     );
+    this.el.addEventListener("enablesensors", (event) => this.enableSensors());
 
     this.system.addEntity(this);
   },
   connect: async function () {
-    this.data.gateway.reduce(async (promise, gateway) => {
-      await promise
-      console.log(promise, gateway)
-      let websocketMissionDevice = this.webSocketMissionDevices[gateway];
-      if (websocketMissionDevice) {
-        console.log("connecting")
-        return websocketMissionDevice.connect(gateway);
-      } else {
-        console.log("_addWebSocketDevice")
-        return this._addWebSocketDevice(gateway);
-      }
-    }, Promise.resolve())
-    
-    return
-    this.data.gateway.forEach(async (gateway) => {
-      let websocketMissionDevice = this.webSocketMissionDevices[gateway];
-      if (websocketMissionDevice) {
-        await websocketMissionDevice.connect(gateway);
-      } else {
-        await this._addWebSocketDevice(gateway);
-      }
-    });
+    if (false) {
+      this.data.gateway.reduce(async (promise, gateway) => {
+        await promise;
+        console.log(promise, gateway);
+        let websocketMissionDevice = this.webSocketMissionDevices[gateway];
+        if (websocketMissionDevice) {
+          console.log("connecting");
+          return websocketMissionDevice.connect(gateway);
+        } else {
+          console.log("_addWebSocketDevice");
+          return this._addWebSocketDevice(gateway);
+        }
+      }, Promise.resolve());
+    } else {
+      this.data.gateway.forEach(async (gateway) => {
+        // FIX
+        if (gateway != '192.168.6.23' && gateway != '192.168.6.24') {
+          //return
+        }
+        let websocketMissionDevice = this.webSocketMissionDevices[gateway];
+        if (websocketMissionDevice) {
+          await websocketMissionDevice.connect(gateway);
+        } else {
+          await this._addWebSocketDevice(gateway);
+        }
+      });
+    }
+  },
+  enableSensors: async function () {
+    if (false) {
+      this.data.gateway.reduce(async (promise, gateway) => {
+        await promise;
+        let websocketMissionDevice = this.webSocketMissionDevices[gateway];
+        if (websocketMissionDevice) {
+          return websocketMissionDevice.setSensorDataConfigurations(
+            websocketMissionDevice.__sensorDataConfigurations
+          );
+        }
+        return promise;
+      }, Promise.resolve());
+    } else {
+      this.data.gateway.forEach(async (gateway) => {
+        let websocketMissionDevice = this.webSocketMissionDevices[gateway];
+        if (websocketMissionDevice) {
+          await websocketMissionDevice.setSensorDataConfigurations(
+            websocketMissionDevice.__sensorDataConfigurations
+          );
+        }
+      });
+    }
   },
   _setupDevice: async function (device) {
     const { anchorConfiguration } = this;
@@ -2056,6 +2091,7 @@ AFRAME.registerComponent("ready-player-me", {
     sensorDataConfigurations.motion.quaternion = this.data.rate;
 
     await device.setSensorDataConfigurations(sensorDataConfigurations);
+    device.__sensorDataConfigurations = sensorDataConfigurations;
 
     device.addEventListener("connected", async (event) => {
       await device.setSensorDataConfigurations(sensorDataConfigurations);
@@ -2101,19 +2137,29 @@ AFRAME.registerComponent("ready-player-me", {
   _calibrate: function () {
     console.log("calibrating");
     this.isCalibrating = true;
-    
+
     if (this.data.camera) {
       const { position, rotation } = this.el.object3D;
       const cameraObject = this.data.camera.object3D;
+      cameraObject.getWorldQuaternion(this.cameraWorldQuaternion);
+      this.cameraWorldEuler.setFromQuaternion(this.cameraWorldQuaternion);
+      this.cameraWorldEuler.reorder("YXZ");
 
       if (this.data.mirrorMode) {
-        rotation.y = cameraObject.rotation.y;
+        rotation.y = this.cameraWorldEuler.y;
       } else {
-        rotation.y = cameraObject.rotation.y + Math.PI;
+        rotation.y = this.cameraWorldEuler.y + Math.PI;
       }
 
-      this.cameraCalibration.position.copy(cameraObject.position);
-      this.cameraCalibration.rotation.copy(cameraObject.rotation);
+      cameraObject.getWorldPosition(this.cameraCalibration.position);
+      cameraObject.getWorldQuaternion(this.cameraCalibration.quaternion);
+      this.cameraCalibration.rotation.setFromQuaternion(
+        this.cameraCalibration.quaternion
+      );
+      this.cameraCalibration.rotation.reorder("YXZ");
+
+      this.cameraCalibration._rotation.copy(cameraObject.rotation);
+      this.cameraCalibration._rotation.reorder("YXZ");
     }
     if (false && this.data.camera) {
       const { position, rotation, quaternion } = this.cameraCalibration;
@@ -2141,7 +2187,6 @@ AFRAME.registerComponent("ready-player-me", {
     });
 
     this._hasCalibratedAtLeastOnce = true;
-
 
     this.anchorConfiguration.isAnchored = false;
     Object.assign(this.anchorConfiguration.masses, { left: 0, right: 0 });
@@ -2178,9 +2223,9 @@ AFRAME.registerComponent("ready-player-me", {
   },
   tick: function (time, timeDelta) {
     if (this.isCalibrating) {
-      return
+      return;
     }
-    
+
     if (this.data.camera?.object3D) {
       this._updatePositionFromCamera();
       this._updateHeadFromCamera();
@@ -2211,19 +2256,20 @@ AFRAME.registerComponent("ready-player-me", {
   },
   _updateHeadFromCamera: function () {
     if (this.data.camera?.object3D && this.model) {
-      const { quaternion } = this.data.camera.object3D;
+      const cameraObject = this.data.camera.object3D;
+      cameraObject.getWorldQuaternion(this.cameraWorldQuaternion);
       if (
         !this.overrideHeadUpdate &&
-        quaternion.angleTo(this.lastCameraQuaternion) < 0.001
+        this.cameraWorldQuaternion.angleTo(this.lastCameraQuaternion) < 0.001
       ) {
         return;
       }
       this.overrideHeadUpdate = false;
-      this.lastCameraQuaternion.copy(quaternion);
+      this.lastCameraQuaternion.copy(this.cameraWorldQuaternion);
 
       const name = "head";
       this.quaternions[name].multiplyQuaternions(
-        quaternion,
+        this.cameraWorldQuaternion,
         this.correctionQuaternions[name]
       );
       this.updatedQuaternion[name] = true;
@@ -2235,34 +2281,40 @@ AFRAME.registerComponent("ready-player-me", {
     if (this.data.camera) {
       const { position, rotation } = this.el.object3D;
       const cameraObject = this.data.camera.object3D;
-
+      cameraObject.getWorldPosition(this.cameraWorldPosition);
       const newPosition = this._cameraPosition;
-      const positionOffset = this._cameraPositionOffset;
-      const positionEulerOffset = this._cameraPositionEulerOffset;
 
-      // default model position
-      newPosition.copy(this.cameraCalibration.position);
-      positionOffset.set(0, 0, -1);
-      positionEulerOffset.set(0, this.cameraCalibration.rotation.y, 0);
-      positionOffset.applyEuler(positionEulerOffset);
-      newPosition.add(positionOffset);
+      if (this.data.mirrorMode) {
+        const positionOffset = this._cameraPositionOffset;
+        const positionEulerOffset = this._cameraPositionEulerOffset;
 
-      // current camera position relative to calibrated camera position
-      positionOffset.subVectors(
-        cameraObject.position,
-        this.cameraCalibration.position
-      );
+        // default model position
+        newPosition.copy(this.cameraCalibration.position);
+        positionOffset.set(0, 0, -1);
+        positionEulerOffset.set(0, this.cameraCalibration.rotation.y, 0);
+        positionOffset.applyEuler(positionEulerOffset);
+        newPosition.add(positionOffset);
 
-      // reflect along 'z' axis
-      const reflection = this.cameraCalibration.reflection
-      reflection.set(0, 0, -1)
-      reflection.applyEuler(positionEulerOffset)
-      positionOffset.reflect(reflection)
+        // current camera position relative to calibrated camera position
+        positionOffset.subVectors(
+          this.cameraWorldPosition,
+          this.cameraCalibration.position
+        );
 
-      // apply reflected camera offset to model
-      newPosition.add(positionOffset);
-      newPosition.y = cameraObject.position.y - 1.75
-      
+        // reflect along 'z' axis
+        const reflection = this.cameraCalibration.reflection;
+        reflection.set(0, 0, -1);
+        reflection.applyEuler(positionEulerOffset);
+        positionOffset.reflect(reflection);
+
+        // apply reflected camera offset to model
+        newPosition.add(positionOffset);
+      } else {
+        newPosition.copy(this.cameraWorldPosition);
+      }
+
+      newPosition.y = this.cameraWorldPosition.y - 1.75;
+
       if (position.distanceTo(newPosition) > 0.001) {
         position.copy(newPosition);
       }
@@ -2323,20 +2375,25 @@ AFRAME.registerComponent("ready-player-me", {
             const q = new THREE.Quaternion().setFromEuler(window._defaultEuler);
             modifiedQuaternion.multiply(q);
           }
-          
+
           // FIX
-          if (this.data.mirrorMode) {
+          if (!this.data.mirrorMode) {
             const euler = this.mirrorModeEulers[name];
             euler.setFromQuaternion(modifiedQuaternion);
             let updateBone = true;
             switch (name) {
+              case "upperTorso":
+                euler.reorder("YXZ");
+                euler.x *= -1;
+                //euler.y *= -1;
+                break;
               case "leftForearm":
               case "leftBicep":
               case "rightForearm":
               case "rightBicep":
                 euler.reorder("YXZ");
-                euler.x *= -1;
-                euler.y *= -1;
+                //euler.x *= -1;
+                //euler.y *= -1;
                 break;
               case "head":
               case "upperTorso":
@@ -2346,14 +2403,14 @@ AFRAME.registerComponent("ready-player-me", {
               case "leftThigh":
               case "leftShin":
                 euler.reorder("YXZ");
-                euler.z *= -1;
-                euler.y *= -1;
+                //euler.z *= -1;
+                //euler.y *= -1;
                 break;
               case "leftFoot":
               case "rightFoot":
                 euler.reorder("YXZ");
-                euler.x *= -1;
-                euler.y *= -1;
+                //euler.x *= -1;
+                //euler.y *= -1;
                 break;
               default:
                 updateBone = false;
@@ -2377,8 +2434,20 @@ AFRAME.registerComponent("ready-player-me", {
               break;
             case "upperTorso":
               euler.reorder("YXZ");
-              euler.x *= -1;
-              euler.z *= -1;
+              if (!this.data.mirrorMode) {
+                //euler.x *= -1;
+                euler.z *= -1;
+              }
+
+              bone.rotation.copy(euler);
+              break;
+            case "lowerTorso":
+              euler.reorder("YXZ");
+              if (!this.data.mirrorMode) {
+                //euler.y *= -1;
+                //euler.z *= -1;
+              }
+
               bone.rotation.copy(euler);
               break;
             case "leftBicep":
@@ -2604,10 +2673,10 @@ AFRAME.registerComponent("ready-player-me", {
           const correctionQuaternion =
             this.handTrackingControlsCorrectionQuaternions[toBoneName];
 
-          euler.copy(fromBone.rotation)
-          euler.reorder("YXZ")
-          euler.y -= this.cameraCalibration.rotation.y
-          const { x, y, z, order } = euler
+          euler.copy(fromBone.rotation);
+          euler.reorder("YXZ");
+          euler.y -= this.cameraCalibration.rotation.y;
+          const { x, y, z, order } = euler;
           switch (boneSuffix) {
             case "wrist":
               if (this.data.mirrorMode) {
@@ -2645,7 +2714,7 @@ AFRAME.registerComponent("ready-player-me", {
             default:
               break;
           }
-          euler.y += this.cameraCalibration.rotation.y
+          euler.y += this.cameraCalibration.rotation.y;
           quaternion.setFromEuler(euler);
 
           toBone.parent.getWorldQuaternion(inverseQuaternion);
@@ -2685,10 +2754,10 @@ AFRAME.registerComponent("ready-player-me", {
         const correctionQuaternion =
           this.handControlsCorrectionQuaternions[wristBoneName];
 
-        euler.copy(handControlsElement.object3D.rotation)
-        euler.reorder("YXZ")
-        euler.y -= this.cameraCalibration.rotation.y
-        const { x, y, z, order } = euler
+        euler.copy(handControlsElement.object3D.rotation);
+        euler.reorder("YXZ");
+        euler.y -= this.cameraCalibration.rotation.y;
+        const { x, y, z, order } = euler;
         switch (suffix) {
           case "wrist":
             if (this.data.mirrorMode) {
@@ -2701,9 +2770,12 @@ AFRAME.registerComponent("ready-player-me", {
           default:
             break;
         }
-        euler.y += this.cameraCalibration.rotation.y
+        euler.y += this.cameraCalibration.rotation.y;
+        if (this.data.camera.parentEl.parentEl.id === "cameraRotation") {
+          euler.y += this.data.camera.parentEl.parentEl.object3D.rotation.y;
+        }
         quaternion.setFromEuler(euler);
-        
+
         wristBone.parent.getWorldQuaternion(inverseQuaternion);
         inverseQuaternion.invert();
         quaternion.premultiply(inverseQuaternion);
@@ -2773,5 +2845,11 @@ AFRAME.registerComponent("ready-player-me", {
         pose[boneName] = { x, y, z, w };
       });
     return pose;
+  },
+
+  logBatteryLife: function () {
+    this.devices.forEach((device) => {
+      console.log(`${device._name}: ${device._batteryLevel}%`);
+    });
   },
 });
