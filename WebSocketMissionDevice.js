@@ -32,7 +32,9 @@ class WebSocketMissionDevice extends BaseMission {
     );
   }
   async connect(ipAddress) {
+    this._ipAddress = ipAddress;
     const gateway = `ws://${ipAddress}/ws`;
+    this._gateway = gateway
     this.log("attempting to connect...");
     if (this.isConnected) {
       this.log("already connected");
@@ -68,6 +70,7 @@ class WebSocketMissionDevice extends BaseMission {
       this.getName(false),
       this.getSensorDataConfigurations(false),
       this.getBLEGenericPeerConnection(false),
+      this.getBatteryLevel(false)
     ];
     this.log("sending initial payload...");
     this.send();
@@ -80,6 +83,11 @@ class WebSocketMissionDevice extends BaseMission {
   _onWebSocketClose(event) {
     this.log("websocket closed");
     this.dispatchEvent({ type: "disconnected", message: { event } });
+    if (this._reconnectOnDisconnection) {
+      window.setTimeout(async () => {
+        await this.connect(this._ipAddress)
+      }, 3000)
+    }
   }
   async _onWebSocketMessage(event) {
     if (!this._sentInitialMessage) {
@@ -381,6 +389,44 @@ class WebSocketMissionDevice extends BaseMission {
     }
 
     return promise;
+  }
+  
+  // BATTERY
+  async getBatteryLevel(sendImmediately = true) {
+    this._assertConnection();
+
+    if (this._batteryLevel !== null) {
+      return this._batteryLevel;
+    } else {
+      if (this._messagePromiseMap.has(this.MessageTypes.BATTERY_LEVEL)) {
+        return this._messagePromiseMap.get(this.MessageTypes.BATTERY_LEVEL);
+      } else {
+        const promise = new Promise((resolve, reject) => {
+          this.addEventListener(
+            "batterylevel",
+            (event) => {
+              const { error, message } = event;
+              if (error) {
+                reject(error);
+              } else {
+                resolve(message.name);
+              }
+
+              this._messagePromiseMap.delete(this.MessageTypes.BATTERY_LEVEL);
+            },
+            { once: true }
+          );
+        });
+
+        this._messageMap.set(this.MessageTypes.BATTERY_LEVEL);
+        if (sendImmediately) {
+          this.send();
+        }
+
+        this._messagePromiseMap.set(this.MessageTypes.BATTERY_LEVEL, promise);
+        return promise;
+      }
+    }
   }
 
   // NAME
@@ -1028,7 +1074,6 @@ class WebSocketMissionDevice extends BaseMission {
   }
   _onBLEGenericPeerUpdate(dataView) {
     let byteOffset = 0;
-    console.log("dataView", dataView);
     while (byteOffset < dataView.byteLength) {
       const messageType = dataView.getUint8(byteOffset++);
       const messageTypeString =
@@ -1097,8 +1142,8 @@ Object.assign(BaseMission, {
 
     "WEIGHT_DATA",
 
-    "SEND_FILE",
     "RECEIVE_FILE",
+    "SEND_FILE",
     "REMOVE_FILE",
     "FORMAT_FILESYSTEM",
 
