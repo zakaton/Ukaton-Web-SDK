@@ -13,11 +13,16 @@
     <script src="/BluetoothMissionDevice.js"></script>
     <script src="/PeerBluetoothMissionDevice.js"></script>
     <script src="/WebSocketMissionDevice.js"></script>
+    <script src="/UDPMissionDevices.js"></script>
     <script src="/body-tracking/hand-tracking-controls-proxy.js"></script>
     <script src="/body-tracking/follow-shadow.js"></script>
     <script src="/body-tracking/ready-player-me-pro.js"></script>
     <!-- https://github.com/gftruj/aframe-hand-tracking-controls-extras -->
     <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
+
+    <!-- https://github.com/alfa256/aframe-mirror-component -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component/dist/aframe-environment-component.min.js"></script>
+    <script src="/body-tracking/mirror-component.js"></script>
   </head>
   <style>
     html,
@@ -44,6 +49,7 @@
       <button class="clickable" onclick="connect()">
         connect via WebSockets
       </button>
+      <button class="clickable" onclick="connectUDP()">connect via UDP</button>
       <button class="clickable" onclick="calibrate()">Calibrate</button>
       <button class="clickable" onclick="addBluetoothDevice()">
         add bluetooth device
@@ -58,7 +64,6 @@
 
     <!-- https://medium.com/samsung-internet-dev/integrating-augmented-reality-objects-into-the-real-world-with-light-and-shadows-12123e7b1151 -->
     <a-scene
-      webxr
       shadow="type: pcfsoft"
       renderer="physicallyCorrectLights:true; colorManagement:true; exposure:1; toneMapping:ACESFilmic;"
     >
@@ -73,6 +78,13 @@
       ></a-light>
 
       <a-camera id="camera" position="0 1.6 2"></a-camera>
+
+      <a-plane
+        visible="true"
+        mirror="repeat: true; resolution: 512; interval: 100; layer: 5;"
+        position="0 1.5 -2"
+        height="3"
+      ></a-plane>
 
       <a-entity
         id="leftHandTrackingControls"
@@ -109,7 +121,7 @@
         id="rig"
         position="0 0 -1"
         gltf-model="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/avatar.glb?v=1646356912673"
-        ready-player-me="gateway: 192.168.6.22, 192.168.6.17, 192.168.6.23, 192.168.6.24, 192.168.6.21, 192.168.6.25, 192.168.6.26, 192.168.6.27, 192.168.6.20, 192.168.6.28, 192.168.6.19, 192.168.6.29; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera; mirrorMode: true;"
+        ready-player-me="gateway: 192.168.6.22, 192.168.6.17, 192.168.6.23, 192.168.6.24, 192.168.6.21, 192.168.6.25, 192.168.6.26, 192.168.6.27, 192.168.6.20, 192.168.6.28, 192.168.6.19, 192.168.6.29; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera; mirrorMode: false; udp: 192.168.4.22; layer: 5;"
         shadow
       ></a-entity>
       <a-plane
@@ -123,19 +135,23 @@
       ></a-plane>
 
       <a-plane
-        visible="false"
+        visible="true"
         position="0 0 -4"
         rotation="-90 0 0"
         width="4"
         height="4"
         color="#7BC8A4"
       ></a-plane>
+      <a-sky visible="true" color="#ECECEC"></a-sky>
     </a-scene>
   </body>
   <script>
     const rig = document.getElementById("rig");
     function connect() {
       rig.emit("connect");
+    }
+    function connectUDP() {
+      rig.emit("connectudp");
     }
     function calibrate() {
       rig.emit("calibrate", { delay: 0000 });

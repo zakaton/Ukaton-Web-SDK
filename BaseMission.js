@@ -65,7 +65,7 @@ class BaseMission extends THREE.EventDispatcher {
     this._sensorDataTimestampOffset = 0;
     this._lastRawSensorDataTimestamp = 0;
 
-    this.disableSensorsBeforeUnload = true;
+    this.disableSensorsBeforeUnload = false;
     window.addEventListener("beforeunload", async (event) => {
       if (this.isConnected && this.disableSensorsBeforeUnload) {
         const sensorDataConfigurations = {};
