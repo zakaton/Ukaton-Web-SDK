@@ -208,8 +208,9 @@
           const rate = Number(event.target.value);
           const sensorDataConfigurations = { motion: { [dataType]: rate } };
           udpMissionDevices.devices.forEach((missionDevice) => {
-            missionDevice.setSensorDataConfigurations(sensorDataConfigurations);
+            missionDevice.setSensorDataConfigurations(sensorDataConfigurations, false);
           });
+          udpMissionDevices.send();
         });
       });
   </script>

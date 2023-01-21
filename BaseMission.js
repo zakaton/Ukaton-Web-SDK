@@ -290,7 +290,7 @@ class BaseMission extends THREE.EventDispatcher {
       if (sensorDataTypeStrings.includes(sensorDataTypeString)) {
         let delay = configuration[sensorDataTypeString];
         if (Number.isInteger(delay) && delay >= 0) {
-          delay -= delay % 20;
+          delay -= delay % 10;
           _configuration[sensorDataTypeString] = delay;
         }
       }
@@ -459,6 +459,7 @@ class BaseMission extends THREE.EventDispatcher {
         case this.PressureDataTypes.pressureDoubleByte:
           const pressure = [];
           pressure.sum = 0;
+          pressure.scalar = scalar;
           for (let index = 0; index < 16; index++) {
             let value;
             if (
@@ -500,9 +501,9 @@ class BaseMission extends THREE.EventDispatcher {
           if (
             pressureSensorDataType == this.PressureDataTypes.pressureSingleByte
           ) {
-            mass /= 2 ** 8 * 16;
+            mass *= scalar / 16;
           } else {
-            mass /= 2 ** 12 * 16;
+            mass *= scalar / 16;
           }
 
           Object.assign(pressure, { mass, centerOfMass, heelToToe });

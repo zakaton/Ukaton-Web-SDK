@@ -1,7 +1,8 @@
-croquet
-slimeVR
-recorder
-
+UDP
+  retry message if not received in 5 seconds (re-ping)
+mocap
+  put rig in corner
+  record movement
 
 IP
   rightForearm: 192.168.4.52
@@ -31,3 +32,17 @@ IP
   rightThigh: 192.168.6.28
   leftShin: 192.168.6.19
   rightShin: 192.168.6.29
+
+IP2
+  leftFoot: 192.168.6.44
+  rightFoot: 192.168.6.45
+  upperTorso: 192.168.6.48
+  lowerTorso: 192.168.6.38
+  leftBicep: 192.168.6.49
+  rightBicep: 192.168.6.34
+  leftForearm: 192.168.6.33
+  rightForearm: 192.168.6.50
+  leftThigh: 192.168.6.47
+  rightThigh: 192.168.6.35
+  leftShin: 192.168.6.31
+  rightShin: 192.168.6.46
