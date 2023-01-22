@@ -62,4 +62,4 @@ next Web SDK
   ble helper functions for creating characteristics (type+subtype [type, 0, 0, subtype], notifications, etc)
   websocket helper functions for get/set (assert connection, promise hub, )
   promise hub for async get/set
-  
+  firmware saves sensordataconfig and loads if resets

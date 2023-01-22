@@ -40,6 +40,8 @@ class BaseMission extends THREE.EventDispatcher {
 
     this._isUsingBNO080 = false;
     this._isUsingBNO085 = true;
+    
+    this._lastTimeReceivedSensorData = 0;
 
     this.motion = {
       acceleration: new THREE.Vector3(),
@@ -324,6 +326,7 @@ class BaseMission extends THREE.EventDispatcher {
   }
 
   _parseSensorData(dataView, byteOffset = 0) {
+    this._lastTimeReceivedSensorData = Date.now();
     const rawTimestamp = dataView.getUint16(byteOffset, true);
     if (rawTimestamp < this._lastRawSensorDataTimestamp) {
       this._sensorDataTimestampOffset += 2 ** 16;

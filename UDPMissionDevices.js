@@ -31,6 +31,39 @@ class UDPMissionDevice extends WebSocketMissionDevice {
   async connect() {
     this.log("not valid for updMissionDevices");
   }
+
+  async checkConnection() {
+    if (!this._name) {
+      return;
+    }
+
+    const sensorDataConfigurations = this._sensorDataConfigurations;
+    const lastTimeReceivedSensorData = this._lastTimeReceivedSensorData;
+    if (sensorDataConfigurations) {
+      let hasAtLeastOneNonzeroConfig = false;
+      for (const sensorType in sensorDataConfigurations) {
+        for (const sensorDataType in sensorDataConfigurations[sensorType]) {
+          hasAtLeastOneNonzeroConfig =
+            sensorDataConfigurations[sensorType][sensorDataType] > 0;
+          if (hasAtLeastOneNonzeroConfig) break;
+        }
+        if (hasAtLeastOneNonzeroConfig) break;
+      }
+      if (hasAtLeastOneNonzeroConfig) {
+        const now = Date.now();
+        const shouldRetry = now - this._lastTimeReceivedSensorData > 2000;
+        if (shouldRetry) {
+          console.log("retrying...", sensorDataConfigurations);
+          this.setSensorDataConfigurations(sensorDataConfigurations);
+        }
+      }
+    }
+  }
+
+  async setSensorDataConfigurations(sensorDataConfigurations) {
+    this._sensorDataConfigurations = sensorDataConfigurations;
+    super.setSensorDataConfigurations(...arguments);
+  }
 }
 
 Object.assign(UDPMissionDevice, {
@@ -81,8 +114,20 @@ class UDPMissionDevices extends THREE.EventDispatcher {
   constructor() {
     super();
     this.isLoggingEnabled = !true;
+    this._reconnectOnDisconnection = true;
     this.devices = [];
     this._messageMap = new Map();
+
+    this.checkDeviceConnections = this._checkDeviceConnections.bind(this);
+    this.addEventListener("connected", (event) => {
+      this._checkDeviceConnectionsIntervalId = window.setInterval(
+        this.checkDeviceConnections,
+        3000
+      );
+    });
+    this.addEventListener("disconnected", (event) => {
+      window.clearInterval(this._checkDeviceConnectionsIntervalId);
+    });
   }
   log() {
     if (this.isLoggingEnabled) {
@@ -90,6 +135,12 @@ class UDPMissionDevices extends THREE.EventDispatcher {
       console.trace(); // hidden in collapsed group
       console.groupEnd();
     }
+  }
+
+  async _checkDeviceConnections() {
+    this.devices.forEach((device) => {
+      device.checkConnection();
+    });
   }
 
   get isConnected() {
@@ -325,6 +376,7 @@ Object.assign(UDPMissionDevices, {
     "NUMBER_OF_DEVICES",
     "DEVICE_INFORMATION",
     "DEVICE_MESSAGE",
+    "DEVICE_CONNECTION",
   ],
 });
 

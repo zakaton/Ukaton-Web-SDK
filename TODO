@@ -1,8 +1,11 @@
 UDP
-  retry message if not received in 5 seconds (re-ping)
+  if setting sensorDataConfig, set a timeout checking the last time data was received
+  resend this._sensorDataConfiguration if not received any data since
+  
 mocap
   put rig in corner
   record movement
+  playback movement
 
 IP
   rightForearm: 192.168.4.52
