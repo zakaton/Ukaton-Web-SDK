@@ -2242,9 +2242,13 @@ AFRAME.registerComponent("ready-player-me", {
     if (rigDatum) {
       const { position, quaternions } = rigDatum;
       if (position) {
-        const lowerTorsoEntity = this.entities.lowerTorso;
-        lowerTorsoEntity.object3D.position.set(...position);
-        lowerTorsoEntity.object3D.updateMatrix();
+        if (this.data.camera) {
+          this.el.object3D.position.copy(position);
+        } else {
+          const lowerTorsoEntity = this.entities.lowerTorso;
+          lowerTorsoEntity.object3D.position.set(...position);
+          lowerTorsoEntity.object3D.updateMatrix();
+        }
       }
       for (const name in quaternions) {
         const entity = this.entities[name];
@@ -2691,6 +2695,12 @@ AFRAME.registerComponent("ready-player-me", {
 
       if (recordingDatum) {
         recordingDatum.position = this.bones.Hips.position.toArray();
+      }
+    }
+
+    if (this.data.camera) {
+      if (recordingDatum) {
+        recordingDatum.position = this.el.object3D.position;
       }
     }
 
