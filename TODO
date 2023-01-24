@@ -1,11 +1,4 @@
-UDP
-  if setting sensorDataConfig, set a timeout checking the last time data was received
-  resend this._sensorDataConfiguration if not received any data since
-  
 mocap
-  put rig in corner
-  record movement
-  playback movement
 
 IP
   rightForearm: 192.168.4.52
@@ -49,3 +42,5 @@ IP2
   rightThigh: 192.168.6.35
   leftShin: 192.168.6.31
   rightShin: 192.168.6.46
+  rightFoot2: 192.168.6.18
+  leftForearm2: 192.168.6.26

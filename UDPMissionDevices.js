@@ -53,7 +53,7 @@ class UDPMissionDevice extends WebSocketMissionDevice {
         const now = Date.now();
         const shouldRetry = now - this._lastTimeReceivedSensorData > 2000;
         if (shouldRetry) {
-          console.log("retrying...", sensorDataConfigurations);
+          this.log("retrying sensor data...", this, sensorDataConfigurations);
           this.setSensorDataConfigurations(sensorDataConfigurations);
         }
       }
@@ -376,7 +376,6 @@ Object.assign(UDPMissionDevices, {
     "NUMBER_OF_DEVICES",
     "DEVICE_INFORMATION",
     "DEVICE_MESSAGE",
-    "DEVICE_CONNECTION",
   ],
 });
 

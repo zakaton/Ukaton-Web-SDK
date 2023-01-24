@@ -47,7 +47,7 @@ AFRAME.registerComponent("ready-player-me", {
     leftHandControls: { type: "selector" },
     rightHandControls: { type: "selector" },
     camera: { type: "selector" },
-    mirrorMode: { type: "boolean", default: false },
+    mirrorMode: { type: "boolean", default: true },
     layer: { type: "number", default: -1 },
     udp: { type: "string", default: "" },
   },
@@ -2236,6 +2236,23 @@ AFRAME.registerComponent("ready-player-me", {
       const nextDatum = recordedData[index + 1];
       return !nextDatum || nextDatum.timestamp > time;
     });
+  },
+  updateWithRecordingDatumAtTime(time) {
+    const rigDatum = this.getRecordingDatumByTime(time);
+    if (rigDatum) {
+      const { position, quaternions } = rigDatum;
+      if (position) {
+        const lowerTorsoEntity = this.entities.lowerTorso;
+        lowerTorsoEntity.object3D.position.set(...position);
+        lowerTorsoEntity.object3D.updateMatrix();
+      }
+      for (const name in quaternions) {
+        const entity = this.entities[name];
+        const quaternion = quaternions[name];
+        entity.object3D.quaternion.set(...quaternion);
+        entity.object3D.updateMatrix();
+      }
+    }
   },
   tick: function (time, timeDelta) {
     if (this.isCalibrating) {
