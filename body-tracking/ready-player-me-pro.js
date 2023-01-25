@@ -1898,10 +1898,7 @@ AFRAME.registerComponent("ready-player-me", {
     this.allBones = {};
     this.el.addEventListener("model-loaded", (event) => {
       this.model = this.el.components["gltf-model"].model;
-      this.el.components["gltf-model"].model.traverse((object) => {
-        if (this.data.layer >= 0) {
-          object.layers.set(this.data.layer);
-        }
+      this.model.traverse((object) => {
         if (object.type == "Bone") {
           const bone = object;
           this.allBones[bone.name] = bone;
@@ -1912,6 +1909,7 @@ AFRAME.registerComponent("ready-player-me", {
           }
         }
       });
+      this.updateLayer();
 
       this.feetObjects = {};
       this.sides.forEach((side) => {
@@ -2719,6 +2717,19 @@ AFRAME.registerComponent("ready-player-me", {
     if (diffKeys.includes("manualArticulation")) {
       this.updateEntityAutoUpdate();
     }
+    if (diffKeys.includes("layer")) {
+      this.updateLayer();
+    }
+  },
+  updateLayer() {
+    if (!this.model) {
+      return;
+    }
+    this.model.traverse((object) => {
+      if (this.data.layer >= 0) {
+        object.layers.set(this.data.layer);
+      }
+    });
   },
   updateEntityAutoUpdate() {
     for (const name in this.bones) {
@@ -2826,6 +2837,7 @@ AFRAME.registerComponent("ready-player-me", {
       return;
     }
 
+    // FIX
     if (handControls) {
       let rpmSide = side;
       if (this.data.mirrorMode) {

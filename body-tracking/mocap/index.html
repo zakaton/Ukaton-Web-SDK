@@ -6,7 +6,7 @@
       href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
     />
 
-    <script src="/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script>
 
     <script src="/BaseMission.js"></script>
@@ -15,6 +15,8 @@
     <script src="/WebSocketMissionDevice.js"></script>
     <script src="/UDPMissionDevices.js"></script>
     <script src="/body-tracking/ready-player-me-pro.js"></script>
+    <script src="/body-tracking/aframe-shadow-material-component.js"></script>
+    <script src="/body-tracking/aframe-detected-planes-component.js"></script>
     <!-- https://github.com/gftruj/aframe-hand-tracking-controls-extras -->
     <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
     <script src="https://unpkg.com/@fern-solutions/aframe-mirror/dist/mirror.umd.min.js"></script>
@@ -152,10 +154,10 @@
         </a-mirror>
       </a-entity>
 
-      <a-sky visible="true" color="#ECECEC"></a-sky>
+      <a-sky visible="false" color="#ECECEC"></a-sky>
 
       <a-plane
-        visible="true"
+        visible="false"
         position="0 0 -4"
         rotation="-90 0 0"
         width="4"
@@ -168,9 +170,9 @@
   <script>
     /*
     TODO
-      button to toggle recording
-      button to toggle playback
-      thumbstick to scrub timeline
+      recording
+      playback
+      scrubbing
     */
 
     // HUD
@@ -291,10 +293,17 @@
 
     // RECORDING
     function toggleRecording() {
-      // FILL
+      // FILL 1
     }
     function togglePlayback() {
-      // FILL
+      // FILL 2
+    }
+
+    function showRig() {
+      _rig.el.setAttribute("ready-player-me", "layer", "1,2,3,4,5");
+    }
+    function hideRig() {
+      _rig.el.setAttribute("ready-player-me", "layer", "5");
     }
 
     // CONTROLLERS
@@ -302,8 +311,11 @@
     const leftOculusTouchControls = document.getElementById(
       "leftOculusTouchControls"
     );
-    leftOculusTouchControls.addEventListener("xbuttonpressed", (event) => {});
-    leftOculusTouchControls.addEventListener("ybuttonpressed", (event) => {
+    leftOculusTouchControls.addEventListener("xbuttondown", (event) => {
+      console.log(event.type);
+    });
+    leftOculusTouchControls.addEventListener("ybuttondown", (event) => {
+      console.log(event.type);
       toggleMirror();
     });
 
@@ -311,15 +323,18 @@
     const rightOculusTouchControls = document.getElementById(
       "rightOculusTouchControls"
     );
-    rightOculusTouchControls.addEventListener("abuttonpressed", (event) => {
+    rightOculusTouchControls.addEventListener("abuttondown", (event) => {
+      console.log(event.type);
       togglePlayback();
     });
-    rightOculusTouchControls.addEventListener("bbuttonpressed", (event) => {
+    rightOculusTouchControls.addEventListener("bbuttondown", (event) => {
+      console.log(event.type);
       toggleRecording();
     });
     rightOculusTouchControls.addEventListener("thumbstickmoved", (event) => {
-      // FILL - update playback position if viewing playback
+      // FILL 3 - update playback position if viewing playback
       let { x, y } = event.detail;
+      console.log(x, y);
     });
   </script>
 </html>
