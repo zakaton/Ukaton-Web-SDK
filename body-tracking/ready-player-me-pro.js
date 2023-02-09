@@ -1,4 +1,4 @@
-/* global AFRAME, THREE */
+/* global AFRAME, THREE, UDPMissionDevices */
 
 THREE.Math = THREE.MathUtils;
 
@@ -41,14 +41,15 @@ AFRAME.registerComponent("ready-player-me", {
     manualArticulation: { type: "boolean", default: false },
     pressureAnchoringEnabled: { type: "boolean", default: false },
     gateway: { type: "array", default: [] },
-    rate: { type: "number", default: 60 },
+    rate: { type: "number", default: 40 },
     leftHandTrackingControls: { type: "selector" },
     rightHandTrackingControls: { type: "selector" },
     leftHandControls: { type: "selector" },
     rightHandControls: { type: "selector" },
     camera: { type: "selector" },
-    mirrorMode: { type: "boolean", default: false },
-    layer: { type: "number", default: 1 },
+    mirrorMode: { type: "boolean", default: true },
+    layer: { type: "number", default: -1 },
+    udp: { type: "string", default: "" },
   },
   init: function () {
     window._rig = this;
@@ -1897,8 +1898,7 @@ AFRAME.registerComponent("ready-player-me", {
     this.allBones = {};
     this.el.addEventListener("model-loaded", (event) => {
       this.model = this.el.components["gltf-model"].model;
-      this.el.components["gltf-model"].model.traverse((object) => {
-        object.layers.set(this.data.mask);
+      this.model.traverse((object) => {
         if (object.type == "Bone") {
           const bone = object;
           this.allBones[bone.name] = bone;
@@ -1909,6 +1909,7 @@ AFRAME.registerComponent("ready-player-me", {
           }
         }
       });
+      this.updateLayer();
 
       this.feetObjects = {};
       this.sides.forEach((side) => {
@@ -1939,7 +1940,15 @@ AFRAME.registerComponent("ready-player-me", {
       updatedThresholds: { left: false, right: false },
     });
 
+    this.udpMissionDevices = new UDPMissionDevices();
+    this.udpMissionDevices.addEventListener("numberofdevices", (event) => {
+      this.udpMissionDevices.devices.forEach((device) => {
+        this._setupDevice(device);
+      });
+    });
+
     this.el.addEventListener("connect", (event) => this.connect());
+    this.el.addEventListener("connectudp", (event) => this.connectUDP());
     this.el.addEventListener("addbluetoothdevice", (event) =>
       this._addBluetoothDevice()
     );
@@ -1967,7 +1976,7 @@ AFRAME.registerComponent("ready-player-me", {
     } else {
       this.data.gateway.forEach(async (gateway) => {
         // FIX
-        if (gateway != '192.168.6.23' && gateway != '192.168.6.24') {
+        if (gateway != "192.168.6.23" && gateway != "192.168.6.24") {
           //return
         }
         let websocketMissionDevice = this.webSocketMissionDevices[gateway];
@@ -1977,6 +1986,11 @@ AFRAME.registerComponent("ready-player-me", {
           await this._addWebSocketDevice(gateway);
         }
       });
+    }
+  },
+  connectUDP: async function () {
+    if (!this.udpMissionDevices.isConnected) {
+      this.udpMissionDevices.connect(this.data.udp);
     }
   },
   enableSensors: async function () {
@@ -2221,6 +2235,27 @@ AFRAME.registerComponent("ready-player-me", {
       return !nextDatum || nextDatum.timestamp > time;
     });
   },
+  updateWithRecordingDatumAtTime(time) {
+    const rigDatum = this.getRecordingDatumByTime(time);
+    if (rigDatum) {
+      const { position, quaternions } = rigDatum;
+      if (position) {
+        if (this.data.camera) {
+          this.el.object3D.position.copy(position);
+        } else {
+          const lowerTorsoEntity = this.entities.lowerTorso;
+          lowerTorsoEntity.object3D.position.set(...position);
+          lowerTorsoEntity.object3D.updateMatrix();
+        }
+      }
+      for (const name in quaternions) {
+        const entity = this.entities[name];
+        const quaternion = quaternions[name];
+        entity.object3D.quaternion.set(...quaternion);
+        entity.object3D.updateMatrix();
+      }
+    }
+  },
   tick: function (time, timeDelta) {
     if (this.isCalibrating) {
       return;
@@ -2382,10 +2417,16 @@ AFRAME.registerComponent("ready-player-me", {
             euler.setFromQuaternion(modifiedQuaternion);
             let updateBone = true;
             switch (name) {
+              // FIX
               case "upperTorso":
                 euler.reorder("YXZ");
                 euler.x *= -1;
-                //euler.y *= -1;
+                euler.z *= -1;
+                break;
+              case "lowerTorso":
+                euler.reorder("YXZ");
+                //euler.x *= -1;
+                //euler.z *= -1;
                 break;
               case "leftForearm":
               case "leftBicep":
@@ -2409,8 +2450,50 @@ AFRAME.registerComponent("ready-player-me", {
               case "leftFoot":
               case "rightFoot":
                 euler.reorder("YXZ");
-                //euler.x *= -1;
-                //euler.y *= -1;
+                euler.x *= -1;
+                euler.z *= -1;
+                break;
+              default:
+                updateBone = false;
+                break;
+            }
+            if (updateBone) {
+              modifiedQuaternion.setFromEuler(euler);
+            }
+          } else {
+            const euler = this.mirrorModeEulers[name];
+            euler.setFromQuaternion(modifiedQuaternion);
+            let updateBone = true;
+            switch (name) {
+              case "upperTorso":
+                euler.reorder("YXZ");
+                euler.x *= -1;
+                euler.y *= -1;
+                break;
+              case "leftForearm":
+              case "leftBicep":
+              case "rightForearm":
+              case "rightBicep":
+                euler.reorder("YXZ");
+                euler.x *= -1;
+                euler.y *= -1;
+                break;
+              case "head":
+              case "upperTorso":
+              case "lowerTorso":
+              case "rightThigh":
+              case "rightShin":
+              case "leftThigh":
+              case "leftShin":
+                euler.reorder("YXZ");
+                euler.z *= -1;
+                euler.y *= -1;
+                break;
+              case "leftFoot":
+              case "rightFoot":
+                euler.reorder("YXZ");
+                euler.x *= -1;
+                euler.y *= -1;
                 break;
               default:
                 updateBone = false;
@@ -2432,13 +2515,13 @@ AFRAME.registerComponent("ready-player-me", {
           switch (name) {
             case "head":
               break;
+            // FIX
             case "upperTorso":
               euler.reorder("YXZ");
               if (!this.data.mirrorMode) {
                 //euler.x *= -1;
-                euler.z *= -1;
+                //euler.z *= -1;
               }
-
               bone.rotation.copy(euler);
               break;
             case "lowerTorso":
@@ -2447,7 +2530,6 @@ AFRAME.registerComponent("ready-player-me", {
                 //euler.y *= -1;
                 //euler.z *= -1;
               }
-
               bone.rotation.copy(euler);
               break;
             case "leftBicep":
@@ -2614,6 +2696,12 @@ AFRAME.registerComponent("ready-player-me", {
       }
     }
 
+    if (this.data.camera) {
+      if (recordingDatum) {
+        recordingDatum.position = this.el.object3D.position;
+      }
+    }
+
     if (this._isRecording) {
       recordedData.push(recordingDatum);
     }
@@ -2629,6 +2717,19 @@ AFRAME.registerComponent("ready-player-me", {
     if (diffKeys.includes("manualArticulation")) {
       this.updateEntityAutoUpdate();
     }
+    if (diffKeys.includes("layer")) {
+      this.updateLayer();
+    }
+  },
+  updateLayer() {
+    if (!this.model) {
+      return;
+    }
+    this.model.traverse((object) => {
+      if (this.data.layer >= 0) {
+        object.layers.set(this.data.layer);
+      }
+    });
   },
   updateEntityAutoUpdate() {
     for (const name in this.bones) {
@@ -2736,6 +2837,7 @@ AFRAME.registerComponent("ready-player-me", {
       return;
     }
 
+    // FIX
     if (handControls) {
       let rpmSide = side;
       if (this.data.mirrorMode) {

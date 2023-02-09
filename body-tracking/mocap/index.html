@@ -1,0 +1,340 @@
+<html>
+  <head>
+    <title>Mocap | Ukaton</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script>
+
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/PeerBluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
+    <script src="/UDPMissionDevices.js"></script>
+    <script src="/body-tracking/ready-player-me-pro.js"></script>
+    <script src="/body-tracking/aframe-shadow-material-component.js"></script>
+    <script src="/body-tracking/aframe-detected-planes-component.js"></script>
+    <!-- https://github.com/gftruj/aframe-hand-tracking-controls-extras -->
+    <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
+    <script src="https://unpkg.com/@fern-solutions/aframe-mirror/dist/mirror.umd.min.js"></script>
+  </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #overlay {
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #overlay .clickable {
+      pointer-events: all;
+    }
+    #overlay .hidden {
+      display: none;
+    }
+  </style>
+  <body>
+    <div id="overlay">
+      <button class="clickable" onclick="connect()">
+        connect via WebSockets
+      </button>
+      <button class="clickable" onclick="connectUDP()">connect via UDP</button>
+      <button class="clickable" onclick="calibrate()">Calibrate</button>
+      <button class="clickable" onclick="addBluetoothDevice()">
+        add bluetooth device
+      </button>
+      <button
+        class="clickable"
+        onclick="navigator.clipboard.writeText('ws://192.168.6.44, ws://192.168.6.45, ws://192.168.6.48, ws://192.168.6.38, ws://192.168.6.49, ws://192.168.6.34, ws://192.168.6.33, ws://192.168.6.50, ws://192.168.6.47, ws://192.168.6.35, ws://192.168.6.31, ws://192.168.6.46,ws://192.168.6.18, ws://192.168.6.26')"
+      >
+        copy gateways
+      </button>
+    </div>
+
+    <a-scene
+      shadow="type: pcfsoft"
+      renderer="colorManagement:true; exposure:1; toneMapping:ACESFilmic;"
+    >
+      <!-- view-source:https://webxr-networked-handtracking.glitch.me/scene.html -->
+
+      <a-camera id="camera" position="0 1.6 2">
+        <a-entity position="0 0 -0.4" id="hud">
+          <a-entity position="0 0.1 0" id="topText">
+            <a-text
+              value=""
+              wrap-count="20"
+              color="black"
+              baseline="top"
+              align="center"
+              shader="flat"
+              width="0.5"
+            ></a-text>
+            <a-plane
+              geometry="primitive: plane; width: 0; height: 0;"
+              material="color: white; shader: flat; opacity: 1"
+            >
+            </a-plane>
+          </a-entity>
+          <a-entity position="0 -0.3 0" id="bottomText">
+            <a-text
+              value=""
+              wrap-count="20"
+              color="black"
+              baseline="bottom"
+              align="center"
+              shader="flat"
+              width="0.5"
+            ></a-text>
+            <a-plane
+              geometry="primitive: plane; width:0; height:0;"
+              material="color: white; shader: flat; opacity: 1"
+            >
+            </a-plane>
+          </a-entity>
+        </a-entity>
+      </a-camera>
+
+      <a-entity
+        id="leftHandTrackingControls"
+        hand-tracking-controls="hand: left; modelColor: #e3b67f"
+        hand-tracking-extras
+        visible="false"
+      ></a-entity>
+      <a-entity
+        id="rightHandTrackingControls"
+        hand-tracking-controls="hand: right; modelColor: #e3b67f"
+        hand-tracking-extras
+        visible="false"
+      ></a-entity>
+
+      <a-entity
+        id="leftOculusTouchControls"
+        oculus-touch-controls="hand: left; model: false;"
+      ></a-entity>
+      <a-entity
+        id="rightOculusTouchControls"
+        oculus-touch-controls="hand: right; model: false;"
+      ></a-entity>
+
+      <a-entity visible="false">
+        <a-entity
+          id="leftHandControls"
+          hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc"
+        ></a-entity>
+        <a-entity
+          id="rightHandControls"
+          hand-controls="hand: right; handModelStyle: lowPoly; color: #ffcccc"
+        ></a-entity
+      ></a-entity>
+
+      <a-entity
+        id="rig"
+        position="0 0 -1"
+        gltf-model="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/avatar.glb?v=1646356912673"
+        ready-player-me="gateway: 192.168.6.44, 192.168.6.45, 192.168.6.48, 192.168.6.38, 192.168.6.49, 192.168.6.34, 192.168.6.33, 192.168.6.50, 192.168.6.47, 192.168.6.35, 192.168.6.31, 192.168.6.46, 192.168.6.18, 192.168.6.26; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera; mirrorMode: false; udp: 192.168.4.22; layer: 5;"
+        shadow
+      ></a-entity>
+
+      <a-entity id="mirrorContainer">
+        <a-mirror
+          id="mirror"
+          position="0 1 -1.5"
+          scale="1 2 1"
+          rotation="0 0 0"
+          layers="0,1,2,3,4,5"
+        >
+        </a-mirror>
+      </a-entity>
+
+      <a-sky visible="false" color="#ECECEC"></a-sky>
+
+      <a-plane
+        visible="false"
+        position="0 0 -4"
+        rotation="-90 0 0"
+        width="4"
+        height="4"
+        color="#7BC8A4"
+        shadow
+      ></a-plane>
+    </a-scene>
+  </body>
+  <script>
+    /*
+    TODO
+      recording
+      playback
+      scrubbing
+    */
+
+    // HUD
+    const topText = document.getElementById("topText");
+    const bottomText = document.getElementById("bottomText");
+    function setText(entity, value, color) {
+      setTextValue(entity, value);
+      setTextColor(entity, color);
+    }
+    function setTopText(value, color) {
+      setText(topText, value, color);
+    }
+    function setBottomText(value, color) {
+      setText(bottomText, value, color);
+    }
+    function setTextColor(entity, color) {
+      if (typeof color == "string") {
+        entity.querySelector("a-text").setAttribute("color", color);
+      }
+    }
+    function setTextValue(entity, value) {
+      if (typeof value == "string") {
+        entity.querySelector("a-text").setAttribute("value", value);
+        updateTextSize(entity);
+      }
+    }
+    let textSize = new THREE.Vector3();
+    function updateTextSize(entity) {
+      setTimeout(() => {
+        let text = entity.querySelector("a-text").components["text"];
+        text.geometry.computeBoundingBox();
+        const { boundingBox } = text.geometry;
+        boundingBox.getSize(textSize);
+
+        const width = textSize.x / 1000;
+        const height = textSize.y / 1000;
+        entity.querySelector("a-plane").setAttribute("width", width);
+        entity.querySelector("a-plane").setAttribute("height", height);
+        if (text.data.baseline !== "center") {
+          entity.querySelector("a-plane").object3D.position.y =
+            ((text.data.baseline == "top" ? -1 : 1) * height) / 2;
+        }
+      }, 0);
+    }
+
+    [topText, bottomText].forEach((textEntity) => {
+      textEntity.addEventListener("loaded", (e) => {
+        setTimeout(() => {
+          setText(textEntity, "");
+        }, 500);
+      });
+    });
+
+    // STATE
+    const states = ["default", "recording", "playback"];
+    let currentState = "default";
+    async function updateState(newState) {
+      if (states.includes(newState)) {
+        console.log("new state", newState);
+
+        let newTopText = "";
+
+        currentState = newState;
+        switch (currentState) {
+          case "default":
+            break;
+          case "recording":
+            newTopText = "recording";
+            break;
+          case "playback":
+            newTopText = "playback";
+            break;
+          default:
+            console.log("uncaught state", currentState);
+            break;
+        }
+
+        setTopText(newTopText);
+      }
+    }
+
+    const rig = document.getElementById("rig");
+    function connect() {
+      rig.emit("connect");
+    }
+    function connectUDP() {
+      rig.emit("connectudp");
+    }
+    function calibrate() {
+      rig.emit("calibrate", { delay: 0000 });
+    }
+    function addBluetoothDevice() {
+      rig.emit("addbluetoothdevice");
+    }
+
+    const scene = document.querySelector("a-scene");
+    const overlay = document.getElementById("overlay");
+    const camera = document.getElementById("camera");
+
+    // MIRROR
+    const mirror = document.getElementById("mirror");
+    const mirrorContainer = document.getElementById("mirrorContainer");
+    function toggleMirror() {
+      const showMirror = !mirrorContainer.object3D.visible;
+      if (showMirror) {
+        resetMirror();
+      }
+      mirrorContainer.object3D.visible = showMirror;
+    }
+    const newMirrorPosition = new THREE.Vector3();
+    function resetMirror() {
+      mirrorContainer.object3D.rotation.y = camera.object3D.rotation.y;
+
+      newMirrorPosition.copy(camera.object3D.position);
+      newMirrorPosition.y = 0;
+      mirrorContainer.object3D.position.copy(newMirrorPosition);
+    }
+
+    // RECORDING
+    function toggleRecording() {
+      // FILL 1
+    }
+    function togglePlayback() {
+      // FILL 2
+    }
+
+    function showRig() {
+      _rig.el.setAttribute("ready-player-me", "layer", "1,2,3,4,5");
+    }
+    function hideRig() {
+      _rig.el.setAttribute("ready-player-me", "layer", "5");
+    }
+
+    // CONTROLLERS
+    // XY (bottom to top)
+    const leftOculusTouchControls = document.getElementById(
+      "leftOculusTouchControls"
+    );
+    leftOculusTouchControls.addEventListener("xbuttondown", (event) => {
+      console.log(event.type);
+    });
+    leftOculusTouchControls.addEventListener("ybuttondown", (event) => {
+      console.log(event.type);
+      toggleMirror();
+    });
+
+    // AB (bottom to top)
+    const rightOculusTouchControls = document.getElementById(
+      "rightOculusTouchControls"
+    );
+    rightOculusTouchControls.addEventListener("abuttondown", (event) => {
+      console.log(event.type);
+      togglePlayback();
+    });
+    rightOculusTouchControls.addEventListener("bbuttondown", (event) => {
+      console.log(event.type);
+      toggleRecording();
+    });
+    rightOculusTouchControls.addEventListener("thumbstickmoved", (event) => {
+      // FILL 3 - update playback position if viewing playback
+      let { x, y } = event.detail;
+      console.log(x, y);
+    });
+  </script>
+</html>

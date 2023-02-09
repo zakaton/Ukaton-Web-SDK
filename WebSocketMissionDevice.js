@@ -34,7 +34,7 @@ class WebSocketMissionDevice extends BaseMission {
   async connect(ipAddress) {
     this._ipAddress = ipAddress;
     const gateway = `ws://${ipAddress}/ws`;
-    this._gateway = gateway
+    this._gateway = gateway;
     this.log("attempting to connect...");
     if (this.isConnected) {
       this.log("already connected");
@@ -70,7 +70,7 @@ class WebSocketMissionDevice extends BaseMission {
       this.getName(false),
       this.getSensorDataConfigurations(false),
       this.getBLEGenericPeerConnection(false),
-      this.getBatteryLevel(false)
+      this.getBatteryLevel(false),
     ];
     this.log("sending initial payload...");
     this.send();
@@ -85,8 +85,8 @@ class WebSocketMissionDevice extends BaseMission {
     this.dispatchEvent({ type: "disconnected", message: { event } });
     if (this._reconnectOnDisconnection) {
       window.setTimeout(async () => {
-        await this.connect(this._ipAddress)
-      }, 3000)
+        await this.connect(this._ipAddress);
+      }, 3000);
     }
   }
   async _onWebSocketMessage(event) {
@@ -94,15 +94,13 @@ class WebSocketMissionDevice extends BaseMission {
       this.log("received message without sending initial payload");
       return;
     }
+    this.dispatchEvent({ type: "websocketmessage", message: { event } });
 
     const arrayBuffer = await event.data.arrayBuffer();
-
-    this.log(
-      "message received",
-      Array.from(new Uint8Array(arrayBuffer)),
-      event
-    );
-    this.dispatchEvent({ type: "websocketmessage", message: { event } });
+    this._parseWebSocketMessage(arrayBuffer);
+  }
+  _parseWebSocketMessage(arrayBuffer) {
+    this.log("message received", Array.from(new Uint8Array(arrayBuffer)));
 
     const dataView = new DataView(arrayBuffer);
     let byteOffset = 0;
@@ -390,7 +388,7 @@ class WebSocketMissionDevice extends BaseMission {
 
     return promise;
   }
-  
+
   // BATTERY
   async getBatteryLevel(sendImmediately = true) {
     this._assertConnection();
@@ -995,7 +993,8 @@ class WebSocketMissionDevice extends BaseMission {
       `getting bleGenericCharacteristicValue for index #${characteristicIndex}...`
     );
 
-    const messageEnum = this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE;
+    const messageEnum =
+      this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE;
 
     if (this._bleGenericPeerCharacteristicValues[characteristicIndex]) {
       return this._bleGenericPeerCharacteristicValues[characteristicIndex];
@@ -1046,8 +1045,10 @@ class WebSocketMissionDevice extends BaseMission {
       newValue
     );
 
-    const getMessageEnum = this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE;
-    const setMessageEnum = this.BLEGenericPeerMessageTypes.SET_REMOTE_CHARACTERISTIC_VALUE;
+    const getMessageEnum =
+      this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE;
+    const setMessageEnum =
+      this.BLEGenericPeerMessageTypes.SET_REMOTE_CHARACTERISTIC_VALUE;
 
     const promise = new Promise((resolve, reject) => {
       this.addEventListener(
@@ -1065,7 +1066,10 @@ class WebSocketMissionDevice extends BaseMission {
     });
 
     this._bleGenericPeerMessageMap.delete(getMessageEnum);
-    this._bleGenericPeerMessageMap.set(setMessageEnum, [characteristicIndex, newValue]);
+    this._bleGenericPeerMessageMap.set(setMessageEnum, [
+      characteristicIndex,
+      newValue,
+    ]);
     if (sendImmediately) {
       this.send();
     }

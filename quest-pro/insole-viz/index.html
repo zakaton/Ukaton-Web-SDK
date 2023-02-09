@@ -1,0 +1,367 @@
+<html>
+  <head>
+    <title>Insole Viz | Ukaton</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/BluetoothMissionDevice.js"></script>
+    <script src="/PeerBluetoothMissionDevice.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
+    <script src="/UDPMissionDevices.js"></script>
+    <!-- https://github.com/gftruj/aframe-hand-tracking-controls-extras -->
+    <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
+  </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #overlay {
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #overlay .clickable {
+      pointer-events: all;
+    }
+    #overlay .hidden {
+      display: none;
+    }
+  </style>
+  <body>
+    <div id="overlay">
+      <button class="clickable" onclick="connect()">
+        connect via WebSockets
+      </button>
+      <button class="clickable" onclick="calibrate()">calibrate</button>
+      <button
+        class="clickable"
+        onclick="navigator.clipboard.writeText('ws://192.168.6.22, ws://192.168.6.17')"
+      >
+        copy gateways
+      </button>
+    </div>
+
+    <a-scene renderer="colorManagement: true;">
+      <a-assets>
+        <a-asset-item
+          id="shoeAsset"
+          src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fshoe%20model.glb?v=1635624986582"
+        ></a-asset-item>
+        <img
+          id="pressureAsset"
+          crossorigin
+          src="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/insole-transparent.png?v=1669833376573"
+        />
+      </a-assets>
+
+      <a-camera id="camera">
+        <a-entity id="leftShoe" position="-0.15 -0.2 -0.5">
+          <a-entity scale="1 1 1">
+            <a-entity rotation="-7.000 -92.07 11.210">
+              <a-entity position="-0.009 0.010 0.116">
+                <a-entity gltf-model="#shoeAsset"></a-entity>
+              </a-entity>
+            </a-entity>
+          </a-entity>
+        </a-entity>
+        <a-entity id="rightShoe" position="0.15 -0.2 -0.5" scale="-1 1 1">
+          <a-entity scale="1 1 1">
+            <a-entity rotation="-7.000 -92.07 11.210">
+              <a-entity position="-0.009 0.010 0.116">
+                <a-entity gltf-model="#shoeAsset"></a-entity>
+              </a-entity>
+            </a-entity>
+          </a-entity>
+        </a-entity>
+
+        <a-entity position="0 0.1 -0.5" scale="0.3 0.3 0.3" id="pressure">
+          <a-image
+            id="leftPressure"
+            src="#pressureAsset"
+            position="-0.2 0 0"
+            width="0.4"
+          >
+            <a-entity position="0 0 0.01" class="sensors">
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="0.0576 0.37844 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.05692 0.34461 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="0.09799 0.29457 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.01101 0.25445 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.11163 0.23632 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="0.07723 0.19857 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.02329 0.16171 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.11179 0.12101 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="0.01096 0.05823 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.12115 0.01486 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.01451 -0.16056 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.12107 -0.16272 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.01669 -0.24548 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.12008 -0.24528 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.01103 -0.40682 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.11824 -0.40066 0"
+              ></a-plane>
+            </a-entity>
+          </a-image>
+          <a-image
+            id="rightPressure"
+            src="#pressureAsset"
+            position="0.2 0 0"
+            width="0.4"
+            scale="-1 1 1"
+            ><a-entity position="0 0 0.01" class="sensors">
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="0.0576 0.37844 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.05692 0.34461 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="0.09799 0.29457 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.01101 0.25445 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.11163 0.23632 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="0.07723 0.19857 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.02329 0.16171 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.11179 0.12101 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="0.01096 0.05823 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.12115 0.01486 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.01451 -0.16056 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.12107 -0.16272 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.01669 -0.24548 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.12008 -0.24528 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.01103 -0.40682 0"
+              ></a-plane>
+              <a-plane
+                color="red"
+                width="0.07"
+                height="0.07"
+                position="-0.11824 -0.40066 0"
+              ></a-plane> </a-entity
+          ></a-image>
+        </a-entity>
+      </a-camera>
+    </a-scene>
+  </body>
+  <script>
+    const missions = new WebSocketMissions();
+    const gateways = ["192.168.6.22", "192.168.6.17"];
+    function connect() {
+      missions.left.connect(gateways[0]);
+      missions.right.connect(gateways[1]);
+    }
+    
+    const camera = document.getElementById("camera")
+
+    const shoeModels = {};
+    const pressureImages = {};
+    const pressureSensorPlanes = {};
+    const calibrationYaw = {};
+    missions.sides.forEach((side) => {
+      calibrationYaw[side] = 0;
+      shoeModels[side] = document.getElementById(`${side}Shoe`);
+      pressureImages[side] = document.getElementById(`${side}Pressure`);
+      pressureSensorPlanes[side] =
+        pressureImages[side].querySelectorAll(".sensors a-plane");
+      pressureSensorPlanes[side].forEach((plane) =>
+        plane.setAttribute(
+          "material",
+          "transparent: true; alphaTest: 0; opacity: 1;"
+        )
+      );
+
+      const mission = missions[side];
+      mission.addEventListener("connected", (event) => {
+        mission.setSensorDataConfigurations({
+          motion: { quaternion: 40 },
+          pressure: { pressureSingleByte: 40 },
+        });
+      });
+      mission.addEventListener("euler", (event) => {
+        const { euler } = event.message;
+        const shoeModel = shoeModels[side];
+        shoeModel.object3D.rotation.set(
+          euler.x,
+          (euler.y - calibrationYaw[side]),
+          euler.z,
+          euler.order
+        );
+      });
+      mission.addEventListener("pressure", (event) => {
+        const { pressure } = event.message;
+        pressure.forEach((sensor, index) => {
+          let {value} = sensor
+          value *= pressure.scalar;
+          value *= 1.5
+          pressureSensorPlanes[side][
+            index
+          ].components.material.material.opacity = value;
+        });
+        // FILL - heel to toe
+      });
+    });
+    missions.addEventListener("pressure", (event) => {
+      // FILL - center of mass
+    });
+
+    function calibrate() {
+      missions.sides.forEach((side) => {
+        const mission = missions[side];
+        calibrationYaw[side] = mission.motion.euler.y;
+      });
+    }
+  </script>
+</html>

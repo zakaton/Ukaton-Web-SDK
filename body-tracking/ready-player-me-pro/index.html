@@ -13,11 +13,15 @@
     <script src="/BluetoothMissionDevice.js"></script>
     <script src="/PeerBluetoothMissionDevice.js"></script>
     <script src="/WebSocketMissionDevice.js"></script>
+    <script src="/UDPMissionDevices.js"></script>
     <script src="/body-tracking/hand-tracking-controls-proxy.js"></script>
     <script src="/body-tracking/follow-shadow.js"></script>
     <script src="/body-tracking/ready-player-me-pro.js"></script>
     <!-- https://github.com/gftruj/aframe-hand-tracking-controls-extras -->
     <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
+
+    <script src="https://unpkg.com/@fern-solutions/aframe-mirror/dist/mirror.umd.min.js"></script>
+
   </head>
   <style>
     html,
@@ -44,13 +48,14 @@
       <button class="clickable" onclick="connect()">
         connect via WebSockets
       </button>
+      <button class="clickable" onclick="connectUDP()">connect via UDP</button>
       <button class="clickable" onclick="calibrate()">Calibrate</button>
       <button class="clickable" onclick="addBluetoothDevice()">
         add bluetooth device
       </button>
       <button
         class="clickable"
-        onclick="navigator.clipboard.writeText('ws://192.168.6.22, ws://192.168.6.17, ws://192.168.6.23, ws://192.168.6.24, ws://192.168.6.21, ws://192.168.6.25, ws://192.168.6.26, ws://192.168.6.27, ws://192.168.6.20, ws://192.168.6.28, ws://192.168.6.19, ws://192.168.6.29')"
+        onclick="navigator.clipboard.writeText('ws://192.168.6.44, ws://192.168.6.45, ws://192.168.6.48, ws://192.168.6.38, ws://192.168.6.49, ws://192.168.6.34, ws://192.168.6.33, ws://192.168.6.50, ws://192.168.6.47, ws://192.168.6.35, ws://192.168.6.31, ws://192.168.6.46,ws://192.168.6.18, ws://192.168.6.26')"
       >
         copy gateways
       </button>
@@ -58,21 +63,14 @@
 
     <!-- https://medium.com/samsung-internet-dev/integrating-augmented-reality-objects-into-the-real-world-with-light-and-shadows-12123e7b1151 -->
     <a-scene
-      webxr
       shadow="type: pcfsoft"
-      renderer="physicallyCorrectLights:true; colorManagement:true; exposure:1; toneMapping:ACESFilmic;"
+      renderer="colorManagement:true; exposure:1; toneMapping:ACESFilmic;"
     >
       <!-- view-source:https://webxr-networked-handtracking.glitch.me/scene.html -->
 
-      <a-light
-        id="real-light"
-        type="directional"
-        light="castShadow:true;shadowCameraAutomatic:#objects;"
-        position="1 2 1"
-        intensity="3"
-      ></a-light>
-
       <a-camera id="camera" position="0 1.6 2"></a-camera>
+
+      <a-mirror position="0 1.2 -3" scale="1 2 1" rotation="0 0 0" layers="0,1,2,3,4,5"></a-mirror>
 
       <a-entity
         id="leftHandTrackingControls"
@@ -109,7 +107,7 @@
         id="rig"
         position="0 0 -1"
         gltf-model="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/avatar.glb?v=1646356912673"
-        ready-player-me="gateway: 192.168.6.22, 192.168.6.17, 192.168.6.23, 192.168.6.24, 192.168.6.21, 192.168.6.25, 192.168.6.26, 192.168.6.27, 192.168.6.20, 192.168.6.28, 192.168.6.19, 192.168.6.29; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera; mirrorMode: true;"
+        ready-player-me="gateway: 192.168.6.44, 192.168.6.45, 192.168.6.48, 192.168.6.38, 192.168.6.49, 192.168.6.34, 192.168.6.33, 192.168.6.50, 192.168.6.47, 192.168.6.35, 192.168.6.31, 192.168.6.46, 192.168.6.18, 192.168.6.26; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera; mirrorMode: false; udp: 192.168.4.22; layer: 5;"
         shadow
       ></a-entity>
       <a-plane
@@ -123,19 +121,24 @@
       ></a-plane>
 
       <a-plane
-        visible="false"
+        visible="true"
         position="0 0 -4"
         rotation="-90 0 0"
         width="4"
         height="4"
         color="#7BC8A4"
+        shadow
       ></a-plane>
+      <a-sky visible="true" color="#ECECEC"></a-sky>
     </a-scene>
   </body>
   <script>
     const rig = document.getElementById("rig");
     function connect() {
       rig.emit("connect");
+    }
+    function connectUDP() {
+      rig.emit("connectudp");
     }
     function calibrate() {
       rig.emit("calibrate", { delay: 0000 });

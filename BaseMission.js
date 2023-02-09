@@ -40,6 +40,8 @@ class BaseMission extends THREE.EventDispatcher {
 
     this._isUsingBNO080 = false;
     this._isUsingBNO085 = true;
+    
+    this._lastTimeReceivedSensorData = 0;
 
     this.motion = {
       acceleration: new THREE.Vector3(),
@@ -65,7 +67,7 @@ class BaseMission extends THREE.EventDispatcher {
     this._sensorDataTimestampOffset = 0;
     this._lastRawSensorDataTimestamp = 0;
 
-    this.disableSensorsBeforeUnload = true;
+    this.disableSensorsBeforeUnload = false;
     window.addEventListener("beforeunload", async (event) => {
       if (this.isConnected && this.disableSensorsBeforeUnload) {
         const sensorDataConfigurations = {};
@@ -290,7 +292,7 @@ class BaseMission extends THREE.EventDispatcher {
       if (sensorDataTypeStrings.includes(sensorDataTypeString)) {
         let delay = configuration[sensorDataTypeString];
         if (Number.isInteger(delay) && delay >= 0) {
-          delay -= delay % 20;
+          delay -= delay % 10;
           _configuration[sensorDataTypeString] = delay;
         }
       }
@@ -324,6 +326,7 @@ class BaseMission extends THREE.EventDispatcher {
   }
 
   _parseSensorData(dataView, byteOffset = 0) {
+    this._lastTimeReceivedSensorData = Date.now();
     const rawTimestamp = dataView.getUint16(byteOffset, true);
     if (rawTimestamp < this._lastRawSensorDataTimestamp) {
       this._sensorDataTimestampOffset += 2 ** 16;
@@ -459,6 +462,7 @@ class BaseMission extends THREE.EventDispatcher {
         case this.PressureDataTypes.pressureDoubleByte:
           const pressure = [];
           pressure.sum = 0;
+          pressure.scalar = scalar;
           for (let index = 0; index < 16; index++) {
             let value;
             if (
@@ -500,9 +504,9 @@ class BaseMission extends THREE.EventDispatcher {
           if (
             pressureSensorDataType == this.PressureDataTypes.pressureSingleByte
           ) {
-            mass /= 2 ** 8 * 16;
+            mass *= scalar / 16;
           } else {
-            mass /= 2 ** 12 * 16;
+            mass *= scalar / 16;
           }
 
           Object.assign(pressure, { mass, centerOfMass, heelToToe });

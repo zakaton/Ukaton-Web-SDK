@@ -1,0 +1,217 @@
+<html>
+  <head>
+    <title>UDP Web SDK | Ukaton</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+    <script src="./BaseMission.js"></script>
+    <script src="./WebSocketMissionDevice.js"></script>
+    <script src="./UDPMissionDevices.js"></script>
+  </head>
+
+  <style>
+    .device:not(.pressure) .pressure {
+      display: none;
+    }
+    .device:not(.motion) .motion {
+      display: none;
+    }
+    .calibration label,
+    .configuration label {
+      display: block;
+    }
+
+    .device {
+      margin-bottom: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+
+    label {
+      display: block;
+    }
+
+    #devices {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+    }
+  </style>
+
+  <body>
+    <h1>UDP Mission Devices | Ukaton Missions</h1>
+
+    <div id="connection">
+      <label class="ip">
+        <b>ip address:</b> <input value="192.168.4.22" />
+      </label>
+      <button class="connect">connect</button>
+    </div>
+
+    <br /><br />
+
+    <div class="motion configuration">
+      <b>motion configuration</b>
+      <label
+        >acceleration:
+        <input
+          data-configuration="acceleration"
+          type="number"
+          value="0"
+          step="10"
+          min="0"
+          max="1000"
+      /></label>
+      <label
+        >gravity:
+        <input
+          data-configuration="gravity"
+          type="number"
+          value="0"
+          step="10"
+          min="0"
+          max="1000"
+      /></label>
+      <label
+        >linear acceleration:
+        <input
+          data-configuration="linearAcceleration"
+          type="number"
+          value="0"
+          step="10"
+          min="0"
+          max="1000"
+      /></label>
+      <label
+        >rotation rate:
+        <input
+          data-configuration="rotationRate"
+          type="number"
+          value="0"
+          step="10"
+          min="0"
+          max="1000"
+      /></label>
+      <label
+        >magnetometer:
+        <input
+          data-configuration="magnetometer"
+          type="number"
+          value="0"
+          step="10"
+          min="0"
+          max="1000"
+      /></label>
+      <label
+        >quaternion:
+        <input
+          data-configuration="quaternion"
+          type="number"
+          value="0"
+          step="10"
+          min="0"
+          max="1000"
+      /></label>
+    </div>
+
+    <div id="devices">
+      <template id="deviceTemplate">
+        <div class="device">
+          <h3>Device #<span class="index"></span></h3>
+          <label>name: <input class="name" readonly /></label>
+          <label>type: <input class="type" readonly /></label>
+          <label>battery level: <input class="batteryLevel" readonly /></label>
+
+          <b>motion data</b>
+          <div data-type="acceleration">acceleration: <span></span></div>
+          <div data-type="gravity">gravity: <span></span></div>
+          <div data-type="linearAcceleration">
+            linear acceleration: <span></span>
+          </div>
+          <div data-type="rotationRate">rotation rate: <span></span></div>
+          <div data-type="magnetometer">magnetometer: <span></span></div>
+          <div data-type="quaternion">quaternion: <span></span></div>
+          <div data-type="euler">euler: <span></span></div>
+        </div>
+      </template>
+    </div>
+  </body>
+
+  <script>
+    const udpMissionDevices = new UDPMissionDevices();
+
+    udpMissionDevices.addEventListener("connected", (event) => {
+      document.getElementById("connection").remove();
+    });
+    document
+      .querySelector("#connection .connect")
+      .addEventListener("click", (event) => {
+        connect();
+      });
+    async function connect() {
+      const ipAddress = document.querySelector(".ip input").value;
+      await udpMissionDevices.connect(ipAddress);
+    }
+
+    const devicesContainer = document.getElementById("devices");
+    const deviceTemplate = document.getElementById("deviceTemplate");
+    const deviceContainers = [];
+    udpMissionDevices.addEventListener("numberofdevices", (event) => {
+      for (let index = 0; index < udpMissionDevices.numberOfDevices; index++) {
+        const missionDevice = udpMissionDevices.devices[index];
+        const deviceContainer = deviceTemplate
+          .cloneNode(true)
+          .content.querySelector(".device");
+        deviceContainer.querySelector(".index").innerText = index;
+        devicesContainer.appendChild(deviceContainer);
+        deviceContainers[index] = deviceContainer;
+
+        missionDevice.addEventListener("name", (event) => {
+          deviceContainer.querySelector(".name").value = event.message.name;
+        });
+        missionDevice.addEventListener("type", (event) => {
+          deviceContainer.querySelector(".type").value =
+            missionDevice.getTypeString();
+        });
+        missionDevice.addEventListener("batterylevel", (event) => {
+          deviceContainer.querySelector(".batteryLevel").value =
+            event.message.batteryLevel;
+        });
+
+        deviceContainer
+          .querySelectorAll("[data-type]")
+          .forEach((dataContainer) => {
+            const dataType = dataContainer.dataset.type;
+            const span = dataContainer.querySelector("span");
+            missionDevice.addEventListener(dataType, (event) => {
+              const { timestamp } = event.message;
+              const value = event.message[dataType];
+              let string = `[${timestamp}] `;
+              string += value
+                .toArray()
+                .map((x) => (x.toFixed ? x.toFixed(2) : x))
+                .toString();
+              span.innerText = string;
+            });
+          });
+      }
+    });
+
+    document
+      .querySelectorAll(".motion.configuration input[data-configuration]")
+      .forEach((input) => {
+        const dataType = input.dataset.configuration;
+        input.addEventListener("input", (event) => {
+          const rate = Number(event.target.value);
+          const sensorDataConfigurations = { motion: { [dataType]: rate } };
+          udpMissionDevices.devices.forEach((missionDevice) => {
+            missionDevice.setSensorDataConfigurations(sensorDataConfigurations, false);
+          });
+          udpMissionDevices.send();
+        });
+      });
+  </script>
+</html>

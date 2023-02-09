@@ -1,3 +1,6 @@
+mocap
+  fix hands
+
 IP
   rightForearm: 192.168.4.52
   rightBicep: 192.168.4.53
@@ -26,3 +29,19 @@ IP
   rightThigh: 192.168.6.28
   leftShin: 192.168.6.19
   rightShin: 192.168.6.29
+
+IP2
+  leftFoot: 192.168.6.44
+  rightFoot: 192.168.6.45
+  upperTorso: 192.168.6.48
+  lowerTorso: 192.168.6.38
+  leftBicep: 192.168.6.49
+  rightBicep: 192.168.6.34
+  leftForearm: 192.168.6.33
+  rightForearm: 192.168.6.50
+  leftThigh: 192.168.6.47
+  rightThigh: 192.168.6.35
+  leftShin: 192.168.6.31
+  rightShin: 192.168.6.46
+  rightFoot2: 192.168.6.18
+  leftForearm2: 192.168.6.26
