@@ -300,7 +300,7 @@
       if (_rig._isPlaying) {
         return;
       }
-      
+
       if (_rig._isRecording) {
         _rig.stopRecording();
         updateState("paused");
@@ -319,15 +319,17 @@
         if (_rig._isPlaying) {
           _rig.stopPlaying();
           updateState("paused");
+          hideRig();
         } else {
           _rig.startPlaying();
           updateState("playing");
+          showRig();
         }
       }
     }
 
     function showRig() {
-      _rig.el.setAttribute("ready-player-me", "layer", "1,2,3,4,5");
+      _rig.el.setAttribute("ready-player-me", "layer", "0,1,2,3,4,5");
     }
     function hideRig() {
       _rig.el.setAttribute("ready-player-me", "layer", "5");
@@ -338,11 +340,12 @@
     const leftOculusTouchControls = document.getElementById(
       "leftOculusTouchControls"
     );
-    leftOculusTouchControls.addEventListener("xbuttondown", (event) => {
+    leftOculusTouchControls.addEventListener("ybuttondown", (event) => {
       console.log(event.type);
+
       calibrate();
     });
-    leftOculusTouchControls.addEventListener("ybuttondown", (event) => {
+    leftOculusTouchControls.addEventListener("xbuttondown", (event) => {
       console.log(event.type);
       toggleMirror();
     });
@@ -351,13 +354,13 @@
     const rightOculusTouchControls = document.getElementById(
       "rightOculusTouchControls"
     );
-    rightOculusTouchControls.addEventListener("abuttondown", (event) => {
-      console.log(event.type);
-      togglePlayback();
-    });
     rightOculusTouchControls.addEventListener("bbuttondown", (event) => {
       console.log(event.type);
       toggleRecording();
+    });
+    rightOculusTouchControls.addEventListener("abuttondown", (event) => {
+      console.log(event.type);
+      togglePlayback();
     });
     rightOculusTouchControls.addEventListener("thumbstickmoved", (event) => {
       if (currentState == "paused") {

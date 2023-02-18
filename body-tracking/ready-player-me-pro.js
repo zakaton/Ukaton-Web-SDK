@@ -2,9 +2,7 @@
 
 /*
   TODO
-    test position
-    test hands
-    test bones
+    show avatar
 */
 
 THREE.Math = THREE.MathUtils;
@@ -2336,6 +2334,19 @@ AFRAME.registerComponent("ready-player-me", {
         this._playbackTimeStart = now;
       }
     } else {
+      let recordingDatum;
+      const { recordedData } = this;
+      if (this._isRecording) {
+        recordingDatum = { quaternions: {} };
+        this._latestRecordingDatum = recordingDatum;
+        if (recordedData.length == 0) {
+          recordingDatum.timestamp = 0;
+          recordedData.baseTime = time;
+        } else {
+          recordingDatum.timestamp = time - recordedData.baseTime;
+        }
+      }
+
       if (this.data.camera?.object3D) {
         this._updatePositionFromCamera();
         this._updateHeadFromCamera();
@@ -2362,6 +2373,16 @@ AFRAME.registerComponent("ready-player-me", {
         if (timeline.completed) {
           delete this.timelines[key];
         }
+      }
+
+      if (this.data.camera) {
+        if (recordingDatum) {
+          recordingDatum.position = this.el.object3D.position.toArray();
+        }
+      }
+
+      if (this._isRecording) {
+        recordedData.push(recordingDatum);
       }
     }
   },
@@ -2435,14 +2456,7 @@ AFRAME.registerComponent("ready-player-me", {
     let recordingDatum;
     const { recordedData } = this;
     if (this._isRecording) {
-      recordingDatum = { quaternions: {} };
-      this._latestRecordingDatum = recordingDatum;
-      if (recordedData.length == 0) {
-        recordingDatum.timestamp = 0;
-        recordedData.baseTime = time;
-      } else {
-        recordingDatum.timestamp = time - recordedData.baseTime;
-      }
+      recordingDatum = this._latestRecordingDatum;
     }
 
     const { anchorConfiguration } = this;
@@ -2771,16 +2785,6 @@ AFRAME.registerComponent("ready-player-me", {
       if (recordingDatum) {
         recordingDatum.position = this.bones.Hips.position.toArray();
       }
-    }
-
-    if (this.data.camera) {
-      if (recordingDatum) {
-        recordingDatum.position = this.el.object3D.position.toArray();
-      }
-    }
-
-    if (this._isRecording) {
-      recordedData.push(recordingDatum);
     }
   },
   getBoneByName(name) {
