@@ -1,5 +1,12 @@
 /* global AFRAME, THREE, UDPMissionDevices */
 
+/*
+  TODO
+    test position
+    test hands
+    test bones
+*/
+
 THREE.Math = THREE.MathUtils;
 
 AFRAME.registerSystem("ready-player-me", {
@@ -56,9 +63,13 @@ AFRAME.registerComponent("ready-player-me", {
 
     this.sides = ["left", "right"];
 
-    this.HAND_BONE_PREFIX = {
+    this._HAND_BONE_PREFIX = {
       left: "b_l_",
       right: "b_r_",
+    };
+    this.HAND_BONE_PREFIX = {
+      left: "",
+      right: "",
     };
 
     this.RPM_HAND_PREFIX = {
@@ -66,7 +77,7 @@ AFRAME.registerComponent("ready-player-me", {
       right: "RightHand",
     };
 
-    this.BONE_MAPPING = {
+    this._BONE_MAPPING = {
       wrist: "",
       thumb1: "Thumb1",
       thumb2: "Thumb2",
@@ -88,6 +99,35 @@ AFRAME.registerComponent("ready-player-me", {
       pinky2: "Pinky2",
       pinky3: "Pinky3",
       pinky_null: "Pinky4",
+    };
+
+    this.BONE_MAPPING = {
+      wrist: "",
+      //"thumb-metacarpal": "Thumb1",
+      "thumb-phalanx-proximal": "Thumb1",
+      "thumb-phalanx-intermediate": "Thumb2",
+      "thumb-phalanx-distal": "Thumb3",
+      "thumb-tip": "Thumb4",
+      //"index-finger-metacarpal": "Index1",
+      "index-finger-phalanx-proximal": "Index1",
+      "index-finger-phalanx-intermediate": "Index2",
+      "index-finger-phalanx-distal": "Index3",
+      "index-finger-tip": "Index4",
+      //"middle-finger-metacarpal": "Middle1",
+      "middle-finger-phalanx-proximal": "Middle1",
+      "middle-finger-phalanx-intermediate": "Middle2",
+      "middle-finger-phalanx-distal": "Middle3",
+      "middle-finger-tip": "Middle4",
+      //"ring-finger-metacarpal": "Ring1",
+      "ring-finger-phalanx-proximal": "Ring1",
+      "ring-finger-phalanx-intermediate": "Ring2",
+      "ring-finger-phalanx-distal": "Ring3",
+      "ring-finger-tip": "Ring4",
+      //"pinky-finger-metacarpal": "Pinky1",
+      "pinky-finger-phalanx-proximal": "Pinky1",
+      "pinky-finger-phalanx-intermediate": "Pinky2",
+      "pinky-finger-phalanx-distal": "Pinky3",
+      "pinky-finger-tip": "Pinky4",
     };
 
     this.cameraWorldPosition = new THREE.Vector3();
@@ -2220,6 +2260,7 @@ AFRAME.registerComponent("ready-player-me", {
   },
   stopRecording: function () {
     this._isRecording = false;
+    this._latestRecordingDatum = null;
     const { recordedData } = this;
     if (recordedData.length > 0) {
       recordedData.duration = Math.ceil(
@@ -2241,7 +2282,7 @@ AFRAME.registerComponent("ready-player-me", {
       const { position, quaternions } = rigDatum;
       if (position) {
         if (this.data.camera) {
-          this.el.object3D.position.copy(position);
+          this.el.object3D.position.set(...position);
         } else {
           const lowerTorsoEntity = this.entities.lowerTorso;
           lowerTorsoEntity.object3D.position.set(...position);
@@ -2249,11 +2290,36 @@ AFRAME.registerComponent("ready-player-me", {
         }
       }
       for (const name in quaternions) {
-        const entity = this.entities[name];
+        const bone = this.getBoneByName(name) || this.allBones[name];
         const quaternion = quaternions[name];
-        entity.object3D.quaternion.set(...quaternion);
-        entity.object3D.updateMatrix();
+        bone.quaternion.set(...quaternion);
+        bone.updateMatrix();
       }
+    }
+  },
+  getRecordingDuration() {
+    const { recordedData } = this;
+    if (recordedData.length > 1) {
+      return (
+        recordedData[recordedData.length - 1].timestamp -
+        recordedData[0].timestamp
+      );
+    }
+    return 0;
+  },
+  startPlaying: function () {
+    const recordingDuration = this.getRecordingDuration();
+    if (recordingDuration > 0) {
+      this._isPlaying = true;
+      this._playbackTimeStart = Date.now();
+      this._recordingDuration = recordingDuration;
+      // TODO - disable sensors
+    }
+  },
+  stopPlaying: function () {
+    if (this._isPlaying) {
+      this._isPlaying = false;
+      // TODO - enable sensors
     }
   },
   tick: function (time, timeDelta) {
@@ -2261,31 +2327,41 @@ AFRAME.registerComponent("ready-player-me", {
       return;
     }
 
-    if (this.data.camera?.object3D) {
-      this._updatePositionFromCamera();
-      this._updateHeadFromCamera();
-    }
-
-    if (this._tickFlag) {
-      this._tick(...arguments);
-      delete this._tickFlag;
-    }
-
-    this.sides.forEach((side) => {
-      if (this.data[`${side}HandTrackingControls`]) {
-        this._updateHandTrackingControls(side);
+    if (this._isPlaying) {
+      const now = Date.now();
+      const playbackTime = now - this._playbackTimeStart;
+      this.updateWithRecordingDatumAtTime(playbackTime);
+      if (playbackTime > this._recordingDuration) {
+        console.log("loop or stop");
+        this._playbackTimeStart = now;
       }
-      if (this.data[`${side}HandControls`]) {
-        this._updateHandControls(side);
+    } else {
+      if (this.data.camera?.object3D) {
+        this._updatePositionFromCamera();
+        this._updateHeadFromCamera();
       }
-    });
 
-    for (const key in this.timelines) {
-      const timeline = this.timelines[key];
-      timeline._time += timeDelta;
-      timeline.tick(timeline._time);
-      if (timeline.completed) {
-        delete this.timelines[key];
+      if (this._tickFlag) {
+        this._tick(...arguments);
+        delete this._tickFlag;
+      }
+
+      this.sides.forEach((side) => {
+        if (this.data[`${side}HandTrackingControls`]) {
+          this._updateHandTrackingControls(side);
+        }
+        if (this.data[`${side}HandControls`]) {
+          this._updateHandControls(side);
+        }
+      });
+
+      for (const key in this.timelines) {
+        const timeline = this.timelines[key];
+        timeline._time += timeDelta;
+        timeline.tick(timeline._time);
+        if (timeline.completed) {
+          delete this.timelines[key];
+        }
       }
     }
   },
@@ -2360,6 +2436,7 @@ AFRAME.registerComponent("ready-player-me", {
     const { recordedData } = this;
     if (this._isRecording) {
       recordingDatum = { quaternions: {} };
+      this._latestRecordingDatum = recordingDatum;
       if (recordedData.length == 0) {
         recordingDatum.timestamp = 0;
         recordedData.baseTime = time;
@@ -2698,7 +2775,7 @@ AFRAME.registerComponent("ready-player-me", {
 
     if (this.data.camera) {
       if (recordingDatum) {
-        recordingDatum.position = this.el.object3D.position;
+        recordingDatum.position = this.el.object3D.position.toArray();
       }
     }
 
@@ -2837,7 +2914,6 @@ AFRAME.registerComponent("ready-player-me", {
       return;
     }
 
-    // FIX
     if (handControls) {
       let rpmSide = side;
       if (this.data.mirrorMode) {
@@ -2886,6 +2962,13 @@ AFRAME.registerComponent("ready-player-me", {
 
         wristBone.quaternion.copy(quaternion);
         wristBone.updateMatrix();
+
+        if (this._isRecording && this._latestRecordingDatum) {
+          const recordingDatum = this._latestRecordingDatum;
+          wristBone.traverse((bone) => {
+            recordingDatum.quaternions[bone.name] = bone.quaternion.toArray();
+          });
+        }
       }
 
       if (this.model) {

@@ -139,14 +139,14 @@
         id="rig"
         position="0 0 -1"
         gltf-model="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/avatar.glb?v=1646356912673"
-        ready-player-me="gateway: 192.168.6.44, 192.168.6.45, 192.168.6.48, 192.168.6.38, 192.168.6.49, 192.168.6.34, 192.168.6.33, 192.168.6.50, 192.168.6.47, 192.168.6.35, 192.168.6.31, 192.168.6.46, 192.168.6.18, 192.168.6.26; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera; mirrorMode: false; udp: 192.168.4.22; layer: 5;"
+        ready-player-me="gateway: 192.168.6.44, 192.168.6.45, 192.168.6.48, 192.168.6.38, 192.168.6.49, 192.168.6.34, 192.168.6.33, 192.168.6.50, 192.168.6.47, 192.168.6.35, 192.168.6.31, 192.168.6.46, 192.168.6.18, 192.168.6.26; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera; mirrorMode: false; udp: 192.168.4.27; layer: 5;"
         shadow
       ></a-entity>
 
       <a-entity id="mirrorContainer">
         <a-mirror
           id="mirror"
-          position="0 1 -1.5"
+          position="0 1 -0.5"
           scale="1 2 1"
           rotation="0 0 0"
           layers="0,1,2,3,4,5"
@@ -227,7 +227,7 @@
     });
 
     // STATE
-    const states = ["default", "recording", "playback"];
+    const states = ["default", "recording", "paused", "playing"];
     let currentState = "default";
     async function updateState(newState) {
       if (states.includes(newState)) {
@@ -242,8 +242,11 @@
           case "recording":
             newTopText = "recording";
             break;
-          case "playback":
-            newTopText = "playback";
+          case "paused":
+            newTopText = "paused";
+            break;
+          case "playing":
+            newTopText = "playing";
             break;
           default:
             console.log("uncaught state", currentState);
@@ -254,6 +257,7 @@
       }
     }
 
+    // SETUP
     const rig = document.getElementById("rig");
     function connect() {
       rig.emit("connect");
@@ -293,10 +297,33 @@
 
     // RECORDING
     function toggleRecording() {
-      // FILL 1
+      if (_rig._isPlaying) {
+        return;
+      }
+      
+      if (_rig._isRecording) {
+        _rig.stopRecording();
+        updateState("paused");
+      } else {
+        _rig.startRecording();
+        updateState("recording");
+      }
     }
+
     function togglePlayback() {
-      // FILL 2
+      if (_rig._isRecording) {
+        return;
+      }
+
+      if (_rig.recordedData.length > 0) {
+        if (_rig._isPlaying) {
+          _rig.stopPlaying();
+          updateState("paused");
+        } else {
+          _rig.startPlaying();
+          updateState("playing");
+        }
+      }
     }
 
     function showRig() {
@@ -313,6 +340,7 @@
     );
     leftOculusTouchControls.addEventListener("xbuttondown", (event) => {
       console.log(event.type);
+      calibrate();
     });
     leftOculusTouchControls.addEventListener("ybuttondown", (event) => {
       console.log(event.type);
@@ -332,9 +360,13 @@
       toggleRecording();
     });
     rightOculusTouchControls.addEventListener("thumbstickmoved", (event) => {
-      // FILL 3 - update playback position if viewing playback
-      let { x, y } = event.detail;
-      console.log(x, y);
+      if (currentState == "paused") {
+        let { x } = event.detail;
+        console.log(x);
+        // FILL
+        // get current recorded time
+        // update time
+      }
     });
   </script>
 </html>

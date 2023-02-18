@@ -1,5 +1,4 @@
 mocap
-  fix hands
 
 IP
   rightForearm: 192.168.4.52
@@ -45,3 +44,17 @@ IP2
   rightShin: 192.168.6.46
   rightFoot2: 192.168.6.18
   leftForearm2: 192.168.6.26
+  
+IP3
+  leftFoot: 192.168.4.55
+  rightFoot: 192.168.4.56
+  upperTorso: 192.168.4.49
+  lowerTorso: 192.168.4.50
+  leftBicep: 192.168.4.47
+  rightBicep: 192.168.4.45
+  leftForearm: 192.168.4.59
+  rightForearm: 192.168.4.48
+  leftThigh: 192.168.4.51
+  rightThigh: 192.168.4.52
+  leftShin: 192.168.4.53
+  rightShin: 192.168.4.54
