@@ -2336,15 +2336,18 @@ AFRAME.registerComponent("ready-player-me", {
     } else {
       let recordingDatum;
       const { recordedData } = this;
-      if (this._isRecording) {
-        recordingDatum = { quaternions: {} };
-        this._latestRecordingDatum = recordingDatum;
+      if (this._isRecording && this._tickFlag) {
+        this._latestRecordingDatum = recordingDatum = { quaternions: {} };
         if (recordedData.length == 0) {
           recordingDatum.timestamp = 0;
           recordedData.baseTime = time;
         } else {
           recordingDatum.timestamp = time - recordedData.baseTime;
         }
+      }
+      
+      if (recordingDatum) {
+        console.log(recordingDatum)
       }
 
       if (this.data.camera?.object3D) {
@@ -2381,7 +2384,7 @@ AFRAME.registerComponent("ready-player-me", {
         }
       }
 
-      if (this._isRecording) {
+      if (this._isRecording && recordingDatum) {
         recordedData.push(recordingDatum);
       }
     }
@@ -2455,7 +2458,7 @@ AFRAME.registerComponent("ready-player-me", {
   _tick: function (time) {
     let recordingDatum;
     const { recordedData } = this;
-    if (this._isRecording) {
+    if (this._isRecording && this._latestRecordingDatum) {
       recordingDatum = this._latestRecordingDatum;
     }
 
@@ -2666,15 +2669,13 @@ AFRAME.registerComponent("ready-player-me", {
     for (const name in this.updatedQuaternion) {
       if (this.updatedQuaternion[name]) {
         const bone = this.getBoneByName(name);
-        if (bone) {
-          if (recordingDatum) {
-            recordingDatum.quaternions[name] = bone.quaternion.toArray();
-          }
+        if (bone && recordingDatum) {
+          recordingDatum.quaternions[name] = bone.quaternion.toArray();
         }
         delete this.updatedQuaternion[name];
       }
     }
-
+    
     if (this._hasCalibratedAtLeastOnce) {
       for (const side in anchorConfiguration.updatedMass) {
         const mass = anchorConfiguration.masses[side];
