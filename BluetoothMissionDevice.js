@@ -3,11 +3,11 @@
 class BluetoothMissionDevice extends BaseMission {
   static MAX_NUMBER_OF_BLE_PEERS = 2;
 
-  _minimizeBluetooth = false;
+  _minimizeBluetooth = true;
 
   constructor() {
     super();
-
+    
     this._wifiSSID = null;
     this._wifiPassword = null;
     this._wifiConnect = null;
@@ -23,6 +23,8 @@ class BluetoothMissionDevice extends BaseMission {
     return `5691eddf-${value}-4420-b7a5-bb8751ab5181`;
   }
   async connect() {
+    
+    
     this.log("attempting to connect...");
     if (this.isConnected) {
       this.log("already connected");
@@ -237,7 +239,7 @@ class BluetoothMissionDevice extends BaseMission {
     this.peers = [];
     for (
       let index = 0;
-      index < this.constructor.MAX_NUMBER_OF_BLE_PEERS;
+      !this._minimizeBluetooth && index < this.constructor.MAX_NUMBER_OF_BLE_PEERS;
       index++
     ) {
       const peer = new PeerBluetoothMissionDevice();
@@ -326,6 +328,7 @@ class BluetoothMissionDevice extends BaseMission {
       this.log("got firmware data characteristic");
     }
 
+    if(!this._minimizeBluetooth) {
     // STEPS
     this.log("getting is step tracking enabled characteristic...");
     this._isStepTrackingEnabledCharacteristic =
@@ -353,7 +356,7 @@ class BluetoothMissionDevice extends BaseMission {
     this.log("starting step data notifications...");
     await this._stepDataCharacteristic.startNotifications();
     this.log("started step data notifications!");
-    
+    }
     // HAPTICS
     this.log("getting haptics vibration characteristic...");
     this._hapticsVibrationCharacteristic = await this._service.getCharacteristic(
