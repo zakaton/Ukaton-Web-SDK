@@ -45,7 +45,7 @@ class TapStrap {
               "device_information",
             ],
             namePrefix: "Tap_",
-            name
+            //name
           },
         ],
       });
