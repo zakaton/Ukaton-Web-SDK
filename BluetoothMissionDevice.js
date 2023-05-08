@@ -50,7 +50,7 @@ class BluetoothMissionDevice extends BaseMission {
     this._server = await this._device.gatt.connect();
     this.log("got server!");
 
-    if (!this._minimizeBluetooth) {
+    if (true || !this._minimizeBluetooth) {
       // BATTERY SERVICE/CHARACTERITICS
       this.log("getting battery service...");
       this._batteryService = await this._server.getPrimaryService(

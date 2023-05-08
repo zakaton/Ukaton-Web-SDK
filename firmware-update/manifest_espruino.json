@@ -1,0 +1,28 @@
+{
+  "name": "Espruino",
+  "version": "1",
+  "new_install_prompt_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        {
+          "path": "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/bootloader.bin?v=1682426224925",
+          "offset": 4096
+        },
+        {
+          "path": "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/partitions_espruino.bin?v=1682426228544",
+          "offset": 32768
+        },
+        {
+          "path": "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/boot_app0.bin?v=1641919095621",
+          "offset": 57344
+        },
+        {
+          "path": "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/espruino_2v17_esp32.bin?v=1682428961696",
+          "offset": 65536
+        }
+      ]
+    }
+  ]
+}
