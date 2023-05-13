@@ -1,4 +1,10 @@
-mocap
+Generic BLE Peer
+  connect
+  get service
+  get characteristic
+  read
+  write
+  subscribe
 
 IP
   rightForearm: 192.168.4.52
