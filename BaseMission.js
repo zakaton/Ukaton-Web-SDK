@@ -918,6 +918,51 @@ class BaseMission extends THREE.EventDispatcher {
       }
     };
   }
+  
+  // HELPERS
+  _flattenMessageDatum(datum) {
+    switch (typeof datum) {
+      case "object":
+        switch (datum.constructor.name) {
+          case "Uint8Array":
+          case "Uint16Array":
+            return datum.buffer;
+            break;
+          case "ArrayBuffer":
+            return datum;
+            break;
+          case "Array":
+            datum = datum.map((datum) => this._flattenMessageDatum(datum));
+            return this._concatenateArrayBuffers(...datum);
+            break;
+          case "Object":
+            this.log(
+              "uncaught datum type: object (what do we do with the keys and in what order?)",
+              datum
+            );
+            break;
+        }
+        break;
+      case "string":
+        return this._concatenateArrayBuffers(
+          Uint8Array.from([datum.length]),
+          this.textEncoder.encode(datum)
+        );
+        break;
+      case "number":
+      case "boolean":
+        return Uint8Array.from([datum]);
+        break;
+      case "function":
+        return this._flattenMessageDatum(datum());
+      case "undefined":
+        return Uint8Array.from([]);
+        break;
+      default:
+        this.log(`uncaught datum of type ${typeof datum}`, datum);
+        break;
+    }
+  }
 }
 Object.assign(BaseMission, {
   textEncoder: new TextEncoder(),

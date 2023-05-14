@@ -291,85 +291,11 @@ class UDPMissionDevices extends THREE.EventDispatcher {
     const flattenedData = this._concatenateArrayBuffers(...arrayBuffers);
     return flattenedData;
   }
-  _flattenMessageDatum(datum) {
-    switch (typeof datum) {
-      case "object":
-        switch (datum.constructor.name) {
-          case "Uint8Array":
-          case "Uint16Array":
-            return datum.buffer;
-            break;
-          case "ArrayBuffer":
-            return datum;
-            break;
-          case "Array":
-            datum = datum.map((datum) => this._flattenMessageDatum(datum));
-            return this._concatenateArrayBuffers(...datum);
-            break;
-          case "Object":
-            this.log(
-              "uncaught datum type: object (what do we do with the keys and in what order?)",
-              datum
-            );
-            break;
-        }
-        break;
-      case "string":
-        return this._concatenateArrayBuffers(
-          Uint8Array.from([datum.length]),
-          this.textEncoder.encode(datum)
-        );
-        break;
-      case "number":
-      case "boolean":
-        return Uint8Array.from([datum]);
-        break;
-      case "function":
-        return this._flattenMessageDatum(datum());
-      case "undefined":
-        return Uint8Array.from([]);
-        break;
-      default:
-        this.log(`uncaught datum of type ${typeof datum}`, datum);
-        break;
-    }
-  }
-
-  _concatenateArrayBuffers(...arrayBuffers) {
-    arrayBuffers = arrayBuffers.filter((arrayBuffer) => arrayBuffer);
-    arrayBuffers = arrayBuffers.map((arrayBuffer) => {
-      if (arrayBuffer instanceof ArrayBuffer) {
-        return arrayBuffer;
-      } else if (
-        "buffer" in arrayBuffer &&
-        arrayBuffer.buffer instanceof ArrayBuffer
-      ) {
-        return arrayBuffer.buffer;
-      } else if (arrayBuffer instanceof DataView) {
-        return arrayBuffer.buffer;
-      } else if (arrayBuffer instanceof Array) {
-        return Uint8Array.from(arrayBuffer).buffer;
-      } else {
-        return arrayBuffer;
-      }
-    });
-    arrayBuffers = arrayBuffers.filter(
-      (arrayBuffer) => arrayBuffer && "byteLength" in arrayBuffer
-    );
-    //this.log("concatenating array buffers", arrayBuffers);
-    const length = arrayBuffers.reduce(
-      (length, arrayBuffer) => length + arrayBuffer.byteLength,
-      0
-    );
-    const uint8Array = new Uint8Array(length);
-    let offset = 0;
-    arrayBuffers.forEach((arrayBuffer) => {
-      uint8Array.set(new Uint8Array(arrayBuffer), offset);
-      offset += arrayBuffer.byteLength;
-    });
-    return uint8Array.buffer;
-  }
 }
+
+['_concatenateArrayBuffers', '_flattenMessageDatum'].forEach(methodName => {
+  UDPMissionDevices.prototype[methodName] = WebSocketMissionDevice.prototype[methodName]
+})
 
 Object.assign(UDPMissionDevices, {
   MessageTypeStrings: [

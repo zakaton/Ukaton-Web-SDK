@@ -1,10 +1,14 @@
+
 Generic BLE Peer
-  connect
-  get service
-  get characteristic
-  read
-  write
-  subscribe
+  API
+    connect
+    get service
+    get characteristic
+    read
+    write
+    subscribe
+  UI
+  Test
 
 IP
   rightForearm: 192.168.4.52

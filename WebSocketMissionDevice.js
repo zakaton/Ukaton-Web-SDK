@@ -14,17 +14,8 @@ class WebSocketMissionDevice extends BaseMission {
     return this.constructor.BLEGenericPeerMessageTypeStrings;
   }
 
-  constructor() {
-    super();
-
-    this._messageMap = new Map();
-    this._messagePromiseMap = new Map();
-
-    this._bleGenericPeerMessageMap = new Map();
-    this._bleGenericPeerMessagePromiseMap = new Map();
-    this._isConnectedToBLEGenericPeer = null;
-    this._bleGenericPeerCharacteristicValues = [];
-  }
+  _messageMap = new Map();
+  _messagePromiseMap = new Map();
 
   get isConnected() {
     return (
@@ -69,7 +60,6 @@ class WebSocketMissionDevice extends BaseMission {
       this.getFirmwareVersion(false),
       this.getName(false),
       this.getSensorDataConfigurations(false),
-      this.getBLEGenericPeerConnection(false),
       this.getBatteryLevel(false),
     ];
     this.log("sending initial payload...");
@@ -205,7 +195,7 @@ class WebSocketMissionDevice extends BaseMission {
         case this.MessageTypes.BLE_GENERIC_PEER:
           {
             const bleGenericPeerLength = dataView.getUint8(byteOffset++);
-            this._onBLEGenericPeerUpdate(
+            this._parseBLEGenericPeersMessage(
               new DataView(
                 dataView.buffer.slice(
                   byteOffset,
@@ -247,6 +237,7 @@ class WebSocketMissionDevice extends BaseMission {
       arrayBuffers.push(flattenedDatum);
     });
 
+    // FILL
     const bleGenericPeerArrayBuffers = [];
     let bleGenericPeerArrayBufferSize = 0;
     this._bleGenericPeerMessageMap.forEach((datum, key) => {
@@ -270,49 +261,6 @@ class WebSocketMissionDevice extends BaseMission {
     this._messageMap.clear();
     this._bleGenericPeerMessageMap.clear();
     return flattenedData;
-  }
-  _flattenMessageDatum(datum) {
-    switch (typeof datum) {
-      case "object":
-        switch (datum.constructor.name) {
-          case "Uint8Array":
-          case "Uint16Array":
-            return datum.buffer;
-            break;
-          case "ArrayBuffer":
-            return datum;
-            break;
-          case "Array":
-            datum = datum.map((datum) => this._flattenMessageDatum(datum));
-            return this._concatenateArrayBuffers(...datum);
-            break;
-          case "Object":
-            this.log(
-              "uncaught datum type: object (what do we do with the keys and in what order?)",
-              datum
-            );
-            break;
-        }
-        break;
-      case "string":
-        return this._concatenateArrayBuffers(
-          Uint8Array.from([datum.length]),
-          this.textEncoder.encode(datum)
-        );
-        break;
-      case "number":
-      case "boolean":
-        return Uint8Array.from([datum]);
-        break;
-      case "function":
-        return this._flattenMessageDatum(datum());
-      case "undefined":
-        return Uint8Array.from([]);
-        break;
-      default:
-        this.log(`uncaught datum of type ${typeof datum}`, datum);
-        break;
-    }
   }
 
   // TYPE
@@ -896,6 +844,12 @@ class WebSocketMissionDevice extends BaseMission {
   }
 
   // BLE GENERIC PEER
+  static MAX_NUMBER_OF_BLE_GENERIC_PEERS = 2;
+  get MAX_NUMBER_OF_BLE_GENERIC_PEERS() {
+    return this.constructor.MAX_NUMBER_OF_BLE_GENERIC_PEERS;
+  }
+  _bleGenericPeers = new Array(this.MAX_NUMBER_OF_BLE_GENERIC_PEERS).fill(null).map(() => new WebSocketGenericBLEPeer())
+
   async getBLEGenericPeerConnection(sendImmediately = true) {
     this._assertConnection();
 
@@ -1076,7 +1030,10 @@ class WebSocketMissionDevice extends BaseMission {
 
     return promise;
   }
-  _onBLEGenericPeerUpdate(dataView) {
+  _parseBLEGenericPeersMessage(dataView) {
+    // FILL
+    // get peer index
+    // message types
     let byteOffset = 0;
     while (byteOffset < dataView.byteLength) {
       const messageType = dataView.getUint8(byteOffset++);
@@ -1160,14 +1117,14 @@ Object.assign(BaseMission, {
     "GET_CONNECTION",
     "SET_CONNECTION",
 
-    'GET_SERVICE',
-    'GET_CHARACTERISTIC',
+    "GET_SERVICE",
+    "GET_CHARACTERISTIC",
 
-    'READ_CHARACTERISTIC',
-    'WRITE_CHARACTERISTIC',
+    "READ_CHARACTERISTIC",
+    "WRITE_CHARACTERISTIC",
 
-    'GET_CHARACTERISTIC_SUBSCRIPTION',
-    'SET_CHARACTERISTIC_SUBSCRIPTION',
+    "GET_CHARACTERISTIC_SUBSCRIPTION",
+    "SET_CHARACTERISTIC_SUBSCRIPTION",
   ],
 });
 
@@ -1179,6 +1136,14 @@ Object.assign(BaseMission, {
     return object;
   }, {});
 });
+
+class WebSocketGenericBLEPeer {
+  // FILL
+  _bleGenericPeerMessageMap = new Map();
+  _bleGenericPeerMessagePromiseMap = new Map();
+  _isConnectedToBLEGenericPeer = null;
+  _bleGenericPeerCharacteristicValues = [];
+}
 
 class WebSocketMissions extends BaseMissions {
   static get MissionDevice() {
