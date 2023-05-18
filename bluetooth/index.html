@@ -466,7 +466,7 @@
       await missionDevice.connect();
     }
 
-    missionDevice.addEventListener("batterylevel", (event) => {
+    missionDevice.addEventListener("batteryLevel", (event) => {
       const { batteryLevel } = event.message;
       deviceContainer.querySelector(".batteryLevel span").innerText =
         batteryLevel;

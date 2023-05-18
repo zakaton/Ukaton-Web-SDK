@@ -6,18 +6,14 @@ class BluetoothMissionDevice extends BaseMission {
     return this.constructor.MAX_NUMBER_OF_BLE_PEERS;
   }
 
-  _minimizeBluetooth = true;
+  _minimizeBluetooth = false;
 
-  constructor() {
-    super();
-
-    this._wifiSSID = null;
-    this._wifiPassword = null;
-    this._wifiConnect = null;
-    this._isWifiConnected = null;
-    this._wifiMACAddress = null;
-    this._wifiIPAddress = null;
-  }
+  _wifiSSID = null;
+  _wifiPassword = null;
+  _wifiConnect = null;
+  _isWifiConnected = null;
+  _wifiMACAddress = null;
+  _wifiIPAddress = null;
 
   get isConnected() {
     return this._device && this._device.gatt.connected;

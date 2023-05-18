@@ -29,7 +29,7 @@ class BaseMission extends THREE.EventDispatcher {
   constructor() {
     super();
 
-    this.isLoggingEnabled = !true;
+    this.isLoggingEnabled = true;
     this._reconnectOnDisconnection = true;
 
     this._batteryLevel = null;
@@ -180,7 +180,7 @@ class BaseMission extends THREE.EventDispatcher {
   _onWeightDataDelayUpdate() {
     this.log(`weight data delay: ${this._weightDataDelay}`);
     this.dispatchEvent({
-      type: "weightdatadelay",
+      type: "weightDataDelay",
       message: { weightDataDelay: this._weightDataDelay },
     });
   }
@@ -854,7 +854,7 @@ class BaseMission extends THREE.EventDispatcher {
   _onBatteryLevel() {
     this.log(`Got battery level`, this._batteryLevel);
     this.dispatchEvent({
-      type: "batterylevel",
+      type: "batteryLevel",
       message: { batteryLevel: this._batteryLevel },
     });
   }
@@ -934,6 +934,9 @@ class BaseMission extends THREE.EventDispatcher {
           case "Array":
             datum = datum.map((datum) => this._flattenMessageDatum(datum));
             return this._concatenateArrayBuffers(...datum);
+            break;
+          case "DataView":
+            return datum.buffer;
             break;
           case "Object":
             this.log(

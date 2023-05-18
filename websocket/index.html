@@ -36,7 +36,7 @@
 
     <div id="connection">
       <label class="ip">
-        <b>ip address:</b> <input value="192.168.6.13" />
+        <b>ip address:</b> <input value="192.168.1.30" />
       </label>
       <button class="connect">connect</button>
     </div>
@@ -224,7 +224,7 @@
         <div class="bleGenericPeerService">
           <b>Service #<span class="index"></span></b>
           <br />
-          <label>uuid <input class="uuid" type="text" /></label>
+          <label>uuid <input class="uuid" type="text" size="38"/></label>
           <button class="get">get</button>
           <button class="addCharacteristic">add characteristic</button>
           <button class="remove">remove</button>
@@ -238,12 +238,16 @@
         <div class="bleGenericPeerCharacteristic">
           <b>Characteristic #<span class="index"></span></b>
           <br />
-          <label>uuid <input class="uuid" type="text" /></label>
+          <label>uuid <input class="uuid" type="text" size="38" /></label>
           <button class="get">get</button>
           <br />
-          <label>value <input class="value" /></label>
+          <label>value <input class="value" size="60" /></label>
           <button class="read">read</button>
           <button class="write">write</button>
+          <select class="dataType">
+            <option>uint8</option>
+            <option>utf-8</option>
+          </select>
           <br />
           <label>subscribe <input class="subscribe" type="checkbox" /></label>
           <br />
@@ -271,7 +275,7 @@
       await missionDevice.connect(ipAddress);
     }
 
-    missionDevice.addEventListener("batterylevel", (event) => {
+    missionDevice.addEventListener("batteryLevel", (event) => {
       const { batteryLevel } = event.message;
       deviceContainer.querySelector(".batteryLevel span").innerText =
         batteryLevel;
@@ -611,22 +615,37 @@
       "bleGenericPeerCharacteristicTemplate"
     );
     const bleGenericPeersContainer = document.getElementById("bleGenericPeers");
+    
+    const textEncoder = new TextEncoder();
+    const textDecoder = new TextDecoder();
     for (
-      let index = 0;
-      index < missionDevice.MAX_NUMBER_OF_BLE_GENERIC_PEERS;
-      index++
+      let bleGenericPeerIndex = 0;
+      bleGenericPeerIndex < missionDevice.MAX_NUMBER_OF_BLE_GENERIC_PEERS;
+      bleGenericPeerIndex++
     ) {
+      const bleGenericPeer = missionDevice._bleGenericPeers[bleGenericPeerIndex];
+      
       const bleGenericPeerContainer = bleGenericPeerTemplate.content
         .cloneNode(true)
         .querySelector(".bleGenericPeer");
-      bleGenericPeerContainer.querySelector(".index").innerText = index + 1;
+      bleGenericPeerContainer.querySelector(".index").innerText = bleGenericPeerIndex + 1;
 
       const nameInput = bleGenericPeerContainer.querySelector(".name");
 
       const connectButton = bleGenericPeerContainer.querySelector(".connect");
-      connectButton.addEventListener("click", () => {
-        // FILL
+      connectButton.addEventListener("click", async () => {
+        connectButton.disabled = true;
+        if (bleGenericPeer.isConnected) {
+          await bleGenericPeer.disconnect()
+        }
+        else {
+          await bleGenericPeer.connect(nameInput.value)
+        }
+        connectButton.disabled = false;
       });
+      bleGenericPeer.addEventListener("isConnected", () => {
+        connectButton.innerText = bleGenericPeer.isConnected? "disconnect":"connect"
+      })
 
       const servicesContainer =
         bleGenericPeerContainer.querySelector(".services");
@@ -642,9 +661,9 @@
         bleGenericPeerServiceContainer.querySelector(".index").innerText =
           serviceIndex + 1;
 
-        const removeButton =
+        const removeServiceButton =
           bleGenericPeerServiceContainer.querySelector(".remove");
-        removeButton.addEventListener("click", () => {
+        removeServiceButton.addEventListener("click", () => {
           const isLast =
             bleGenericPeerServiceContainer ==
             servicesContainer.childNodes[
@@ -654,10 +673,17 @@
             bleGenericPeerServiceContainer.remove();
           }
         });
+        
+        const serviceUuidInput = bleGenericPeerServiceContainer.querySelector(".uuid");
+        
         const getServiceButton =
           bleGenericPeerServiceContainer.querySelector(".get");
-        getServiceButton.addEventListener("click", () => {
-          // FILL
+        getServiceButton.addEventListener("click", async () => {
+          const uuid = serviceUuidInput.value;
+          await bleGenericPeer.getService(serviceIndex, uuid);
+          getServiceButton.disabled = true;
+          serviceUuidInput.disabled = true;
+          removeServiceButton.disabled = true;
         });
 
         const characteristicsContainer =
@@ -674,36 +700,76 @@
           bleGenericPeerCharacteristicContainer.querySelector(
             ".index"
           ).innerText = characteristicIndex + 1;
+          
+          const characteristicUuidInput = bleGenericPeerCharacteristicContainer.querySelector(".uuid");
+          const characteristicValueInput = bleGenericPeerCharacteristicContainer.querySelector(".value");
+          
+          const characteristicValueDataTypeInput = bleGenericPeerCharacteristicContainer.querySelector(".dataType");
+          let dataType = characteristicValueDataTypeInput.value;
+          characteristicValueDataTypeInput.addEventListener("input", async event => {
+            dataType = characteristicValueDataTypeInput.value;
+            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+            characteristicValueInput.value = dataViewToInputString(dataView);
+          });
+          const inputStringToDataView = (string) => {
+            let dataView;
+            switch (dataType) {
+              case "uint8":
+                dataView = new DataView(Uint8Array.from(string.split('-')).buffer);
+                break;
+              case "utf-8":
+                dataView = string;
+                break;
+            }
+            return dataView;
+          }
+          const dataViewToInputString = (dataView) => {
+            let string;
+            switch (dataType) {
+              case "uint8":
+                string = Array.from(new Uint8Array(dataView.buffer)).join('-');
+                break;
+              case "utf-8":
+                string = textDecoder.decode(dataView)
+                break;
+            }
+            return string;
+          }
 
           const getCharacteristicButton =
             bleGenericPeerCharacteristicContainer.querySelector(".get");
-          getCharacteristicButton.addEventListener("click", () => {
-            // FILL
-            console.log("get");
+          getCharacteristicButton.addEventListener("click", async () => {
+            const uuid = characteristicUuidInput.value;
+            await bleGenericPeer.getCharacteristic(serviceIndex, characteristicIndex, uuid)
+            getCharacteristicButton.disabled = true;
+            characteristicUuidInput.disabled = true;
+            removeCharacteristicButton.disabled = true;
           });
           const readCharacteristicButton =
             bleGenericPeerCharacteristicContainer.querySelector(".read");
-          readCharacteristicButton.addEventListener("click", () => {
-            // FILL
-            console.log("read");
+          readCharacteristicButton.addEventListener("click", async () => {
+            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+            characteristicValueInput.value = dataViewToInputString(dataView);
           });
           const writeCharacteristicButton =
             bleGenericPeerCharacteristicContainer.querySelector(".write");
-          writeCharacteristicButton.addEventListener("click", () => {
-            // FILL
-            console.log("write");
+          writeCharacteristicButton.addEventListener("click", async () => {
+            let inputString = characteristicValueInput.value;
+            let dataView = inputStringToDataView(inputString)
+            console.log(dataView);
+            dataView = await bleGenericPeer.writeCharacteristic(characteristicIndex, dataView);
+            characteristicValueInput.value = dataViewToInputString(dataView);
           });
           const subscribeCharacteristicButton =
             bleGenericPeerCharacteristicContainer.querySelector(".subscribe");
-          subscribeCharacteristicButton.addEventListener("input", (event) => {
-            // FILL
+          subscribeCharacteristicButton.addEventListener("input", async (event) => {
             const shouldSubscribe = event.target.checked;
-            console.log(shouldSubscribe);
+            await bleGenericPeer.setCharacteristicSubscription(characteristicIndex, shouldSubscribe);
           });
 
-          const removeButton =
+          const removeCharacteristicButton =
             bleGenericPeerCharacteristicContainer.querySelector(".remove");
-          removeButton.addEventListener("click", () => {
+          removeCharacteristicButton.addEventListener("click", () => {
             const isLast =
               bleGenericPeerCharacteristicContainer ==
               characteristicsContainer.childNodes[

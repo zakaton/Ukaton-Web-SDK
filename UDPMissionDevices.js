@@ -12,9 +12,9 @@ class UDPMissionDevice extends WebSocketMissionDevice {
     }
   }
 
+  _isConnected = false;
   constructor(index, udpMissionDevices) {
     super();
-    this._isConnected = false;
     this.udpMissionDevices = udpMissionDevices;
     this.index = index;
   }
@@ -294,7 +294,7 @@ class UDPMissionDevices extends THREE.EventDispatcher {
 }
 
 ['_concatenateArrayBuffers', '_flattenMessageDatum'].forEach(methodName => {
-  UDPMissionDevices.prototype[methodName] = WebSocketMissionDevice.prototype[methodName]
+  UDPMissionDevices.prototype[methodName] = BaseMission.prototype[methodName]
 })
 
 Object.assign(UDPMissionDevices, {

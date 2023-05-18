@@ -7,12 +7,6 @@ class WebSocketMissionDevice extends BaseMission {
   get MessageTypeStrings() {
     return this.constructor.MessageTypeStrings;
   }
-  get BLEGenericPeerMessageTypes() {
-    return this.constructor.BLEGenericPeerMessageTypes;
-  }
-  get BLEGenericPeerMessageTypeStrings() {
-    return this.constructor.BLEGenericPeerMessageTypeStrings;
-  }
 
   _messageMap = new Map();
   _messagePromiseMap = new Map();
@@ -187,23 +181,23 @@ class WebSocketMissionDevice extends BaseMission {
             );
             byteOffset += firmwareVersionLength;
             this.dispatchEvent({
-              type: "firmwareversion",
+              type: "firmwareVersion",
               message: { firmwareVersion: this._firmwareVersion },
             });
           }
           break;
         case this.MessageTypes.BLE_GENERIC_PEER:
           {
-            const bleGenericPeerLength = dataView.getUint8(byteOffset++);
+            const bleGenericPeersDataLength = dataView.getUint8(byteOffset++);
             this._parseBLEGenericPeersMessage(
               new DataView(
                 dataView.buffer.slice(
                   byteOffset,
-                  byteOffset + bleGenericPeerLength
+                  byteOffset + bleGenericPeersDataLength
                 )
               )
             );
-            byteOffset += bleGenericPeerLength;
+            byteOffset += bleGenericPeersDataLength;
           }
           break;
         default:
@@ -237,30 +231,63 @@ class WebSocketMissionDevice extends BaseMission {
       arrayBuffers.push(flattenedDatum);
     });
 
-    // FILL
-    const bleGenericPeerArrayBuffers = [];
-    let bleGenericPeerArrayBufferSize = 0;
-    this._bleGenericPeerMessageMap.forEach((datum, key) => {
-      bleGenericPeerArrayBuffers.push(Uint8Array.from([key]));
-      bleGenericPeerArrayBufferSize++;
-      const flattenedDatum = this._flattenMessageDatum(datum);
-      bleGenericPeerArrayBufferSize += flattenedDatum.byteLength;
-      bleGenericPeerArrayBuffers.push(flattenedDatum);
+    const bleGenericPeersArrayBuffers = [];
+    let bleGenericPeersArrayBufferSize = 0;
+    this._bleGenericPeers.forEach((bleGenericPeer, bleGenericPeerIndex) => {
+      const bleGenericPeerArrayBuffers = [];
+      let bleGenericPeerArrayBufferSize = 0;
+
+      bleGenericPeer._messageMap.forEach((datum, key) => {
+        bleGenericPeerArrayBuffers.push(Uint8Array.from([key]));
+        bleGenericPeerArrayBufferSize++;
+        const flattenedDatum = this._flattenMessageDatum(datum);
+        bleGenericPeerArrayBufferSize += flattenedDatum.byteLength;
+        bleGenericPeerArrayBuffers.push(flattenedDatum);
+      });
+      bleGenericPeer._messageMap.clear();
+      if (bleGenericPeerArrayBufferSize > 0) {
+        bleGenericPeerArrayBuffers.unshift(
+          Uint8Array.from([bleGenericPeerIndex, bleGenericPeerArrayBufferSize])
+        );
+        bleGenericPeersArrayBuffers.push(...bleGenericPeerArrayBuffers);
+      }
+      bleGenericPeersArrayBufferSize += bleGenericPeerArrayBufferSize
     });
-    if (bleGenericPeerArrayBufferSize > 0) {
-      bleGenericPeerArrayBuffers.unshift(
+    if (bleGenericPeersArrayBufferSize > 0) {
+      bleGenericPeersArrayBuffers.unshift(
         Uint8Array.from([
           this.MessageTypes.BLE_GENERIC_PEER,
-          bleGenericPeerArrayBufferSize,
+          bleGenericPeersArrayBufferSize,
         ])
       );
-      arrayBuffers.push(...bleGenericPeerArrayBuffers);
+      arrayBuffers.push(...bleGenericPeersArrayBuffers);
     }
 
     const flattenedData = this._concatenateArrayBuffers(...arrayBuffers);
     this._messageMap.clear();
-    this._bleGenericPeerMessageMap.clear();
     return flattenedData;
+  }
+
+  async _waitForResponse(eventString, promiseTypeToDelete) {
+    const promise = new Promise((resolve, reject) => {
+      this.addEventListener(
+        eventString,
+        (event) => {
+          const { error, message } = event;
+          if (error) {
+            reject(error);
+          } else {
+            resolve(message[eventString]);
+          }
+
+          if (promiseTypeToDelete != undefined) {
+            this._messagePromiseMap.delete(promiseTypeToDelete);
+          }
+        },
+        { once: true }
+      );
+    });
+    return promise;
   }
 
   // TYPE
@@ -273,22 +300,10 @@ class WebSocketMissionDevice extends BaseMission {
       if (this._messagePromiseMap.has(this.MessageTypes.GET_TYPE)) {
         return this._messagePromiseMap.get(this.MessageTypes.GET_TYPE);
       } else {
-        const promise = new Promise((resolve, reject) => {
-          this.addEventListener(
-            "type",
-            (event) => {
-              const { error, message } = event;
-              if (error) {
-                reject(error);
-              } else {
-                resolve(message.type);
-              }
-
-              this._messagePromiseMap.delete(this.MessageTypes.GET_TYPE);
-            },
-            { once: true }
-          );
-        });
+        const promise = this._waitForResponse(
+          "type",
+          this.MessageTypes.GET_TYPE
+        );
 
         this._messageMap.set(this.MessageTypes.GET_TYPE);
         if (sendImmediately) {
@@ -313,20 +328,7 @@ class WebSocketMissionDevice extends BaseMission {
     }
     newType = Number(newType);
 
-    const promise = new Promise((resolve, reject) => {
-      this.addEventListener(
-        "type",
-        (event) => {
-          const { error, message } = event;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(message.type);
-          }
-        },
-        { once: true }
-      );
-    });
+    const promise = this._waitForResponse("type");
 
     this._messageMap.delete(this.MessageTypes.GET_TYPE);
     this._messageMap.set(this.MessageTypes.SET_TYPE, newType);
@@ -347,22 +349,10 @@ class WebSocketMissionDevice extends BaseMission {
       if (this._messagePromiseMap.has(this.MessageTypes.BATTERY_LEVEL)) {
         return this._messagePromiseMap.get(this.MessageTypes.BATTERY_LEVEL);
       } else {
-        const promise = new Promise((resolve, reject) => {
-          this.addEventListener(
-            "batterylevel",
-            (event) => {
-              const { error, message } = event;
-              if (error) {
-                reject(error);
-              } else {
-                resolve(message.name);
-              }
-
-              this._messagePromiseMap.delete(this.MessageTypes.BATTERY_LEVEL);
-            },
-            { once: true }
-          );
-        });
+        const promise = this._waitForResponse(
+          "batteryLevel",
+          this.MessageTypes.BATTERY_LEVEL
+        );
 
         this._messageMap.set(this.MessageTypes.BATTERY_LEVEL);
         if (sendImmediately) {
@@ -385,22 +375,10 @@ class WebSocketMissionDevice extends BaseMission {
       if (this._messagePromiseMap.has(this.MessageTypes.GET_NAME)) {
         return this._messagePromiseMap.get(this.MessageTypes.GET_NAME);
       } else {
-        const promise = new Promise((resolve, reject) => {
-          this.addEventListener(
-            "name",
-            (event) => {
-              const { error, message } = event;
-              if (error) {
-                reject(error);
-              } else {
-                resolve(message.name);
-              }
-
-              this._messagePromiseMap.delete(this.MessageTypes.GET_NAME);
-            },
-            { once: true }
-          );
-        });
+        const promise = this._waitForResponse(
+          "name",
+          this.MessageTypes.GET_NAME
+        );
 
         this._messageMap.set(this.MessageTypes.GET_NAME);
         if (sendImmediately) {
@@ -417,20 +395,7 @@ class WebSocketMissionDevice extends BaseMission {
 
     newName = newName.substr(0, 30);
 
-    const promise = new Promise((resolve, reject) => {
-      this.addEventListener(
-        "name",
-        (event) => {
-          const { error, message } = event;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(message.name);
-          }
-        },
-        { once: true }
-      );
-    });
+    const promise = this._waitForResponse("name");
 
     this._messageMap.delete(this.MessageTypes.GET_NAME);
     this._messageMap.set(this.MessageTypes.SET_NAME, newName);
@@ -457,24 +422,10 @@ class WebSocketMissionDevice extends BaseMission {
           this.MessageTypes.GET_SENSOR_DATA_CONFIGURATIONS
         );
       } else {
-        const promise = new Promise((resolve, reject) => {
-          this.addEventListener(
-            "sensordataconfigurations",
-            (event) => {
-              const { error, message } = event;
-              if (error) {
-                reject(error);
-              } else {
-                resolve(message.sensorDataConfigurations);
-              }
-
-              this._messagePromiseMap.delete(
-                this.MessageTypes.GET_SENSOR_DATA_CONFIGURATIONS
-              );
-            },
-            { once: true }
-          );
-        });
+        const promise = this._waitForResponse(
+          "sensorDataConfigurations",
+          this.MessageTypes.GET_SENSOR_DATA_CONFIGURATIONS
+        );
 
         this._messageMap.set(this.MessageTypes.GET_SENSOR_DATA_CONFIGURATIONS);
         if (sendImmediately) {
@@ -497,21 +448,7 @@ class WebSocketMissionDevice extends BaseMission {
 
     const flattenedConfigurations =
       this._flattenSensorConfigurations(configurations);
-
-    const promise = new Promise((resolve, reject) => {
-      this.addEventListener(
-        "sensordataconfigurations",
-        (event) => {
-          const { error, message } = event;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(message.sensorDataConfigurations);
-          }
-        },
-        { once: true }
-      );
-    });
+    const promise = this._waitForResponse("sensorDataConfigurations");
 
     this._messageMap.delete(this.MessageTypes.GET_SENSOR_DATA_CONFIGURATIONS);
     this._messageMap.set(this.MessageTypes.SET_SENSOR_DATA_CONFIGURATIONS, [
@@ -525,7 +462,7 @@ class WebSocketMissionDevice extends BaseMission {
     return promise;
   }
 
-  // WEIGHT DATA DELA
+  // WEIGHT DATA DELAY
   async getWeightDataDelay(sendImmediately = true) {
     this._assertConnection();
 
@@ -539,24 +476,10 @@ class WebSocketMissionDevice extends BaseMission {
           this.MessageTypes.GET_WEIGHT_DATA_DELAY
         );
       } else {
-        const promise = new Promise((resolve, reject) => {
-          this.addEventListener(
-            "weightdatadelay",
-            (event) => {
-              const { error, message } = event;
-              if (error) {
-                reject(error);
-              } else {
-                resolve(message.weightDataDelay);
-              }
-
-              this._messagePromiseMap.delete(
-                this.MessageTypes.GET_WEIGHT_DATA_DELAY
-              );
-            },
-            { once: true }
-          );
-        });
+        const promise = this._waitForResponse(
+          "weightDataDelay",
+          this.MessageTypes.GET_WEIGHT_DATA_DELAY
+        );
 
         this._messageMap.set(this.MessageTypes.GET_WEIGHT_DATA_DELAY);
         if (sendImmediately) {
@@ -580,21 +503,7 @@ class WebSocketMissionDevice extends BaseMission {
       throw `weight data delay "${newWeightDataDelay}" is not a number!`;
     }
     newWeightDataDelay = Number(newWeightDataDelay);
-
-    const promise = new Promise((resolve, reject) => {
-      this.addEventListener(
-        "weightdatadelay",
-        (event) => {
-          const { error, message } = event;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(message.weightDataDelay);
-          }
-        },
-        { once: true }
-      );
-    });
+    const promise = this._waitForResponse("weightDataDelay");
 
     this._messageMap.delete(this.MessageTypes.GET_WEIGHT_DATA_DELAY);
     this._messageMap.set(
@@ -771,24 +680,10 @@ class WebSocketMissionDevice extends BaseMission {
           this.MessageTypes.GET_FIRMWARE_VERSION
         );
       } else {
-        const promise = new Promise((resolve, reject) => {
-          this.addEventListener(
-            "firmwareversion",
-            (event) => {
-              const { error, message } = event;
-              if (error) {
-                reject(error);
-              } else {
-                resolve(message.firmwareVersion);
-              }
-
-              this._messagePromiseMap.delete(
-                this.MessageTypes.GET_FIRMWARE_VERSION
-              );
-            },
-            { once: true }
-          );
-        });
+        const promise = this._waitForResponse(
+          "firmwareVersion",
+          this.MessageTypes.GET_FIRMWARE_VERSION
+        );
 
         this._messageMap.set(this.MessageTypes.GET_FIRMWARE_VERSION);
         if (sendImmediately) {
@@ -848,235 +743,24 @@ class WebSocketMissionDevice extends BaseMission {
   get MAX_NUMBER_OF_BLE_GENERIC_PEERS() {
     return this.constructor.MAX_NUMBER_OF_BLE_GENERIC_PEERS;
   }
-  _bleGenericPeers = new Array(this.MAX_NUMBER_OF_BLE_GENERIC_PEERS).fill(null).map(() => new WebSocketGenericBLEPeer())
+  _bleGenericPeers = new Array(this.MAX_NUMBER_OF_BLE_GENERIC_PEERS)
+    .fill(null)
+    .map((_, index) => new WebSocketGenericBLEPeer(this, index));
 
-  async getBLEGenericPeerConnection(sendImmediately = true) {
-    this._assertConnection();
-
-    if (this._isConnectedToBLEGenericPeer !== null) {
-      return this._isConnectedToBLEGenericPeer;
-    } else {
-      if (
-        this._bleGenericPeerMessagePromiseMap.has(
-          this.BLEGenericPeerMessageTypes.GET_CONNECTION
-        )
-      ) {
-        return this._bleGenericPeerMessagePromiseMap.get(
-          this.BLEGenericPeerMessageTypes.GET_CONNECTION
-        );
-      } else {
-        const promise = new Promise((resolve, reject) => {
-          this.addEventListener(
-            "bleGenericPeerConnection",
-            (event) => {
-              const { error, message } = event;
-              if (error) {
-                reject(error);
-              } else {
-                resolve(message.type);
-              }
-
-              this._bleGenericPeerMessagePromiseMap.delete(
-                this.BLEGenericPeerMessageTypes.GET_CONNECTION
-              );
-            },
-            { once: true }
-          );
-        });
-
-        this._bleGenericPeerMessageMap.set(
-          this.BLEGenericPeerMessageTypes.GET_CONNECTION
-        );
-        if (sendImmediately) {
-          this.send();
-        }
-
-        this._bleGenericPeerMessagePromiseMap.set(
-          this.BLEGenericPeerMessageTypes.GET_CONNECTION,
-          promise
-        );
-        return promise;
-      }
-    }
-  }
-  async setBLEGenericPeerConnection(newShouldConnect, sendImmediately = true) {
-    this._assertConnection();
-
-    newShouldConnect = Boolean(newShouldConnect);
-    this.log(`setting bleGenericPeer connection to ${newShouldConnect}...`);
-
-    const promise = new Promise((resolve, reject) => {
-      this.addEventListener(
-        "bleGenericPeerConnection",
-        (event) => {
-          const { error, message } = event;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(message.type);
-          }
-        },
-        { once: true }
-      );
-    });
-
-    this._bleGenericPeerMessageMap.delete(
-      this.BLEGenericPeerMessageTypes.GET_CONNECTION
-    );
-    this._bleGenericPeerMessageMap.set(
-      this.BLEGenericPeerMessageTypes.SET_CONNECTION,
-      newShouldConnect
-    );
-    if (sendImmediately) {
-      this.send();
-    }
-
-    return promise;
-  }
-  async getBLEGenericPeerCharacteristicValue(
-    characteristicIndex,
-    sendImmediately = true
-  ) {
-    this._assertConnection();
-
-    if (isNaN(characteristicIndex)) {
-      throw `type "${characteristicIndex}" is not a number!`;
-    }
-    characteristicIndex = Number(characteristicIndex);
-    this.log(
-      `getting bleGenericCharacteristicValue for index #${characteristicIndex}...`
-    );
-
-    const messageEnum =
-      this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE;
-
-    if (this._bleGenericPeerCharacteristicValues[characteristicIndex]) {
-      return this._bleGenericPeerCharacteristicValues[characteristicIndex];
-    } else {
-      if (this._bleGenericPeerMessagePromiseMap.has(messageEnum)) {
-        return this._bleGenericPeerMessagePromiseMap.get(messageEnum);
-      } else {
-        const promise = new Promise((resolve, reject) => {
-          this.addEventListener(
-            "bleGenericPeerCharacteristicValue",
-            (event) => {
-              const { error, message } = event;
-              if (error) {
-                reject(error);
-              } else {
-                resolve(message.type);
-              }
-
-              this._bleGenericPeerMessagePromiseMap.delete(messageEnum);
-            },
-            { once: true }
-          );
-        });
-
-        this._bleGenericPeerMessageMap.set(messageEnum, characteristicIndex);
-        if (sendImmediately) {
-          this.send();
-        }
-
-        this._bleGenericPeerMessagePromiseMap.set(messageEnum, promise);
-        return promise;
-      }
-    }
-  }
-  async setBLEGenericPeerCharacteristicValue(
-    characteristicIndex,
-    newValue,
-    sendImmediately = true
-  ) {
-    this._assertConnection();
-
-    if (isNaN(characteristicIndex)) {
-      throw `type "${characteristicIndex}" is not a number!`;
-    }
-    characteristicIndex = Number(characteristicIndex);
-    this.log(
-      `setting bleGenericCharacteristicValue for index #${characteristicIndex}`,
-      newValue
-    );
-
-    const getMessageEnum =
-      this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE;
-    const setMessageEnum =
-      this.BLEGenericPeerMessageTypes.SET_REMOTE_CHARACTERISTIC_VALUE;
-
-    const promise = new Promise((resolve, reject) => {
-      this.addEventListener(
-        "bleGenericPeerCharacteristicValue",
-        (event) => {
-          const { error, message } = event;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(message.type);
-          }
-        },
-        { once: true }
-      );
-    });
-
-    this._bleGenericPeerMessageMap.delete(getMessageEnum);
-    this._bleGenericPeerMessageMap.set(setMessageEnum, [
-      characteristicIndex,
-      newValue,
-    ]);
-    if (sendImmediately) {
-      this.send();
-    }
-
-    return promise;
-  }
   _parseBLEGenericPeersMessage(dataView) {
-    // FILL
-    // get peer index
-    // message types
     let byteOffset = 0;
     while (byteOffset < dataView.byteLength) {
-      const messageType = dataView.getUint8(byteOffset++);
-      const messageTypeString =
-        this.BLEGenericPeerMessageTypeStrings[messageType];
-      this.log(`bleGenericPeerMessage type: ${messageTypeString}`);
-      switch (messageType) {
-        case this.BLEGenericPeerMessageTypes.GET_CONNECTION:
-        case this.BLEGenericPeerMessageTypes.SET_CONNECTION:
-          const isConnected = Boolean(dataView.getUint8(byteOffset++));
-          this.log("isConnectedToBLEGenericPeer", isConnected);
-          this._isConnectedToBLEGenericPeer = isConnected;
-          this.dispatchEvent({
-            type: "bleGenericPeerConnection",
-            message: { isConnected },
-          });
-          break;
-        case this.BLEGenericPeerMessageTypes.GET_REMOTE_CHARACTERISTIC_VALUE:
-        case this.BLEGenericPeerMessageTypes.SET_REMOTE_CHARACTERISTIC_VALUE:
-          const characteristicIndex = dataView.getUint8(byteOffset++);
-          this.log("characteristicIndex", characteristicIndex);
-          const characteristicValueSize = dataView.getUint8(byteOffset++);
-          this.log("characteristicValueSize", characteristicValueSize);
-          const characteristicDataView = new DataView(
-            dataView.buffer.slice(
-              byteOffset,
-              byteOffset + characteristicValueSize
-            )
-          );
-          this.log("characteristicDataView", characteristicDataView);
-          this._bleGenericPeerCharacteristicValues[characteristicIndex] =
-            characteristicDataView;
-          this.dispatchEvent({
-            type: `bleGenericPeerCharacteristicValue${characteristicIndex}`,
-            message: { value: dataView },
-          });
-          byteOffset += characteristicValueSize;
-          break;
-        default:
-          this.log(`uncaught message type #${messageType}`);
-          byteOffset = dataView.byteLength;
-          break;
-      }
+      const bleGenericPeerIndex = dataView.getUint8(byteOffset++);
+      const bleGenericPeerDataLength = dataView.getUint8(byteOffset++);
+      this._bleGenericPeers[bleGenericPeerIndex]._parseMessage(
+        new DataView(
+          dataView.buffer.slice(
+            byteOffset,
+            byteOffset + bleGenericPeerDataLength
+          )
+        )
+      );
+      byteOffset += bleGenericPeerDataLength;
     }
   }
 }
@@ -1137,13 +821,295 @@ Object.assign(BaseMission, {
   }, {});
 });
 
-class WebSocketGenericBLEPeer {
-  // FILL
-  _bleGenericPeerMessageMap = new Map();
-  _bleGenericPeerMessagePromiseMap = new Map();
-  _isConnectedToBLEGenericPeer = null;
-  _bleGenericPeerCharacteristicValues = [];
+class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
+  isLoggingEnabled = true;
+  log() {
+    if (this.isLoggingEnabled) {
+      console.groupCollapsed(
+        `[${this.constructor.name} #${this.index}]`,
+        ...arguments
+      );
+      console.trace(); // hidden in collapsed group
+      console.groupEnd();
+    }
+  }
+
+  get MessageTypes() {
+    return this._missionDevice.constructor.BLEGenericPeerMessageTypes;
+  }
+  get MessageTypeStrings() {
+    return this._missionDevice.constructor.BLEGenericPeerMessageTypeStrings;
+  }
+
+  _messageMap = new Map();
+  _messagePromiseMap = new Map();
+
+  constructor(missionDevice, index) {
+    super();
+
+    this._missionDevice = missionDevice;
+    this.index = index;
+  }
+
+  send() {
+    this.log("send")
+    this._missionDevice.send();
+  }
+
+  _name = null;
+  isConnected = null;
+  async _setConnection(shouldConnect, name) {
+    this.log("attempting to connect?", shouldConnect, name)
+    
+    const promise = this._waitForResponse("isConnected");
+
+    this._messageMap.delete(this.MessageTypes.GET_CONNECTION);
+    this._messageMap.set(this.MessageTypes.SET_CONNECTION, [shouldConnect, name]);
+
+    this.send();
+
+    return promise;
+  }
+  async connect(name) {
+    return this._setConnection(true, name);
+  }
+  async disconnect() {
+    const response = await this._setConnection(false);
+    this._services.length = 0;
+    this._characteristics.length = 0;
+    return response;
+  }
+
+  _services = []; // {uuid, value, didGet}
+  async getService(serviceIndex, uuid, sendImmediately = true) {
+    this._assertConnection();
+    if (!this._services[serviceIndex]) {
+      this._services[serviceIndex] = { uuid, value: null, didGet: false };
+      const promise = this._waitForResponse(`getService${serviceIndex}`);
+      this._messageMap.set(this.MessageTypes.GET_SERVICE, [serviceIndex, uuid]);
+      if (sendImmediately) {
+        this.send();
+      }
+      return promise;
+    } else {
+      throw `service #${serviceIndex} already in use`;
+    }
+  }
+
+  _characteristics = []; // {serviceIndex, uuid, value, isSubscribed, didGet}
+  async getCharacteristic(
+    serviceIndex,
+    characteristicIndex,
+    uuid,
+    sendImmediately = true
+  ) {
+    this._assertConnection();
+    const service = this._services[serviceIndex];
+    let characteristic = this._characteristics[characteristicIndex];
+    if (service?.didGet && !characteristic) {
+      this._characteristics[characteristicIndex] = {
+        serviceIndex,
+        uuid,
+        value: null,
+        didGet: false,
+        isSubscribed: false,
+      };
+
+      const promise = this._waitForResponse(
+        `getCharacteristic${characteristicIndex}`
+      );
+      this._messageMap.set(this.MessageTypes.GET_CHARACTERISTIC, [
+        serviceIndex,
+        characteristicIndex,
+        uuid,
+      ]);
+      if (sendImmediately) {
+        this.send();
+      }
+      return promise;
+    } else {
+      if (!service?.didGet) {
+        throw `did not get service #${serviceIndex}`;
+      } else {
+        throw `characteristic #${characteristicIndex} already in use`;
+      }
+    }
+  }
+  async readCharacteristic(characteristicIndex, sendImmediately = true) {
+    this._assertConnection();
+    const characteristic = this._characteristics[characteristicIndex];
+    if (characteristic) {
+      if (characteristic.value) {
+        return characteristic.value;
+      } else {
+        if (
+          this._messagePromiseMap.has(this.MessageTypes.READ_CHARACTERISTIC)
+        ) {
+          return this._messagePromiseMap.get(
+            this.MessageTypes.READ_CHARACTERISTIC
+          );
+        } else {
+          const promise = this._waitForResponse(
+            `characteristicValue${characteristicIndex}`
+          );
+          this._messageMap.set(this.MessageTypes.READ_CHARACTERISTIC, [
+            characteristicIndex,
+          ]);
+          if (sendImmediately) {
+            this.send();
+          }
+          this._messagePromiseMap.set(this.MessageTypes.GET_TYPE, promise);
+          return promise;
+        }
+      }
+    } else {
+      throw `did not get characteristic #${characteristicIndex}`;
+    }
+  }
+  async writeCharacteristic(
+    characteristicIndex,
+    newValue,
+    sendImmediately = true
+  ) {
+    this._assertConnection();
+    if (this._characteristics[characteristicIndex]) {
+      const promise = this._waitForResponse(
+        `characteristicValue${characteristicIndex}`
+      );
+      this._messageMap.delete(this.MessageTypes.READ_CHARACTERISTIC);
+      const arrayBuffer = this._flattenMessageDatum(newValue)
+      this._messageMap.set(this.MessageTypes.WRITE_CHARACTERISTIC, [
+        characteristicIndex,
+        [arrayBuffer.byteLength, arrayBuffer],
+      ]);
+      if (sendImmediately) {
+        this.send();
+      }
+      return promise;
+    } else {
+      throw `did not get characteristic #${characteristicIndex}`;
+    }
+  }
+  async setCharacteristicSubscription(characteristicIndex, shouldSubscribe, sendImmediately = true) {
+    this._assertConnection();
+    if (this._characteristics[characteristicIndex]) {
+      const promise = this._waitForResponse(
+        `characteristicSubscription${characteristicIndex}`
+      );
+      this._messageMap.delete(
+        this.MessageTypes.GET_CHARACTERISTIC_SUBSCRIPTION
+      );
+      this._messageMap.set(this.MessageTypes.SET_CHARACTERISTIC_SUBSCRIPTION, [
+        characteristicIndex,
+        shouldSubscribe,
+      ]);
+      if (sendImmediately) {
+        this.send();
+      }
+      return promise;
+    } else {
+      throw `did not get characteristic #${characteristicIndex}`;
+    }
+  }
+
+  _parseMessage(dataView) {
+    this.log("_parseMessage", dataView);
+
+    let byteOffset = 0;
+    while (byteOffset < dataView.byteLength) {
+      const messageType = dataView.getUint8(byteOffset++);
+      const messageTypeString =
+        this.MessageTypeStrings[messageType];
+      this.log(`bleGenericPeerMessage type: ${messageTypeString}`);
+      const messageDataLength = dataView.getUint8(byteOffset++);
+      const _dataView = new DataView(
+        dataView.buffer.slice(byteOffset, byteOffset + messageDataLength)
+      );
+      let _byteOffset = 0;
+      switch (messageType) {
+        case this.MessageTypes.GET_CONNECTION:
+        case this.MessageTypes.SET_CONNECTION:
+          this.isConnected = Boolean(_dataView.getUint8(_byteOffset++));
+          this.log("isConnectedToBLEGenericPeer", this.isConnected);
+          this.dispatchEvent({
+            type: "isConnected",
+            message: { isConnected: this.isConnected },
+          });
+          break;
+        case this.MessageTypes.GET_SERVICE:
+          while (_byteOffset < _dataView.byteLength) {
+            const serviceIndex = _dataView.getUint8(_byteOffset++);
+            const service = this._services[serviceIndex];
+            service.didGet = Boolean(_dataView.getUint8(_byteOffset++));
+            const type = `getService${serviceIndex}`;
+            this.log(type, service);
+            this.dispatchEvent({
+              type,
+              message: { [type]: service.didGet },
+            });
+          }
+          break;
+        case this.MessageTypes.GET_CHARACTERISTIC:
+          while (_byteOffset < _dataView.byteLength) {
+            const characteristicIndex = _dataView.getUint8(_byteOffset++);
+            const characteristic = this._characteristics[characteristicIndex];
+            characteristic.didGet = Boolean(_dataView.getUint8(_byteOffset++));
+            const type = `getCharacteristic${characteristicIndex}`;
+            this.log(type, characteristic);
+            this.dispatchEvent({
+              type,
+              message: { [type]: characteristic.didGet },
+            });
+          }
+          break;
+        case this.MessageTypes.READ_CHARACTERISTIC:
+        case this.MessageTypes.WRITE_CHARACTERISTIC:
+          while (_byteOffset < _dataView.byteLength) {
+            const characteristicIndex = _dataView.getUint8(_byteOffset++);
+            const characteristic = this._characteristics[characteristicIndex];
+            const valueLength = _dataView.getUint8(_byteOffset++);
+            characteristic.value = new DataView(
+              _dataView.buffer.slice(_byteOffset, _byteOffset + valueLength)
+            );
+            _byteOffset += valueLength;
+            const type = `characteristicValue${characteristicIndex}`;
+            this.log(type, characteristic);
+            this.dispatchEvent({
+              type,
+              message: { [type]: characteristic.value },
+            });
+          }
+          break;
+        case this.MessageTypes.GET_CHARACTERISTIC_SUBSCRIPTION:
+        case this.MessageTypes.SET_CHARACTERISTIC_SUBSCRIPTION:
+          while (_byteOffset < _dataView.byteLength) {
+            const characteristicIndex = _dataView.getUint8(_byteOffset++);
+            const characteristic = this._characteristics[characteristicIndex];
+            characteristic.isSubscribed = Boolean(
+              _dataView.getUint8(_byteOffset++)
+            );
+            const type = `characteristicSubscription${characteristicIndex}`;
+            this.log(type, characteristic);
+            this.dispatchEvent({
+              type,
+              message: { [type]: characteristic.isSubscribed },
+            });
+          }
+          break;
+        default:
+          this.log(`uncaught message type #${messageType}`);
+          byteOffset = dataView.byteLength;
+          break;
+      }
+      byteOffset += messageDataLength;
+    }
+  }
 }
+
+["_waitForResponse", "_assertConnection", "_flattenMessageDatum"].forEach((methodName) => {
+  WebSocketGenericBLEPeer.prototype[methodName] =
+    WebSocketMissionDevice.prototype[methodName];
+});
 
 class WebSocketMissions extends BaseMissions {
   static get MissionDevice() {
