@@ -1,11 +1,8 @@
-Generic BLE Peer
-  connect
-  get service
-  get characteristic
-  read
-  write
-  subscribe
-
+Tap Strap Piano
+  setup Piano model
+  map hands to piano fingerings
+  UI to change scale and synth type (oscillator or piano synth)
+  
 IP
   rightForearm: 192.168.4.52
   rightBicep: 192.168.4.53

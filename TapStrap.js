@@ -2,8 +2,10 @@
 
 const { EventDispatcher, Vector3 } = THREE;
 
-class TapStrap {
+class TapStrap extends EventDispatcher {
   constructor() {
+    super();
+    
     this.services = {};
 
     this.inputMode = "controller";
@@ -261,57 +263,20 @@ class TapStrap {
       // https://github.com/TapWithUs/tap-python-sdk/blob/bf1372a12daee7b1977366484cc10650eb965b7a/tapsdk/backends/macos/TapSDK.py#L92
       // https://github.com/TapWithUs/tap-python-sdk/blob/bf1372a12daee7b1977366484cc10650eb965b7a/tapsdk/parsers.py#L1
       case this.services.data.characteristics.tapData.characteristic:
-        console.log("Tap Data");
-        const tapDataBitMask = data.getUint8(0);
-        const tapData = {};
-        TapStrap.TapDataEnumeration.forEach((name, index) => {
-          const didTap = tapDataBitMask & (1 << index);
-          tapData[name] = didTap;
-        });
-        const timeInterval = data.getUint16(1, true);
-
-        if (this.mouseMode == "AIR_MOUSE") {
-          // FILL
-        } else {
-          this.dispatchEvent({
-            type: "tapdata",
-            message: { tapData, tapDataBitMask, timeInterval },
-          });
-        }
+        this._onTapData(data);
         break;
 
       // https://github.com/TapWithUs/tap-python-sdk/blob/bf1372a12daee7b1977366484cc10650eb965b7a/tapsdk/backends/macos/TapSDK.py#L87
       // https://github.com/TapWithUs/tap-python-sdk/blob/bf1372a12daee7b1977366484cc10650eb965b7a/tapsdk/parsers.py#L4
       case this.services.data.characteristics.mouseData.characteristic:
-        const x = data.getInt16(1, true);
-        const y = -data.getInt16(3, true);
-        const proximation = data.getUint8(9) === 1;
-        this.dispatchEvent({
-          type: "mouse",
-          message: { x, y, proximation },
-        });
+        this._onMouseData(data);
         break;
       case this.services.data.characteristics.uiCommand.characteristic:
         break;
 
       // https://github.com/TapWithUs/tap-python-sdk/blob/bf1372a12daee7b1977366484cc10650eb965b7a/tapsdk/backends/macos/TapSDK.py#L106
       case this.services.data.characteristics.airGestureData.characteristic:
-        console.log("Air Gesture Data");
-        if (data.getUint8(0) == 0x14) {
-          console.log(data.getUint8(1));
-          this.mouseMode = TapStrap.MouseModeEnumeration[data.getUint8(1)];
-          console.log(`mouse mode switched to ${this.mouseMode}`);
-          this.dispatchEvent({
-            type: "mousemode",
-          });
-        } else {
-          const airGesture = TapStrap.AirGestureEnumeration[data.getUint8(0)];
-          console.log(`air gesture ${airGesture}`);
-          this.dispatchEvent({
-            type: "airgesture",
-            message: { airGesture },
-          });
-        }
+        this._onAirGestureData(data);
         break;
 
       /*
@@ -336,79 +301,128 @@ class TapStrap {
         console.log("Tap Mode");
         break;
       case this.services.support.characteristics.rawSensors.characteristic:
-        let offset = 0;
-        const messages = [];
-        while (offset < data.byteLength) {
-          let timestamp = data.getUint32(offset, true);
-          if (timestamp == 0) {
-            break;
-          } else {
-            offset += 4;
-            let type;
-            let numberOfSamples;
-            if (timestamp > 2 ** 31) {
-              type = "accelerometer";
-              timestamp -= 2 ** 31;
-              numberOfSamples = 15;
-            } else {
-              type = "imu";
-              numberOfSamples = 6;
-            }
-            const payload = [];
-            const sensors = [];
-            for (
-              let payloadIndex = 0, sensorIndex = 0, vectorIndex = 0;
-              payloadIndex < numberOfSamples;
-              payloadIndex++, vectorIndex = (vectorIndex + 1) % 3
-            ) {
-              const value = data.getInt16(offset, true);
-
-              payload.push(value);
-              offset += 2;
-
-              if (vectorIndex === 0) {
-                sensors[sensorIndex] = [];
-              }
-
-              let _vectorIndex = vectorIndex;
-              let _value = value;
-              _value *= -1;
-
-              switch (vectorIndex) {
-                case 0:
-                  _vectorIndex = 2;
-                  break;
-                case 1:
-                  _vectorIndex = 0;
-                  break;
-                case 2:
-                  _vectorIndex = 1;
-                  break;
-              }
-
-              sensors[sensorIndex][_vectorIndex] = _value;
-
-              if (vectorIndex === 2) {
-                sensorIndex++;
-              }
-            }
-            const message = { type, timestamp, payload, sensors };
-            messages.push(message);
-            this.dispatchEvent({
-              type,
-              message,
-            });
-          }
-        }
-        this.dispatchEvent({
-          type: "raw",
-          message: { messages },
-        });
+        this._onRawSensors(data);
         break;
 
       default:
         break;
     }
+  }
+
+  _onTapData(data) {
+    const tapDataBitMask = data.getUint8(0);
+    const tapData = {};
+    TapStrap.TapDataEnumeration.forEach((name, index) => {
+      const didTap = tapDataBitMask & (1 << index);
+      tapData[name] = didTap;
+    });
+    const timeInterval = data.getUint16(1, true);
+
+    if (this.mouseMode == "AIR_MOUSE") {
+      // FILL
+    } else {
+      this.dispatchEvent({
+        type: "tapdata",
+        message: { tapData, tapDataBitMask, timeInterval },
+      });
+    }
+  }
+  _onMouseData(data) {
+    const x = data.getInt16(1, true);
+    const y = -data.getInt16(3, true);
+    const proximation = data.getUint8(9) === 1;
+    this.dispatchEvent({
+      type: "mouse",
+      message: { x, y, proximation },
+    });
+  }
+  _onAirGestureData(data) {
+    console.log("Air Gesture Data");
+    if (data.getUint8(0) == 0x14) {
+      console.log(data.getUint8(1));
+      this.mouseMode = TapStrap.MouseModeEnumeration[data.getUint8(1)];
+      console.log(`mouse mode switched to ${this.mouseMode}`);
+      this.dispatchEvent({
+        type: "mousemode",
+      });
+    } else {
+      const airGesture = TapStrap.AirGestureEnumeration[data.getUint8(0)];
+      console.log(`air gesture ${airGesture}`);
+      this.dispatchEvent({
+        type: "airgesture",
+        message: { airGesture },
+      });
+    }
+  }
+  _onRawSensors(data) {
+    let offset = 0;
+    const messages = [];
+    while (offset < data.byteLength) {
+      let timestamp = data.getUint32(offset, true);
+      if (timestamp == 0) {
+        break;
+      } else {
+        offset += 4;
+        let type;
+        let numberOfSamples;
+        if (timestamp > 2 ** 31) {
+          type = "accelerometer";
+          timestamp -= 2 ** 31;
+          numberOfSamples = 15;
+        } else {
+          type = "imu";
+          numberOfSamples = 6;
+        }
+        const payload = [];
+        const sensors = [];
+        for (
+          let payloadIndex = 0, sensorIndex = 0, vectorIndex = 0;
+          payloadIndex < numberOfSamples;
+          payloadIndex++, vectorIndex = (vectorIndex + 1) % 3
+        ) {
+          const value = data.getInt16(offset, true);
+
+          payload.push(value);
+          offset += 2;
+
+          if (vectorIndex === 0) {
+            sensors[sensorIndex] = [];
+          }
+
+          let _vectorIndex = vectorIndex;
+          let _value = value;
+          _value *= -1;
+
+          switch (vectorIndex) {
+            case 0:
+              _vectorIndex = 2;
+              break;
+            case 1:
+              _vectorIndex = 0;
+              break;
+            case 2:
+              _vectorIndex = 1;
+              break;
+          }
+
+          sensors[sensorIndex][_vectorIndex] = _value;
+
+          if (vectorIndex === 2) {
+            sensorIndex++;
+          }
+        }
+        const message = { type, timestamp, payload, sensors };
+        messages.push(message);
+        this.dispatchEvent({
+          type,
+          message,
+        });
+      }
+    }
+    this.dispatchEvent({
+      type: "raw",
+      message: { messages },
+    });
   }
 
   // https://github.com/TapWithUs/tap-python-sdk/blob/master/tapsdk/backends/macos/inputmodes.py#L11
@@ -452,9 +466,9 @@ class TapStrap {
   async vibrate(sequence) {
     sequence = sequence
       .slice(0, 18)
-      .map((value) => Math.max(0, Math.min(255, Math.floor(value/10))));
+      .map((value) => Math.max(0, Math.min(255, Math.floor(value / 10))));
     if (sequence.length % 2 == 0) {
-      sequence.pop()
+      sequence.pop();
     }
     await this.services.data.characteristics.uiCommand.characteristic.writeValue(
       TapStrap.arrayToDataView([0x0, 0x2, ...sequence])
@@ -462,7 +476,8 @@ class TapStrap {
   }
 
   async getBatteryLevel() {
-    const value = this.services.batteryLevel.characteristics.batteryLevel.readValue()
+    const value =
+      this.services.batteryLevel.characteristics.batteryLevel.readValue();
     return value.getUint8(0);
   }
 }

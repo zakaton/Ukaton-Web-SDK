@@ -36,7 +36,7 @@
 
     <div id="connection">
       <label class="ip">
-        <b>ip address:</b> <input value="192.168.6.13" />
+        <b>ip address:</b> <input value="192.168.1.30" />
       </label>
       <button class="connect">connect</button>
     </div>
@@ -203,31 +203,57 @@
 
     <hr />
 
-    <div id="hue">
-      <h2>Philips Hue</h2>
+    <div id="bleGenericPeers">
+      <h2>BLE Generic Peers</h2>
 
-      <div class="hue connect">
-        <button>connect</button>
-      </div>
+      <template id="bleGenericPeerTemplate">
+        <div class="bleGenericPeer">
+          <h3>BLE Generic Peer #<span class="index"></span></h3>
 
-      <div class="hue connected hidden">
-        <div class="toggle">
-          <button>toggle</button>
+          <label>name <input class="name" type="text" /></label>
+          <button class="connect">connect</button>
+
+          <button class="addService">add service</button>
+
+          <br /><br />
+          <div class="services"></div>
         </div>
-        <div class="brightness">
-          <label
-            >brightness <input type="number" min="1" max="254" step="1"
-          /></label>
+      </template>
+
+      <template id="bleGenericPeerServiceTemplate">
+        <div class="bleGenericPeerService">
+          <b>Service #<span class="index"></span></b>
+          <br />
+          <label>uuid <input class="uuid" type="text" size="38"/></label>
+          <button class="get">get</button>
+          <button class="addCharacteristic">add characteristic</button>
+          <button class="remove">remove</button>
+
+          <br /><br />
+          <div class="characteristics"></div>
         </div>
-        <div class="temperature">
-          <label
-            >temperature <input type="number" min="153" max="301" step="1"
-          /></label>
+      </template>
+
+      <template id="bleGenericPeerCharacteristicTemplate">
+        <div class="bleGenericPeerCharacteristic">
+          <b>Characteristic #<span class="index"></span></b>
+          <br />
+          <label>uuid <input class="uuid" type="text" size="38" /></label>
+          <button class="get">get</button>
+          <br />
+          <label>value <input class="value" size="60" /></label>
+          <button class="read">read</button>
+          <button class="write">write</button>
+          <select class="dataType">
+            <option>uint8</option>
+            <option>utf-8</option>
+          </select>
+          <br />
+          <label>subscribe <input class="subscribe" type="checkbox" /></label>
+          <br />
+          <button class="remove">remove</button>
         </div>
-        <div class="color">
-          <label>color <input type="color" /></label>
-        </div>
-      </div>
+      </template>
     </div>
   </body>
 
@@ -249,7 +275,7 @@
       await missionDevice.connect(ipAddress);
     }
 
-    missionDevice.addEventListener("batterylevel", (event) => {
+    missionDevice.addEventListener("batteryLevel", (event) => {
       const { batteryLevel } = event.message;
       deviceContainer.querySelector(".batteryLevel span").innerText =
         batteryLevel;
@@ -578,40 +604,196 @@
       };
     }
 
-    // PHILIPS HUE
-    const connectHueButton = document.querySelector(".hue.connect button");
-    const hueControlsContainer = document.querySelector(".hue.connected");
-    const toggleHueButton =
-      hueControlsContainer.querySelector(".toggle button");
-    const hueBrightnessInput =
-      hueControlsContainer.querySelector(".brightness input");
-    const hueTemperatureInput =
-      hueControlsContainer.querySelector(".temperature input");
-    const hueColorInput = hueControlsContainer.querySelector(".color input");
-    connectHueButton.addEventListener("click", async (event) => {
-      await missionDevice.setBLEGenericPeerConnection(true);
-    });
-    missionDevice.addEventListener("bleGenericPeerConnection", (event) => {
-      const { message } = event;
-      if (message.isConnected) {
-        connectHueButton.classList.add("hidden");
-        hueControlsContainer.classList.remove("hidden");
-      } else {
-        connectHueButton.classList.remove("hidden");
-        hueControlsContainer.classList.add("hidden");
-      }
-    });
-    toggleHueButton.addEventListener("click", (event) => {
-      // FILL
-    });
-    hueBrightnessInput.addEventListener("input", (event) => {
-      // FILL
-    });
-    hueTemperatureInput.addEventListener("input", (event) => {
-      // FILL
-    });
-    hueColorInput.addEventListener("input", (event) => {
-      // FILL
-    });
+    // BLE GENERIC PEER
+    const bleGenericPeerTemplate = document.getElementById(
+      "bleGenericPeerTemplate"
+    );
+    const bleGenericPeerServiceTemplate = document.getElementById(
+      "bleGenericPeerServiceTemplate"
+    );
+    const bleGenericPeerCharacteristicTemplate = document.getElementById(
+      "bleGenericPeerCharacteristicTemplate"
+    );
+    const bleGenericPeersContainer = document.getElementById("bleGenericPeers");
+    
+    const textEncoder = new TextEncoder();
+    const textDecoder = new TextDecoder();
+    for (
+      let bleGenericPeerIndex = 0;
+      bleGenericPeerIndex < missionDevice.MAX_NUMBER_OF_BLE_GENERIC_PEERS;
+      bleGenericPeerIndex++
+    ) {
+      const bleGenericPeer = missionDevice._bleGenericPeers[bleGenericPeerIndex];
+      
+      const bleGenericPeerContainer = bleGenericPeerTemplate.content
+        .cloneNode(true)
+        .querySelector(".bleGenericPeer");
+      bleGenericPeerContainer.querySelector(".index").innerText = bleGenericPeerIndex + 1;
+
+      const nameInput = bleGenericPeerContainer.querySelector(".name");
+
+      const connectButton = bleGenericPeerContainer.querySelector(".connect");
+      connectButton.addEventListener("click", async () => {
+        connectButton.disabled = true;
+        if (bleGenericPeer.isConnected) {
+          await bleGenericPeer.disconnect()
+        }
+        else {
+          await bleGenericPeer.connect(nameInput.value)
+        }
+        connectButton.disabled = false;
+      });
+      bleGenericPeer.addEventListener("isConnected", () => {
+        connectButton.innerText = bleGenericPeer.isConnected? "disconnect":"connect"
+      })
+
+      const servicesContainer =
+        bleGenericPeerContainer.querySelector(".services");
+
+      const addServiceButton =
+        bleGenericPeerContainer.querySelector(".addService");
+      addServiceButton.addEventListener("click", () => {
+        const serviceIndex = servicesContainer.children.length;
+        const bleGenericPeerServiceContainer =
+          bleGenericPeerServiceTemplate.content
+            .cloneNode(true)
+            .querySelector(".bleGenericPeerService");
+        bleGenericPeerServiceContainer.querySelector(".index").innerText =
+          serviceIndex + 1;
+
+        const removeServiceButton =
+          bleGenericPeerServiceContainer.querySelector(".remove");
+        removeServiceButton.addEventListener("click", () => {
+          const isLast =
+            bleGenericPeerServiceContainer ==
+            servicesContainer.childNodes[
+              servicesContainer.childNodes.length - 1
+            ];
+          if (isLast) {
+            bleGenericPeerServiceContainer.remove();
+          }
+        });
+        
+        const serviceUuidInput = bleGenericPeerServiceContainer.querySelector(".uuid");
+        
+        const getServiceButton =
+          bleGenericPeerServiceContainer.querySelector(".get");
+        getServiceButton.addEventListener("click", async () => {
+          const uuid = serviceUuidInput.value;
+          await bleGenericPeer.getService(serviceIndex, uuid);
+          getServiceButton.disabled = true;
+          serviceUuidInput.disabled = true;
+          removeServiceButton.disabled = true;
+        });
+
+        const characteristicsContainer =
+          bleGenericPeerServiceContainer.querySelector(".characteristics");
+
+        const addCharacteristicButton =
+          bleGenericPeerServiceContainer.querySelector(".addCharacteristic");
+        addCharacteristicButton.addEventListener("click", () => {
+          //const characteristicIndex = characteristicsContainer.children.length;
+          const characteristicIndex = bleGenericPeer._characteristics.length
+          const bleGenericPeerCharacteristicContainer =
+            bleGenericPeerCharacteristicTemplate.content
+              .cloneNode(true)
+              .querySelector(".bleGenericPeerCharacteristic");
+          bleGenericPeerCharacteristicContainer.querySelector(
+            ".index"
+          ).innerText = characteristicIndex + 1;
+          
+          const characteristicUuidInput = bleGenericPeerCharacteristicContainer.querySelector(".uuid");
+          const characteristicValueInput = bleGenericPeerCharacteristicContainer.querySelector(".value");
+          
+          const characteristicValueDataTypeInput = bleGenericPeerCharacteristicContainer.querySelector(".dataType");
+          let dataType = characteristicValueDataTypeInput.value;
+          characteristicValueDataTypeInput.addEventListener("input", async event => {
+            dataType = characteristicValueDataTypeInput.value;
+            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+            characteristicValueInput.value = dataViewToInputString(dataView);
+          });
+          const inputStringToDataView = (string) => {
+            let dataView;
+            switch (dataType) {
+              case "uint8":
+                dataView = new DataView(Uint8Array.from(string.split('-')).buffer);
+                break;
+              case "utf-8":
+                dataView = string;
+                break;
+            }
+            return dataView;
+          }
+          const dataViewToInputString = (dataView) => {
+            let string;
+            switch (dataType) {
+              case "uint8":
+                string = Array.from(new Uint8Array(dataView.buffer)).join('-');
+                break;
+              case "utf-8":
+                string = textDecoder.decode(dataView)
+                break;
+            }
+            return string;
+          }
+
+          const getCharacteristicButton =
+            bleGenericPeerCharacteristicContainer.querySelector(".get");
+          getCharacteristicButton.addEventListener("click", async () => {
+            const uuid = characteristicUuidInput.value;
+            await bleGenericPeer.getCharacteristic(serviceIndex, characteristicIndex, uuid);
+            getCharacteristicButton.disabled = true;
+            characteristicUuidInput.disabled = true;
+            removeCharacteristicButton.disabled = true;
+          });
+          bleGenericPeer.addEventListener(`characteristicValue${characteristicIndex}`, async event => {
+            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+            characteristicValueInput.value = dataViewToInputString(dataView);
+          });
+          const readCharacteristicButton =
+            bleGenericPeerCharacteristicContainer.querySelector(".read");
+          readCharacteristicButton.addEventListener("click", async () => {
+            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+            characteristicValueInput.value = dataViewToInputString(dataView);
+          });
+          const writeCharacteristicButton =
+            bleGenericPeerCharacteristicContainer.querySelector(".write");
+          writeCharacteristicButton.addEventListener("click", async () => {
+            let inputString = characteristicValueInput.value;
+            let dataView = inputStringToDataView(inputString)
+            console.log(dataView);
+            dataView = await bleGenericPeer.writeCharacteristic(characteristicIndex, dataView);
+            characteristicValueInput.value = dataViewToInputString(dataView);
+          });
+          const subscribeCharacteristicButton =
+            bleGenericPeerCharacteristicContainer.querySelector(".subscribe");
+          subscribeCharacteristicButton.addEventListener("input", async (event) => {
+            const shouldSubscribe = event.target.checked;
+            await bleGenericPeer.setCharacteristicSubscription(characteristicIndex, shouldSubscribe);
+          });
+
+          const removeCharacteristicButton =
+            bleGenericPeerCharacteristicContainer.querySelector(".remove");
+          removeCharacteristicButton.addEventListener("click", () => {
+            const isLast =
+              bleGenericPeerCharacteristicContainer ==
+              characteristicsContainer.childNodes[
+                characteristicsContainer.childNodes.length - 1
+              ];
+            if (isLast) {
+              bleGenericPeerCharacteristicContainer.remove();
+            }
+          });
+
+          characteristicsContainer.appendChild(
+            bleGenericPeerCharacteristicContainer
+          );
+        });
+
+        servicesContainer.appendChild(bleGenericPeerServiceContainer);
+      });
+
+      bleGenericPeersContainer.appendChild(bleGenericPeerContainer);
+    }
   </script>
 </html>

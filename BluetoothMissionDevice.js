@@ -2,19 +2,18 @@
 
 class BluetoothMissionDevice extends BaseMission {
   static MAX_NUMBER_OF_BLE_PEERS = 2;
-
-  _minimizeBluetooth = true;
-
-  constructor() {
-    super();
-    
-    this._wifiSSID = null;
-    this._wifiPassword = null;
-    this._wifiConnect = null;
-    this._isWifiConnected = null;
-    this._wifiMACAddress = null;
-    this._wifiIPAddress = null;
+  get MAX_NUMBER_OF_BLE_PEERS() {
+    return this.constructor.MAX_NUMBER_OF_BLE_PEERS;
   }
+
+  _minimizeBluetooth = false;
+
+  _wifiSSID = null;
+  _wifiPassword = null;
+  _wifiConnect = null;
+  _isWifiConnected = null;
+  _wifiMACAddress = null;
+  _wifiIPAddress = null;
 
   get isConnected() {
     return this._device && this._device.gatt.connected;
@@ -23,8 +22,6 @@ class BluetoothMissionDevice extends BaseMission {
     return `5691eddf-${value}-4420-b7a5-bb8751ab5181`;
   }
   async connect() {
-    
-    
     this.log("attempting to connect...");
     if (this.isConnected) {
       this.log("already connected");
@@ -70,8 +67,8 @@ class BluetoothMissionDevice extends BaseMission {
       this.log("starting battery level notifications...");
       await this._batteryLevelCharacteristic.startNotifications();
       this.log("started battery level notifications!");
-      
-      await this._batteryLevelCharacteristic.readValue()
+
+      await this._batteryLevelCharacteristic.readValue();
     }
 
     this.log("getting service...");
@@ -239,7 +236,8 @@ class BluetoothMissionDevice extends BaseMission {
     this.peers = [];
     for (
       let index = 0;
-      !this._minimizeBluetooth && index < this.constructor.MAX_NUMBER_OF_BLE_PEERS;
+      !this._minimizeBluetooth &&
+      index < this.constructor.MAX_NUMBER_OF_BLE_PEERS;
       index++
     ) {
       const peer = new PeerBluetoothMissionDevice();
@@ -328,42 +326,41 @@ class BluetoothMissionDevice extends BaseMission {
       this.log("got firmware data characteristic");
     }
 
-    if(!this._minimizeBluetooth) {
-    // STEPS
-    this.log("getting is step tracking enabled characteristic...");
-    this._isStepTrackingEnabledCharacteristic =
-      await this._service.getCharacteristic(this.GENERATE_UUID("c000"));
-    await this.isStepTrackingEnabled();
-    this.log("got is step tracking enabled characteristic");
+    if (!this._minimizeBluetooth) {
+      // STEPS
+      this.log("getting is step tracking enabled characteristic...");
+      this._isStepTrackingEnabledCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("c000"));
+      await this.isStepTrackingEnabled();
+      this.log("got is step tracking enabled characteristic");
 
-    this.log("getting step tracking mass threshold characteristic...");
-    this._stepTrackingMassThresholdCharacteristic =
-      await this._service.getCharacteristic(this.GENERATE_UUID("c001"));
-    await this.getStepTrackingMassThreshold();
-    this.log("got step tracking mass threshold  characteristic");
+      this.log("getting step tracking mass threshold characteristic...");
+      this._stepTrackingMassThresholdCharacteristic =
+        await this._service.getCharacteristic(this.GENERATE_UUID("c001"));
+      await this.getStepTrackingMassThreshold();
+      this.log("got step tracking mass threshold  characteristic");
 
-    this.log("getting step data characteristic...");
-    this._stepDataCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("c002")
-    );
-    await this.getSteps();
-    this.log("got step data characteristic");
+      this.log("getting step data characteristic...");
+      this._stepDataCharacteristic = await this._service.getCharacteristic(
+        this.GENERATE_UUID("c002")
+      );
+      await this.getSteps();
+      this.log("got step data characteristic");
 
-    this._stepDataCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      this._onStepDataCharacteristicValueChanged.bind(this)
-    );
-    this.log("starting step data notifications...");
-    await this._stepDataCharacteristic.startNotifications();
-    this.log("started step data notifications!");
+      this._stepDataCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        this._onStepDataCharacteristicValueChanged.bind(this)
+      );
+      this.log("starting step data notifications...");
+      await this._stepDataCharacteristic.startNotifications();
+      this.log("started step data notifications!");
     }
     // HAPTICS
     this.log("getting haptics vibration characteristic...");
-    this._hapticsVibrationCharacteristic = await this._service.getCharacteristic(
-      this.GENERATE_UUID("d000")
-    );
+    this._hapticsVibrationCharacteristic =
+      await this._service.getCharacteristic(this.GENERATE_UUID("d000"));
     this.log("got haptic vibration characteristic");
-    
+
     // COMPLETED
     this.log("connection complete!");
     this.dispatchEvent({ type: "connected" });
@@ -1116,8 +1113,11 @@ class BluetoothMissionDevice extends BaseMission {
       return this._isStepTrackingEnabled;
     }
 
-    const isStepTrackingEnabledValue = await this._isStepTrackingEnabledCharacteristic.readValue();
-    this._isStepTrackingEnabled = Boolean(isStepTrackingEnabledValue.getUint8(0));
+    const isStepTrackingEnabledValue =
+      await this._isStepTrackingEnabledCharacteristic.readValue();
+    this._isStepTrackingEnabled = Boolean(
+      isStepTrackingEnabledValue.getUint8(0)
+    );
 
     this.log("is step tracking enabled?", this._isStepTrackingEnabled);
     return this._isStepTrackingEnabled;
@@ -1127,8 +1127,12 @@ class BluetoothMissionDevice extends BaseMission {
 
     this.log("setting step tracking", enabled);
 
-    await this._isStepTrackingEnabledCharacteristic.writeValueWithResponse(Uint8Array.of([enabled? 1:0]));
-    this._isStepTrackingEnabled = Boolean(this._isStepTrackingEnabledCharacteristic.value.getUint8(0));
+    await this._isStepTrackingEnabledCharacteristic.writeValueWithResponse(
+      Uint8Array.of([enabled ? 1 : 0])
+    );
+    this._isStepTrackingEnabled = Boolean(
+      this._isStepTrackingEnabledCharacteristic.value.getUint8(0)
+    );
 
     return this._isStepTrackingEnabled;
   }
@@ -1146,26 +1150,33 @@ class BluetoothMissionDevice extends BaseMission {
       return this._stepTrackingMassThreshold;
     }
 
-    const stepTrackingMassThresholdValue = await this._stepTrackingMassThresholdCharacteristic.readValue();
-    this._stepTrackingMassThreshold = stepTrackingMassThresholdValue.getFloat32(0, true);
+    const stepTrackingMassThresholdValue =
+      await this._stepTrackingMassThresholdCharacteristic.readValue();
+    this._stepTrackingMassThreshold = stepTrackingMassThresholdValue.getFloat32(
+      0,
+      true
+    );
 
     this.log("step tracking mass threshold", this._stepTrackingMassThreshold);
     return this._stepTrackingMassThreshold;
   }
-  async setStepTrackingMassThreshold(massThreshold){
+  async setStepTrackingMassThreshold(massThreshold) {
     this._assertConnection();
 
     this.log("setting step tracking mass threshold", massThreshold);
 
-    await this._stepTrackingMassThresholdCharacteristic.writeValueWithResponse(Float32Array.of([massThreshold]));
-    this._stepTrackingMassThreshold = this._stepTrackingMassThresholdCharacteristic.value.getFloat32(0, true)
+    await this._stepTrackingMassThresholdCharacteristic.writeValueWithResponse(
+      Float32Array.of([massThreshold])
+    );
+    this._stepTrackingMassThreshold =
+      this._stepTrackingMassThresholdCharacteristic.value.getFloat32(0, true);
 
     return this._isStepTrackingEnabled;
   }
   _stepData = null;
   async getSteps() {
     this._assertConnection();
-    
+
     if (this._stepData != null) {
       return this._stepData;
     }
@@ -1181,35 +1192,46 @@ class BluetoothMissionDevice extends BaseMission {
 
     this.log("setting steps", steps);
 
-    await this._stepDataCharacteristic.writeValueWithResponse(Uint32Array.of([steps]));
-    this._stepData = this._stepDataCharacteristic.value.getUint32(0, true)
+    await this._stepDataCharacteristic.writeValueWithResponse(
+      Uint32Array.of([steps])
+    );
+    this._stepData = this._stepDataCharacteristic.value.getUint32(0, true);
 
     return this._stepData;
   }
   _onStepDataCharacteristicValueChanged(event) {
-    const dataView = event.target.value
+    const dataView = event.target.value;
     this._stepData = dataView.getUint32(0, true);
     this.dispatchEvent({
       type: "steps",
-      message: {steps: this._stepData}
-    })
+      message: { steps: this._stepData },
+    });
   }
-  
+
   // HAPTICS
-  static VIBRATION_TYPES = {waveform: 0, sequence: 1}
-  get VIBRATION_TYPES() {return this.constructor.VIBRATION_TYPES}
+  static VIBRATION_TYPES = { waveform: 0, sequence: 1 };
+  get VIBRATION_TYPES() {
+    return this.constructor.VIBRATION_TYPES;
+  }
   async vibrateWaveform(waveform) {
-    return this._vibrate([this.VIBRATION_TYPES.waveform, ...waveform])
+    return this._vibrate([this.VIBRATION_TYPES.waveform, ...waveform]);
   }
   async vibrateSequence(sequence) {
     // must be an even number
     if (sequence.length % 2) {
-      sequence = sequence.slice(0, -1)
+      sequence = sequence.slice(0, -1);
     }
-    return this._vibrate([this.VIBRATION_TYPES.sequence, ...sequence.map((value, index) => (index%2)? Math.floor(value/10):value)])
+    return this._vibrate([
+      this.VIBRATION_TYPES.sequence,
+      ...sequence.map((value, index) =>
+        index % 2 ? Math.floor(value / 10) : value
+      ),
+    ]);
   }
   async _vibrate(array) {
-    await this._hapticsVibrationCharacteristic.writeValue(Uint8Array.from(array))
+    await this._hapticsVibrationCharacteristic.writeValue(
+      Uint8Array.from(array)
+    );
   }
 }
 

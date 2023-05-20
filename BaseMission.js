@@ -29,7 +29,7 @@ class BaseMission extends THREE.EventDispatcher {
   constructor() {
     super();
 
-    this.isLoggingEnabled = !true;
+    this.isLoggingEnabled = true;
     this._reconnectOnDisconnection = true;
 
     this._batteryLevel = null;
@@ -180,7 +180,7 @@ class BaseMission extends THREE.EventDispatcher {
   _onWeightDataDelayUpdate() {
     this.log(`weight data delay: ${this._weightDataDelay}`);
     this.dispatchEvent({
-      type: "weightdatadelay",
+      type: "weightDataDelay",
       message: { weightDataDelay: this._weightDataDelay },
     });
   }
@@ -231,7 +231,7 @@ class BaseMission extends THREE.EventDispatcher {
       );
     });
     this.dispatchEvent({
-      type: "sensordataconfigurations",
+      type: "sensorDataConfigurations",
       message: { sensorDataConfigurations: this._sensorDataConfigurations },
     });
     return byteOffset;
@@ -854,7 +854,7 @@ class BaseMission extends THREE.EventDispatcher {
   _onBatteryLevel() {
     this.log(`Got battery level`, this._batteryLevel);
     this.dispatchEvent({
-      type: "batterylevel",
+      type: "batteryLevel",
       message: { batteryLevel: this._batteryLevel },
     });
   }
@@ -917,6 +917,54 @@ class BaseMission extends THREE.EventDispatcher {
         functionToThrottle.apply(null, arguments);
       }
     };
+  }
+  
+  // HELPERS
+  _flattenMessageDatum(datum) {
+    switch (typeof datum) {
+      case "object":
+        switch (datum.constructor.name) {
+          case "Uint8Array":
+          case "Uint16Array":
+            return datum.buffer;
+            break;
+          case "ArrayBuffer":
+            return datum;
+            break;
+          case "Array":
+            datum = datum.map((datum) => this._flattenMessageDatum(datum));
+            return this._concatenateArrayBuffers(...datum);
+            break;
+          case "DataView":
+            return datum.buffer;
+            break;
+          case "Object":
+            this.log(
+              "uncaught datum type: object (what do we do with the keys and in what order?)",
+              datum
+            );
+            break;
+        }
+        break;
+      case "string":
+        return this._concatenateArrayBuffers(
+          Uint8Array.from([datum.length]),
+          this.textEncoder.encode(datum)
+        );
+        break;
+      case "number":
+      case "boolean":
+        return Uint8Array.from([datum]);
+        break;
+      case "function":
+        return this._flattenMessageDatum(datum());
+      case "undefined":
+        return Uint8Array.from([]);
+        break;
+      default:
+        this.log(`uncaught datum of type ${typeof datum}`, datum);
+        break;
+    }
   }
 }
 Object.assign(BaseMission, {
