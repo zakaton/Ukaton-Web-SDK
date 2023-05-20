@@ -692,7 +692,8 @@
         const addCharacteristicButton =
           bleGenericPeerServiceContainer.querySelector(".addCharacteristic");
         addCharacteristicButton.addEventListener("click", () => {
-          const characteristicIndex = characteristicsContainer.children.length;
+          //const characteristicIndex = characteristicsContainer.children.length;
+          const characteristicIndex = bleGenericPeer._characteristics.length
           const bleGenericPeerCharacteristicContainer =
             bleGenericPeerCharacteristicTemplate.content
               .cloneNode(true)
@@ -740,10 +741,14 @@
             bleGenericPeerCharacteristicContainer.querySelector(".get");
           getCharacteristicButton.addEventListener("click", async () => {
             const uuid = characteristicUuidInput.value;
-            await bleGenericPeer.getCharacteristic(serviceIndex, characteristicIndex, uuid)
+            await bleGenericPeer.getCharacteristic(serviceIndex, characteristicIndex, uuid);
             getCharacteristicButton.disabled = true;
             characteristicUuidInput.disabled = true;
             removeCharacteristicButton.disabled = true;
+          });
+          bleGenericPeer.addEventListener(`characteristicValue${characteristicIndex}`, async event => {
+            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+            characteristicValueInput.value = dataViewToInputString(dataView);
           });
           const readCharacteristicButton =
             bleGenericPeerCharacteristicContainer.querySelector(".read");

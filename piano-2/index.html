@@ -1,0 +1,172 @@
+<html>
+  <head>
+    <title>Piano WebXR</title>
+    <link
+      rel="icon"
+      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
+    />
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="./BaseMission.js"></script>
+    <script src="./WebSocketMissionDevice.js"></script>
+    <script src="./TapStrap.js"></script>
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    <script src="./piano-2/scales.js"></script>
+    <script src="./piano-2/instruments/index.js" type="module"></script>
+    <script src="./piano-2/piano-component.js" defer></script>
+  </head>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #overlay {
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #overlay .clickable {
+      pointer-events: all;
+    }
+    #overlay .hidden {
+      display: none;
+    }
+  </style>
+
+  <body>
+    <div id="overlay">
+      <button class="clickable connect missionDevice">
+        connect via WebSockets
+      </button>
+      <button disabled class="clickable connect tapStrap left">
+        left tap strap
+      </button>
+      <button disabled class="clickable connect tapStrap right">
+        right tap strap
+      </button>
+    </div>
+
+    <a-scene
+      _shadow="type: pcfsoft"
+      _renderer="colorManagement:true; exposure:1; toneMapping:ACESFilmic;"
+    >
+    </a-scene>
+  </body>
+
+  <script>
+    const missionDevice = new WebSocketMissionDevice();
+
+    const connectMissionDeviceButton = document.querySelector(
+      ".connect.missionDevice"
+    );
+    connectMissionDeviceButton.addEventListener("click", (event) => {
+      missionDevice.connect("192.168.1.30");
+    });
+    missionDevice.addEventListener("connected", () => {
+      connectMissionDeviceButton.disabled = true;
+      for (const side in connectTapStrapButtons) {
+        connectTapStrapButtons[side].disabled = false;
+      }
+    });
+    missionDevice.addEventListener("disconnected", () => {
+      connectMissionDeviceButton.disabled = false;
+      for (const side in connectTapStrapButtons) {
+        connectTapStrapButtons[side].disabled = true;
+      }
+    });
+
+    const tapStraps = {
+      left: new TapStrap(),
+      right: new TapStrap(),
+    };
+
+    const _tapStrapServices = {
+      data: {
+        tapData: {
+          properties: ["subscribe"],
+          onValue: (event, side) => {
+            const { value } = event.message;
+            tapStraps[side]._onTapData(value);
+          },
+        },
+      },
+      support: { tapMode: {} },
+    };
+    const tapStrapServices = [];
+    for (const serviceName in _tapStrapServices) {
+      const serviceInfo = {
+        name: serviceName,
+        uuid: TapStrap.services[serviceName].uuid,
+        characteristics: [],
+      };
+      for (const characteristicName in _tapStrapServices[serviceName]) {
+        const { properties, onValue } =
+          _tapStrapServices[serviceName][characteristicName];
+        const characteristicInfo = {
+          name: characteristicName,
+          uuid: TapStrap.services[serviceName].characteristics[
+            characteristicName
+          ].uuid,
+        };
+        if (onValue) {
+          characteristicInfo.onValue = (event) => {
+            event.target.tapStrap._onTapData(event.message.value);
+          };
+        }
+        properties?.forEach(
+          (property) => (characteristicInfo[property] = true)
+        );
+        serviceInfo.characteristics.push(characteristicInfo);
+      }
+      tapStrapServices.push(serviceInfo);
+    }
+
+    const tapStrapNames = {
+      left: "Tap_D124264",
+      right: "Tap_D065264",
+    };
+    const sides = Object.keys(tapStraps);
+    const connectTapStrapButtons = {};
+    sides.forEach((side, index) => {
+      const tapStrap = tapStraps[side];
+      const name = tapStrapNames[side];
+      const bleGenericPeer = missionDevice._bleGenericPeers[index];
+      bleGenericPeer.tapStrap = tapStrap;
+      tapStrap.addEventListener("tapdata", (event) => {
+        // FILL - use for playing piano...
+        console.log("tap data", side, event);
+      });
+
+      const connectButton = document.querySelector(`.connect.tapStrap.${side}`);
+      connectButton.addEventListener("click", async (event) => {
+        await bleGenericPeer.requestDevice({
+          name,
+          services: tapStrapServices,
+        });
+        bleGenericPeer.writeCharacteristic(
+          "tapMode",
+          TapStrap.InputModes.controller
+        );
+        intervalId = setInterval(() => {
+          bleGenericPeer.writeCharacteristic(
+            "tapMode",
+            TapStrap.InputModes.controller
+          );
+        }, 1000 * 10);
+      });
+
+      let intervalId;
+      bleGenericPeer.addEventListener("isConnected", (event) => {
+        connectButton.disabled = bleGenericPeer.isConnected;
+        if (bleGenericPeer.isConnected) {
+        } else {
+          clearInterval(intervalId);
+        }
+      });
+      connectTapStrapButtons[side] = connectButton;
+    });
+  </script>
+</html>

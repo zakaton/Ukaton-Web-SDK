@@ -231,7 +231,7 @@ class BaseMission extends THREE.EventDispatcher {
       );
     });
     this.dispatchEvent({
-      type: "sensordataconfigurations",
+      type: "sensorDataConfigurations",
       message: { sensorDataConfigurations: this._sensorDataConfigurations },
     });
     return byteOffset;

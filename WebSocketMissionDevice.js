@@ -67,6 +67,13 @@ class WebSocketMissionDevice extends BaseMission {
   _onWebSocketClose(event) {
     this.log("websocket closed");
     this.dispatchEvent({ type: "disconnected", message: { event } });
+    this._bleGenericPeers.forEach((bleGenericPeer) => {
+      bleGenericPeer.isConnected = false;
+      bleGenericPeer.dispatchEvent({
+        type: "isConnected",
+        message: { isConnected: bleGenericPeer.isConnected },
+      });
+    });
     if (this._reconnectOnDisconnection) {
       window.setTimeout(async () => {
         await this.connect(this._ipAddress);
@@ -251,7 +258,7 @@ class WebSocketMissionDevice extends BaseMission {
         );
         bleGenericPeersArrayBuffers.push(...bleGenericPeerArrayBuffers);
       }
-      bleGenericPeersArrayBufferSize += bleGenericPeerArrayBufferSize
+      bleGenericPeersArrayBufferSize += bleGenericPeerArrayBufferSize;
     });
     if (bleGenericPeersArrayBufferSize > 0) {
       bleGenericPeersArrayBuffers.unshift(
@@ -852,24 +859,77 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
   }
 
   send() {
-    this.log("send")
+    this.log("send");
     this._missionDevice.send();
   }
 
   _name = null;
   isConnected = null;
-  async _setConnection(shouldConnect, name) {
-    this.log("attempting to connect?", shouldConnect, name)
-    
+  async _setConnection(shouldConnect, name, sendImmediately = true) {
+    this.log("attempting to connect?", shouldConnect, name);
+
     const promise = this._waitForResponse("isConnected");
 
     this._messageMap.delete(this.MessageTypes.GET_CONNECTION);
-    this._messageMap.set(this.MessageTypes.SET_CONNECTION, [shouldConnect, name]);
+    this._messageMap.set(this.MessageTypes.SET_CONNECTION, [
+      shouldConnect,
+      name,
+    ]);
 
-    this.send();
+    if (sendImmediately) {
+      this.send();
+    }
 
     return promise;
   }
+
+  async requestDevice({ name, services }) {
+    await this.connect(name);
+    if (this.isConnected) {
+      for (const serviceIndex in services) {
+        const { uuid, name } = services[serviceIndex];
+        await this.getService(serviceIndex, uuid, name);
+      }
+
+      let characteristicIndex = 0;
+      for (const serviceIndex in services) {
+        const { characteristics } = services[serviceIndex];
+        for (const index in characteristics) {
+          const { uuid, name, read, subscribe, onValue } =
+            characteristics[index];
+          this.log(
+            "getting characteristic",
+            serviceIndex,
+            characteristicIndex,
+            uuid,
+            name
+          );
+          await this.getCharacteristic(
+            serviceIndex,
+            characteristicIndex,
+            uuid,
+            name
+          );
+          if (read) {
+            await this.readCharacteristic(characteristicIndex);
+          }
+          if (subscribe) {
+            await this.setCharacteristicSubscription(characteristicIndex, true);
+          }
+          if (onValue) {
+            this.addEventListener(
+              `characteristicValue${characteristicIndex}`,
+              onValue
+            );
+          }
+          characteristicIndex++;
+        }
+      }
+      this.log("Requested device!");
+      this.dispatchEvent({type: "didRequestDevice"})
+    }
+  }
+
   async connect(name) {
     return this._setConnection(true, name);
   }
@@ -880,11 +940,12 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
     return response;
   }
 
-  _services = []; // {uuid, value, didGet}
-  async getService(serviceIndex, uuid, sendImmediately = true) {
+  _services = []; // {uuid, value, didGet, name}
+  async getService(serviceIndex, uuid, name, sendImmediately = true) {
     this._assertConnection();
+    serviceIndex = Number(serviceIndex);
     if (!this._services[serviceIndex]) {
-      this._services[serviceIndex] = { uuid, value: null, didGet: false };
+      this._services[serviceIndex] = { uuid, value: null, didGet: false, name };
       const promise = this._waitForResponse(`getService${serviceIndex}`);
       this._messageMap.set(this.MessageTypes.GET_SERVICE, [serviceIndex, uuid]);
       if (sendImmediately) {
@@ -895,15 +956,47 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
       throw `service #${serviceIndex} already in use`;
     }
   }
+  _getIndex(value, array) {
+    let index;
+    if (!isNaN(value)) {
+      index = Number(value);
+    } else if (typeof value == "string") {
+      const string = value;
+      const _index = array.findIndex(({ name, uuid }) => {
+        return string == name || string == uuid;
+      });
+      if (_index != -1) {
+        index = _index;
+      }
+    }
 
-  _characteristics = []; // {serviceIndex, uuid, value, isSubscribed, didGet}
+    if (typeof index == "number") {
+      return index;
+    } else {
+      throw `couldn't find index for "${value}"`;
+    }
+  }
+
+  _getServiceIndex(value) {
+    return this._getIndex(value, this._services);
+  }
+  _getCharacteristicIndex(value) {
+    return this._getIndex(value, this._characteristics);
+  }
+
+  _characteristics = []; // {serviceIndex, uuid, value, isSubscribed, didGet, name}
   async getCharacteristic(
     serviceIndex,
     characteristicIndex,
     uuid,
+    name,
     sendImmediately = true
   ) {
     this._assertConnection();
+
+    serviceIndex = this._getServiceIndex(serviceIndex);
+    characteristicIndex = Number(characteristicIndex);
+
     const service = this._services[serviceIndex];
     let characteristic = this._characteristics[characteristicIndex];
     if (service?.didGet && !characteristic) {
@@ -913,6 +1006,7 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
         value: null,
         didGet: false,
         isSubscribed: false,
+        name,
       };
 
       const promise = this._waitForResponse(
@@ -937,6 +1031,9 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
   }
   async readCharacteristic(characteristicIndex, sendImmediately = true) {
     this._assertConnection();
+
+    characteristicIndex = this._getCharacteristicIndex(characteristicIndex);
+
     const characteristic = this._characteristics[characteristicIndex];
     if (characteristic) {
       if (characteristic.value) {
@@ -972,12 +1069,15 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
     sendImmediately = true
   ) {
     this._assertConnection();
+
+    characteristicIndex = this._getCharacteristicIndex(characteristicIndex);
+
     if (this._characteristics[characteristicIndex]) {
       const promise = this._waitForResponse(
         `characteristicValue${characteristicIndex}`
       );
       this._messageMap.delete(this.MessageTypes.READ_CHARACTERISTIC);
-      const arrayBuffer = this._flattenMessageDatum(newValue)
+      const arrayBuffer = this._flattenMessageDatum(newValue);
       this._messageMap.set(this.MessageTypes.WRITE_CHARACTERISTIC, [
         characteristicIndex,
         [arrayBuffer.byteLength, arrayBuffer],
@@ -990,8 +1090,15 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
       throw `did not get characteristic #${characteristicIndex}`;
     }
   }
-  async setCharacteristicSubscription(characteristicIndex, shouldSubscribe, sendImmediately = true) {
+  async setCharacteristicSubscription(
+    characteristicIndex,
+    shouldSubscribe,
+    sendImmediately = true
+  ) {
     this._assertConnection();
+
+    characteristicIndex = this._getCharacteristicIndex(characteristicIndex);
+
     if (this._characteristics[characteristicIndex]) {
       const promise = this._waitForResponse(
         `characteristicSubscription${characteristicIndex}`
@@ -1018,8 +1125,7 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
     let byteOffset = 0;
     while (byteOffset < dataView.byteLength) {
       const messageType = dataView.getUint8(byteOffset++);
-      const messageTypeString =
-        this.MessageTypeStrings[messageType];
+      const messageTypeString = this.MessageTypeStrings[messageType];
       this.log(`bleGenericPeerMessage type: ${messageTypeString}`);
       const messageDataLength = dataView.getUint8(byteOffset++);
       const _dataView = new DataView(
@@ -1068,16 +1174,24 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
             const characteristicIndex = _dataView.getUint8(_byteOffset++);
             const characteristic = this._characteristics[characteristicIndex];
             const valueLength = _dataView.getUint8(_byteOffset++);
-            characteristic.value = new DataView(
+            const value = new DataView(
               _dataView.buffer.slice(_byteOffset, _byteOffset + valueLength)
             );
+            characteristic.value = value;
             _byteOffset += valueLength;
             const type = `characteristicValue${characteristicIndex}`;
             this.log(type, characteristic);
             this.dispatchEvent({
               type,
-              message: { [type]: characteristic.value },
+              message: { [type]: characteristic.value, value },
             });
+            if ("name" in characteristic) {
+              const { name } = characteristic;
+              this.dispatchEvent({
+                type: name,
+                message: { [name]: characteristic.value, value },
+              });
+            }
           }
           break;
         case this.MessageTypes.GET_CHARACTERISTIC_SUBSCRIPTION:
@@ -1106,10 +1220,12 @@ class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
   }
 }
 
-["_waitForResponse", "_assertConnection", "_flattenMessageDatum"].forEach((methodName) => {
-  WebSocketGenericBLEPeer.prototype[methodName] =
-    WebSocketMissionDevice.prototype[methodName];
-});
+["_waitForResponse", "_assertConnection", "_flattenMessageDatum"].forEach(
+  (methodName) => {
+    WebSocketGenericBLEPeer.prototype[methodName] =
+      WebSocketMissionDevice.prototype[methodName];
+  }
+);
 
 class WebSocketMissions extends BaseMissions {
   static get MissionDevice() {
