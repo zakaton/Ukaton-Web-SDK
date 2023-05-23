@@ -68,6 +68,62 @@ const scale = {
     }
   },
 
+  exoticScales: [
+    "algerian",
+    "arabic",
+    "augmented",
+    "balinese",
+    "byzantine",
+    "chinese",
+    "diminished",
+    "dominant diminished",
+    "egyptian",
+    "eight tone spanish",
+    "enigmatic",
+    "geez", // ethiopian
+    "hawaiian",
+    "hindu",
+    "hirajoshi",
+    "hungarian",
+    "iberian",
+    "iwato",
+    "japanese",
+    "lydian b7",
+    "maqam",
+    "neapolitan major",
+    "neapolitan minor",
+    "bebop",
+    "oriental", // Chinese
+    "prometheus", // mystic
+    "romanian minor",
+    "spanish gypsy",
+    "super locrian",
+    "whole tone",
+    "yo",
+    "phrygian",
+    "nine tone",
+  ],
+  _exoticScale: "",
+  get exoticScale() {
+    return this._exoticScale;
+  },
+  set exoticScale(newExoticScale) {
+    if (this._exoticScale != newExoticScale) {
+      if (this.exoticScales.includes(newExoticScale)) {
+        this._exoticScale = newExoticScale;
+      } else {
+        this._exoticScale = "";
+      }
+      this.update();
+    }
+  },
+  get exoticScaleIndex() {
+    return this.exoticScales.indexOf(this._exoticScale) || 0;
+  },
+  set exoticScaleIndex(newExoticScaleIndex) {
+    this.exoticScale = this.exoticScales[newExoticScaleIndex];
+  },
+
   _isAuto: false,
   get isAuto() {
     return this._isAuto;
@@ -109,6 +165,10 @@ const scale = {
     }
     if (this.isPentatonic) {
       name += "p";
+    }
+
+    if (this.exoticScale?.length > 0) {
+      name += ` ${this.exoticScale}`;
     }
 
     if (!this.allScales[name]) {
@@ -164,11 +224,45 @@ const scale = {
   },
 
   allScales: {},
+  // references https://www.pianoscales.org/
   patterns: {
     major: [2, 2, 1, 2, 2, 2],
     minor: [2, 1, 2, 2, 1, 2],
     pentatonicMajor: [2, 2, 3, 2],
     pentatonicMinor: [3, 2, 2, 3],
+    algerian: [2, 1, 2, 1, 1, 1, 3],
+    arabic: [2, 2, 1, 1, 2, 2, 2],
+    augmented: [3, 1, 3, 1, 3],
+    balinese: [1, 2, 4, 1],
+    byzantine: [1, 3, 1, 2, 1, 3],
+    chinese: [4, 2, 1, 4],
+    diminished: [2, 1, 2, 1, 2, 1, 2],
+    "dominant diminished": [1, 2, 1, 2, 1, 2, 1],
+    egyptian: [2, 3, 2, 3, 2],
+    "eight tone spanish": [1, 2, 1, 1, 1, 2, 2],
+    enigmatic: [1, 3, 2, 2, 2, 1],
+    geez: [2, 1, 2, 2, 1, 2], // ethiopian
+    hawaiian: [2, 1, 2, 2, 2, 2],
+    hindu: [2, 2, 1, 2, 1, 2],
+    hirajoshi: [2, 1, 4, 1],
+    hungarian: [2, 1, 3, 1, 1, 3],
+    iberian: [1, 3, 1, 2, 3],
+    iwato: [1, 4, 1, 4],
+    japanese: [1, 4, 2, 3],
+    "lydian b7": [2, 2, 2, 1, 2, 1],
+    maqam: [1, 3, 1, 2, 1, 3],
+    "neapolitan minor": [1, 2, 2, 2, 1, 3],
+    "neapolitan major": [1, 2, 2, 2, 2, 2],
+    bebop: [2, 2, 1, 2, 1, 1, 2],
+    oriental: [1, 3, 1, 1, 3, 1], // Chinese
+    prometheus: [2, 2, 2, 3, 1], // mystic
+    "romanian minor": [2, 1, 3, 1, 2, 1],
+    "spanish gypsy": [1, 3, 1, 2, 1, 2],
+    "super locrian": [1, 2, 1, 2, 2, 2],
+    "whole tone": [2, 2, 2, 2, 2],
+    yo: [2, 3, 2, 2],
+    phrygian: [1, 2, 2, 2, 1, 2],
+    "nine tone": [2, 1, 1, 2, 1, 1, 1, 2],
   },
   initAllScales() {
     this.allKeys.forEach((rootKey, rootKeyIndex) => {
@@ -187,8 +281,12 @@ const scale = {
         var lowercasePatternName = patternName.toLowerCase();
         rootKeys.forEach((rootKeyName) => {
           var scaleName = rootKeyName;
-          scaleName += lowercasePatternName.includes("major") ? "" : "m";
-          scaleName += lowercasePatternName.includes("pentatonic") ? "p" : "";
+          if (this.exoticScales.includes(lowercasePatternName)) {
+            scaleName += ` ${lowercasePatternName}`;
+          } else {
+            scaleName += lowercasePatternName.includes("major") ? "" : "m";
+            scaleName += lowercasePatternName.includes("pentatonic") ? "p" : "";
+          }
           this.allScales[scaleName] = scale;
         });
       }

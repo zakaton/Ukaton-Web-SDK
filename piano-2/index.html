@@ -1,18 +1,15 @@
 <html>
   <head>
     <title>Piano WebXR</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="./BaseMission.js"></script>
-    <script src="./WebSocketMissionDevice.js"></script>
-    <script src="./TapStrap.js"></script>
+    <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
+    <script src="/BaseMission.js"></script>
+    <script src="/WebSocketMissionDevice.js"></script>
+    <script src="/TapStrap.js"></script>
     <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
-    <script src="./piano-2/scales.js"></script>
-    <script src="./piano-2/instruments/index.js" type="module"></script>
-    <script src="./piano-2/piano-component.js" defer></script>
+    <script src="/piano-2/scales.js"></script>
+    <script src="/piano-2/instruments/index.js" type="module"></script>
+    <script src="/piano-2/piano-component.js" defer></script>
   </head>
 
   <style>
@@ -49,10 +46,90 @@
       </button>
     </div>
 
-    <a-scene
-      _shadow="type: pcfsoft"
-      _renderer="colorManagement:true; exposure:1; toneMapping:ACESFilmic;"
-    >
+    <a-scene>
+      <a-entity
+        visible="false"
+        id="leftHandControls"
+        hand-tracking-controls="hand: left;"
+        hand-tracking-extras
+      ></a-entity>
+      <a-entity
+        visible="true"
+        id="rightHandControls"
+        hand-tracking-controls="hand: right;"
+        hand-tracking-extras
+      >
+      </a-entity>
+
+      <a-sky color="grey"></a-sky>
+
+      <a-entity
+        id="piano"
+        position="0 1.4 -0.3"
+        piano="side: right; leftHand: #leftHandControls; rightHand: #rightHandControls; modeText: #modeText; scaleText: #scaleText; camera: #camera;"
+      >
+        <a-entity position="0 0.1 0" scale="0.1 0.1 0.1">
+          <a-text
+            id="scaleText"
+            value="C"
+            color="black"
+            material="shader: flat;"
+            position="0 0 0"
+            align="center"
+          ></a-text>
+          <a-entity scale="3 1 1">
+            <a-plane
+              height="0.3"
+              opacity="0.7"
+              width="0.5"
+              color="white"
+              material="shader: flat;"
+              position="0 0 -0.001"
+            ></a-plane>
+          </a-entity>
+        </a-entity>
+
+        <template id="whiteKeyTemplate">
+          <a-entity
+            class="key white"
+            animation__rotateDown="property: rotation.x; to: 3; startEvents: down; dur: 100"
+            animation__rotateUp="property: rotation.x; to: 0; startEvents: up; dur: 100"
+          >
+            <a-box color="white"></a-box>
+          </a-entity>
+        </template>
+        <template id="blackKeyTemplate">
+          <a-entity
+            class="key black"
+            animation__rotateDown="property: rotation.x; to: 3; startEvents: down; dur: 100"
+            animation__rotateUp="property: rotation.x; to: 0; startEvents: up; dur: 100"
+          >
+            <a-box color="black"></a-box>
+          </a-entity>
+        </template>
+        <a-entity class="keys"></a-entity>
+      </a-entity>
+
+      <a-entity position="-0.5 1 -1" scale="0.2 0.2 0.2" visible="false">
+        <a-text
+          id="modeText"
+          value=""
+          color="black"
+          material="shader: flat;"
+          position="0 0 0"
+          align="left"
+        ></a-text>
+        <a-entity scale="3 1 1">
+          <a-plane
+            height="0.3"
+            opacity="0.7"
+            width="0.3"
+            color="white"
+            material="shader: flat;"
+            position="0.15 0 -0.001"
+          ></a-plane>
+        </a-entity>
+      </a-entity>
     </a-scene>
   </body>
 
@@ -168,5 +245,18 @@
       });
       connectTapStrapButtons[side] = connectButton;
     });
+  </script>
+
+  <script>
+    const audioContext = Tone.context.rawContext._nativeAudioContext;
+    audioContext.addEventListener("statechange", () => {
+      console.log("audioContext state:", audioContext.state);
+      if (audioContext.state !== "running") {
+        document.addEventListener("click", () => audioContext.resume(), {
+          once: true,
+        });
+      }
+    });
+    audioContext.dispatchEvent(new Event("statechange"));
   </script>
 </html>

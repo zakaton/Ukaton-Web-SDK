@@ -1,7 +1,8 @@
 Tap Strap Piano
-  setup Piano model
-  map hands to piano fingerings
-  UI to change scale and synth type (oscillator or piano synth)
+  playKey (useSustain?)
+  update hand position (UI and key mapping)
+  releaseKey
+  change scale UI
   
 IP
   rightForearm: 192.168.4.52

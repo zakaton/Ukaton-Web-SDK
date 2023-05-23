@@ -308,7 +308,7 @@
         });
 
         document.addEventListener("keypress", (event) => {
-          return
+          return;
           switch (event.key) {
             case "8":
               this.revert();
@@ -1629,21 +1629,21 @@
     };
     const triggerKeyboardEvent = {
       left: debounce(() => {
-        const bitmaskArray =  keyboardBitmaskArrays.left;
+        const bitmaskArray = keyboardBitmaskArrays.left;
         piano.playTaps("left", { bitmaskArray });
         bitmaskArray.length = 0;
       }, 10),
       right: debounce(() => {
-        const bitmaskArray =  keyboardBitmaskArrays.right;
+        const bitmaskArray = keyboardBitmaskArrays.right;
         piano.playTaps("right", { bitmaskArray });
         bitmaskArray.length = 0;
       }, 10),
     };
-    
+
     const keyboardToKey = {
-      left: ["`", '1', '2', '3', '4', '5'],
-      right: ['6', '7', '8', '9', '0', '-', '=']
-    }
+      left: ["`", "1", "2", "3", "4", "5"],
+      right: ["6", "7", "8", "9", "0", "-", "="],
+    };
 
     document.addEventListener("keydown", (event) => {
       const { key } = event;
@@ -1651,9 +1651,9 @@
       let side, keyIndex;
       for (const _side in keyboardToKey) {
         const _sideKeys = keyboardToKey[_side];
-        if(_sideKeys.includes(key)) {
+        if (_sideKeys.includes(key)) {
           side = _side;
-          keyIndex = _sideKeys.indexOf(key)
+          keyIndex = _sideKeys.indexOf(key);
           break;
         }
       }
