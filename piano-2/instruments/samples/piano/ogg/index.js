@@ -23,7 +23,7 @@ for (let prefix in _notes) {
 }
 const AUDIO = {};
 notes.forEach((note) => {
-  AUDIO[note.replace("s", "#")] = `./instruments/samples/piano/ogg/${note}.ogg`;
+  AUDIO[note.replace("s", "#")] = `./piano-2/instruments/samples/piano/ogg/${note}.ogg`;
 });
 
 export default class InstrumentPianoOgg extends window.Tone.Sampler {

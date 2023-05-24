@@ -1,8 +1,9 @@
 Tap Strap Piano
-  quest pro test
+  setup piano position (guardian)
+  wrist position => handIndex
   scale UI
-  test tap strap
   test insole
+  test tap strap
   
 IP
   rightForearm: 192.168.4.52
