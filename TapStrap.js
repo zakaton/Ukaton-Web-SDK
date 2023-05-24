@@ -5,7 +5,7 @@ const { EventDispatcher, Vector3 } = THREE;
 class TapStrap extends EventDispatcher {
   constructor() {
     super();
-    
+
     this.services = {};
 
     this.inputMode = "controller";
@@ -312,9 +312,11 @@ class TapStrap extends EventDispatcher {
   _onTapData(data) {
     const tapDataBitMask = data.getUint8(0);
     const tapData = {};
+    const taps = [];
     TapStrap.TapDataEnumeration.forEach((name, index) => {
       const didTap = tapDataBitMask & (1 << index);
       tapData[name] = didTap;
+      taps[index] = Boolean(didTap);
     });
     const timeInterval = data.getUint16(1, true);
 
@@ -323,7 +325,7 @@ class TapStrap extends EventDispatcher {
     } else {
       this.dispatchEvent({
         type: "tapdata",
-        message: { tapData, tapDataBitMask, timeInterval },
+        message: { tapData, tapDataBitMask, timeInterval, taps },
       });
     }
   }

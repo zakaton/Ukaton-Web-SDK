@@ -14,7 +14,7 @@ AFRAME.registerComponent("piano", {
     whiteKeyDimensions: { type: "vec3", default: { x: 23.75, y: 15, z: 150 } },
     blackKeyDimensions: { type: "vec3", default: { x: 12.5, y: 6, z: 90 } },
     spaceBetweenWhiteKeys: { type: "number", default: 1 },
-    release: { type: "number", default: 1.4 },
+    release: { type: "number", default: 0.6 },
   },
   init: function () {
     window.piano = this;
@@ -146,12 +146,12 @@ AFRAME.registerComponent("piano", {
     }
     this._didCreatePiano = true;
 
-    const keyDimensions = {
+    this.keyDimensions = {
       white: this.data.whiteKeyDimensions,
       black: this.data.blackKeyDimensions,
     };
-    for (const color in keyDimensions) {
-      const _keyDimensions = keyDimensions[color];
+    for (const color in this.keyDimensions) {
+      const _keyDimensions = this.keyDimensions[color];
       for (const component in _keyDimensions) {
         _keyDimensions[component] /= 1000;
       }
@@ -161,30 +161,6 @@ AFRAME.registerComponent("piano", {
       white: document.getElementById("whiteKeyTemplate"),
       black: document.getElementById("blackKeyTemplate"),
     };
-
-    const fingerIndexTemplate = document.getElementById("fingerIndexTemplate");
-    this.fingerIndexEntites = {
-      left: [],
-      right: [],
-    };
-    for (let index = 0; index < 5; index++) {
-      for (const side in this.fingerIndexEntites) {
-        const fingerIndexEntity = fingerIndexTemplate.content
-          .cloneNode(true)
-          .querySelector("a-entity");
-
-        const position = [0, 0, keyDimensions.white.z - 0.02];
-        fingerIndexEntity.setAttribute("position", position.join(" "));
-
-        this.setText(
-          fingerIndexEntity.querySelector("a-text"),
-          (index + 1).toString()
-        );
-
-        this.pianoKeysEntity.appendChild(fingerIndexEntity);
-        this.fingerIndexEntites[side].push(fingerIndexEntity);
-      }
-    }
 
     this.pianoKeys = []; // {entity, frequency}
     this.pianoKeysByNote = {};
@@ -214,13 +190,16 @@ AFRAME.registerComponent("piano", {
         entity.dataset.note = note;
         const box = entity.querySelector("a-box");
 
-        const { x: width, y: height, z: depth } = keyDimensions[color];
+        const { x: width, y: height, z: depth } = this.keyDimensions[color];
         box.setAttribute("width", width);
         box.setAttribute("height", height);
         box.setAttribute("depth", depth);
 
+        const text = entity.querySelector("a-text");
+
         const position = [0, 0, 0];
         const boxPosition = [0, 0, 0];
+        const textPosition = [0, 0, 0];
         const [x, y, z] = [0, 1, 2];
         if (color == "white") {
           position[x] = whiteKeyIndex * (width + spaceBetweenWhiteKeys);
@@ -228,16 +207,18 @@ AFRAME.registerComponent("piano", {
         } else {
           position[x] =
             (whiteKeyIndex - 0.5) *
-            (keyDimensions.white.x + spaceBetweenWhiteKeys);
-          position[y] = keyDimensions.white.y / 2;
+            (this.keyDimensions.white.x + spaceBetweenWhiteKeys);
+          position[y] = this.keyDimensions.white.y / 2;
         }
         boxPosition[y] = -height / 2;
         boxPosition[z] = depth / 2;
+        textPosition[z] = depth - 0.01;
 
         entity.setAttribute("position", position.join(" "));
         box.setAttribute("position", boxPosition.join(" "));
+        text.setAttribute("position", textPosition.join(" "));
 
-        const pianoKey = { frequency, entity, box, note, isSharp, _note };
+        const pianoKey = { frequency, entity, box, note, isSharp, _note, text };
         this.pianoKeys.push(pianoKey);
         this.pianoKeysByNote[note] = pianoKey;
         this.pianoKeysEntity.appendChild(entity);
@@ -246,7 +227,7 @@ AFRAME.registerComponent("piano", {
     baseFrequency.dispose();
 
     const pianoWidth =
-      whiteKeyIndex * (keyDimensions.white.x + spaceBetweenWhiteKeys);
+      whiteKeyIndex * (this.keyDimensions.white.x + spaceBetweenWhiteKeys);
     this.pianoKeysEntity.setAttribute(
       "position",
       [-pianoWidth / 2, 0, 0].join(" ")
@@ -286,6 +267,7 @@ AFRAME.registerComponent("piano", {
       key.isHovering = false;
       delete key.side;
       this.updateKeyColor(key);
+      this.updateKeyIndex(key);
     });
     hoveringKeys.length = 0;
 
@@ -301,20 +283,19 @@ AFRAME.registerComponent("piano", {
         key.isHovering = true;
         key.side = side;
         this.updateKeyColor(key);
+        this.updateKeyIndex(key, fingerIndex);
         hoveringKeys.push(key);
       }
     }
+  },
 
-    this.fingerIndexEntites[side].forEach((fingerIndexEntity, index) => {
-      const key = hoveringKeys[index];
-      if (key) {
-        this.onEntitiesLoaded([key.entity, fingerIndexEntity], () => {
-          const position = key.entity.getAttribute("position");
-          fingerIndexEntity.object3D.position.x = position.x;
-        });
-      }
-      this.showEntity(fingerIndexEntity, Boolean(key));
-    });
+  updateKeyIndex: function (key, fingerIndex = -1) {
+    const { text } = key;
+    if (fingerIndex >= 0) {
+      this.setText(text, fingerIndex + 1);
+    } else {
+      this.setText(text, "");
+    }
   },
 
   onEntitiesLoaded: function (entities, callback) {
@@ -427,8 +408,17 @@ AFRAME.registerComponent("piano", {
     this.triggeredKeys.clear();
   },
 
+  playTaps: function (taps, side) {
+    this.hoveringKeys[side].forEach((hoveringKey, index) => {
+      const playKey = taps[index];
+      if (playKey) {
+        this.playKey(hoveringKey);
+      }
+    });
+  },
+
   setText: function (text, value, color) {
-    if (value) {
+    if (value || value == "") {
       text.setAttribute("value", value);
       this.showEntity(text.parentEl);
       if (color) {
