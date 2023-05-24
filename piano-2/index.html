@@ -66,8 +66,34 @@
       <a-entity
         id="piano"
         position="0 1.4 -0.3"
-        piano="side: right; leftHand: #leftHandControls; rightHand: #rightHandControls; modeText: #modeText; scaleText: #scaleText; camera: #camera;"
+        piano="side: right; leftHand: #leftHandControls; rightHand: #rightHandControls; modeText: #modeText; scaleText: #scaleText; camera: #camera; sustainText: #sustainText"
       >
+        <template id="fingerIndexTemplate">
+          <a-entity
+            position="0 0 0"
+            rotation="-90 0 0"
+            scale="0.1 0.1 0.1"
+            visible="false"
+          >
+            <a-text
+              value=""
+              color="black"
+              material="shader: flat;"
+              position="0 0 0"
+              align="center"
+            ></a-text>
+            <a-entity scale="3 1 1">
+              <a-plane
+                height="0.3"
+                opacity="1"
+                width="0.08"
+                color="white"
+                material="shader: flat;"
+                position="0 0 -0.001"
+              ></a-plane>
+            </a-entity>
+          </a-entity>
+        </template>
         <a-entity position="0 0.1 0" scale="0.1 0.1 0.1">
           <a-text
             id="scaleText"
@@ -89,6 +115,27 @@
           </a-entity>
         </a-entity>
 
+        <a-entity position="0.3 0.1 0" scale="0.1 0.1 0.1" visible="false">
+          <a-text
+            id="sustainText"
+            value="sustain"
+            color="black"
+            material="shader: flat;"
+            position="0 0 0"
+            align="center"
+          ></a-text>
+          <a-entity scale="3 1 1">
+            <a-plane
+              height="0.3"
+              opacity="0.7"
+              width="0.3"
+              color="white"
+              material="shader: flat;"
+              position="0 0 -0.001"
+            ></a-plane>
+          </a-entity>
+        </a-entity>
+
         <template id="whiteKeyTemplate">
           <a-entity
             class="key white"
@@ -101,7 +148,7 @@
         <template id="blackKeyTemplate">
           <a-entity
             class="key black"
-            animation__rotateDown="property: rotation.x; to: 3; startEvents: down; dur: 100"
+            animation__rotateDown="property: rotation.x; to: 4; startEvents: down; dur: 100"
             animation__rotateUp="property: rotation.x; to: 0; startEvents: up; dur: 100"
           >
             <a-box color="black"></a-box>

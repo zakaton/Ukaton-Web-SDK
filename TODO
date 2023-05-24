@@ -1,8 +1,7 @@
 Tap Strap Piano
-  playKey (useSustain?)
-  update hand position (UI and key mapping)
-  releaseKey
-  change scale UI
+  scale UI
+  test tap strap
+  test insole
   
 IP
   rightForearm: 192.168.4.52

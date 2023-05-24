@@ -5,6 +5,7 @@ AFRAME.registerComponent("piano", {
     leftHand: { type: "selector" },
     rightHand: { type: "selector" },
     modeText: { type: "selector" },
+    sustainText: { type: "selector" },
     instrument: { type: "string", default: "ogg" },
     camera: { type: "selector", default: "[camera]" },
     scaleText: { type: "selector" },
@@ -13,6 +14,7 @@ AFRAME.registerComponent("piano", {
     whiteKeyDimensions: { type: "vec3", default: { x: 23.75, y: 15, z: 150 } },
     blackKeyDimensions: { type: "vec3", default: { x: 12.5, y: 6, z: 90 } },
     spaceBetweenWhiteKeys: { type: "number", default: 1 },
+    release: { type: "number", default: 1.4 },
   },
   init: function () {
     window.piano = this;
@@ -24,6 +26,7 @@ AFRAME.registerComponent("piano", {
     this.instrument = new this.instrumentClass();
     this.gain = new Tone.Gain(1).toDestination();
     this.instrument.connect(this.gain);
+    this.triggeredKeys = new Map(); // {key: {startTime, endTime}}
 
     this.otherSide = this.data.side == "left" ? "right" : "left";
 
@@ -67,14 +70,41 @@ AFRAME.registerComponent("piano", {
     this.pianoKeysEntity = this.el.querySelector(".keys");
     this.highlightColors = {
       left: {
-        hover: { white: "#E0FFFD", black: "#C7FFFB" },
-        play: { white: "#C2FFFB", black: "#47FFF3" },
+        white: {
+          isHovering: "#cffffc",
+          isPlaying: "#adfffa",
+        },
+        black: {
+          isHovering: "#9cfff8",
+          isPlaying: "#47fff2",
+        },
       },
       right: {
-        hover: { white: "#F8AB1B", black: "#FF6666" },
-        play: { white: "#FFD88F", black: "#FFC966" },
+        white: {
+          isHovering: "#ffcb6b",
+          isPlaying: "#ffb221",
+        },
+        black: {
+          isHovering: "#c99128",
+          isPlaying: "#c98300",
+        },
       },
     };
+
+    this.handIndices = {
+      left: null,
+      right: null,
+    };
+    this.hoveringKeys = {
+      left: [],
+      right: [],
+    };
+
+    this.checkTriggeredKeys = AFRAME.utils.throttle(
+      this.checkTriggeredKeys,
+      100,
+      this
+    );
 
     this.el.addEventListener(
       "loaded",
@@ -88,16 +118,33 @@ AFRAME.registerComponent("piano", {
     );
   },
 
+  tick: function (time, timeDelta) {
+    this.checkTriggeredKeys();
+  },
+
+  checkTriggeredKeys: function () {
+    const now = Tone.now();
+    this.triggeredKeys.forEach((value, key) => {
+      let { endTime, shouldRelease, finalEndTime } = value;
+      shouldRelease = shouldRelease || now > endTime;
+      const shouldReleaseOverride = now > finalEndTime;
+      if ((shouldRelease && !this.useSustain) || shouldReleaseOverride) {
+        key.isPlaying = false;
+        this.instrument.triggerRelease(key.note);
+        this.animateKeyUp(key);
+        this.updateKeyColor(key);
+        this.triggeredKeys.delete(key);
+      } else {
+        value.shouldRelease = shouldRelease;
+      }
+    });
+  },
+
   _createPiano: function () {
     if (this._didCreatePiano) {
       return;
     }
     this._didCreatePiano = true;
-
-    const keyTemplates = {
-      white: document.getElementById("whiteKeyTemplate"),
-      black: document.getElementById("blackKeyTemplate"),
-    };
 
     const keyDimensions = {
       white: this.data.whiteKeyDimensions,
@@ -107,6 +154,35 @@ AFRAME.registerComponent("piano", {
       const _keyDimensions = keyDimensions[color];
       for (const component in _keyDimensions) {
         _keyDimensions[component] /= 1000;
+      }
+    }
+
+    const keyTemplates = {
+      white: document.getElementById("whiteKeyTemplate"),
+      black: document.getElementById("blackKeyTemplate"),
+    };
+
+    const fingerIndexTemplate = document.getElementById("fingerIndexTemplate");
+    this.fingerIndexEntites = {
+      left: [],
+      right: [],
+    };
+    for (let index = 0; index < 5; index++) {
+      for (const side in this.fingerIndexEntites) {
+        const fingerIndexEntity = fingerIndexTemplate.content
+          .cloneNode(true)
+          .querySelector("a-entity");
+
+        const position = [0, 0, keyDimensions.white.z - 0.02];
+        fingerIndexEntity.setAttribute("position", position.join(" "));
+
+        this.setText(
+          fingerIndexEntity.querySelector("a-text"),
+          (index + 1).toString()
+        );
+
+        this.pianoKeysEntity.appendChild(fingerIndexEntity);
+        this.fingerIndexEntites[side].push(fingerIndexEntity);
       }
     }
 
@@ -175,8 +251,83 @@ AFRAME.registerComponent("piano", {
       "position",
       [-pianoWidth / 2, 0, 0].join(" ")
     );
+  },
 
-    console.log(this.pianoKeys);
+  getClosestValidPianoKeyIndex: function (index, side) {
+    let key = this.pianoKeys[index];
+    let radius = 0;
+    let offset = 0;
+    let initialSign = side == "left" ? -1 : 1;
+    while (key && !key.enabled) {
+      radius++;
+
+      offset = radius * initialSign;
+      key = this.pianoKeys[index + offset];
+    }
+    return index + offset;
+  },
+  getNextClosestValidPianoKeyIndex: function (index, side) {
+    const offset = side == "left" ? -1 : 1;
+    return this.getClosestValidPianoKeyIndex(index + offset, side);
+  },
+  setHandIndex: function (
+    handIndex = this.handIndices[side],
+    side,
+    override = true
+  ) {
+    handIndex = this.getClosestValidPianoKeyIndex(handIndex, side);
+    if (this.handIndices[side] == handIndex && !override) {
+      return;
+    }
+
+    this.handIndices[side] = handIndex;
+    const hoveringKeys = this.hoveringKeys[side];
+    hoveringKeys.forEach((key) => {
+      key.isHovering = false;
+      delete key.side;
+      this.updateKeyColor(key);
+    });
+    hoveringKeys.length = 0;
+
+    let keyIndex = handIndex;
+    for (let fingerIndex = 0; fingerIndex < 5; fingerIndex++) {
+      if (fingerIndex > 0) {
+        keyIndex = this.getNextClosestValidPianoKeyIndex(keyIndex, side);
+      } else {
+        keyIndex = this.getClosestValidPianoKeyIndex(keyIndex, side);
+      }
+      const key = this.pianoKeys[keyIndex];
+      if (key) {
+        key.isHovering = true;
+        key.side = side;
+        this.updateKeyColor(key);
+        hoveringKeys.push(key);
+      }
+    }
+
+    this.fingerIndexEntites[side].forEach((fingerIndexEntity, index) => {
+      const key = hoveringKeys[index];
+      if (key) {
+        this.onEntitiesLoaded([key.entity, fingerIndexEntity], () => {
+          const position = key.entity.getAttribute("position");
+          fingerIndexEntity.object3D.position.x = position.x;
+        });
+      }
+      this.showEntity(fingerIndexEntity, Boolean(key));
+    });
+  },
+
+  onEntitiesLoaded: function (entities, callback) {
+    const firstUnloadedEntity = entities.find((entity) => !entity.hasLoaded);
+    if (!firstUnloadedEntity) {
+      callback();
+    } else {
+      firstUnloadedEntity.addEventListener(
+        "loaded",
+        () => this.onEntitiesLoaded(entities, callback),
+        { once: true }
+      );
+    }
   },
 
   updateIndex: function (index, isOffset = true, currentIndex, values) {
@@ -249,12 +400,8 @@ AFRAME.registerComponent("piano", {
   setSustain: function (useSustain) {
     if (this.useSustain != useSustain) {
       this.useSustain = useSustain;
-      if (!this.useSustain) {
-        // FILL - UI indicating useSustain
-      } else {
-        // FILL - UI indicating useSustain
-        // FILL - release all pending instruments
-      }
+      // TODO - UI indicating useSustain?
+      this.setEntityVisibility(this.data.sustainText.parentEl, this.useSustain);
     }
   },
   getRawMidi: function (pitch) {
@@ -263,23 +410,21 @@ AFRAME.registerComponent("piano", {
   },
 
   playKey: function (key) {
-    // FILL - color key and animate
     key.isPlaying = true;
-    if (this.useSustain) {
-      this.instrument.triggerAttack(key.note);
-    } else {
-      this.instrument.triggerAttackRelease(key.note);
-      // FILL - release
-    }
+    this.instrument.triggerRelease(key.note);
+    this.instrument.triggerAttack(key.note);
+    this.animateKeyDown(key);
+    this.updateKeyColor(key);
+    const triggeredNote = {
+      startTime: Tone.now(),
+      endTime: Tone.now() + this.data.release,
+      finalEndTime: Tone.now() + 5,
+    };
+    this.triggeredKeys.set(key, triggeredNote);
   },
   clearInstrument: function () {
     this.instrument.releaseAll(Tone.now());
-    this.throttledUpdateInstrument(0, 0);
-  },
-  updateInstrument: function (gain) {
-    if (gain !== undefined) {
-      this.gain.gain.rampTo(gain);
-    }
+    this.triggeredKeys.clear();
   },
 
   setText: function (text, value, color) {
@@ -298,10 +443,11 @@ AFRAME.registerComponent("piano", {
 
     if (enabled) {
       if (isHovering) {
-        color =
-          this.highlightColors[side][isSharp ? "black" : "white"][
-            isPlaying ? "playing" : "hover"
-          ];
+        const highlightColors =
+          this.highlightColors[side][isSharp ? "black" : "white"];
+        color = isPlaying
+          ? highlightColors.isPlaying
+          : highlightColors.isHovering;
       } else {
         color = isSharp ? "black" : "white";
       }
@@ -317,9 +463,9 @@ AFRAME.registerComponent("piano", {
   animateKey: function (key, isDown = true) {
     const { entity } = key;
     if (isDown) {
-      entity.emit("rotateDown", null, false);
+      entity.emit("down", null, false);
     } else {
-      entity.emit("rotateUp", null, false);
+      entity.emit("up", null, false);
     }
   },
   animateKeyDown: function (key) {
@@ -364,6 +510,9 @@ AFRAME.registerComponent("piano", {
       key.enabled = this.scaleKeys.includes(key._note);
       this.updateKeyColor(key);
     });
+
+    this.setHandIndex(Math.floor(this.pianoKeys.length / 2) - 3, "left");
+    this.setHandIndex(Math.ceil(this.pianoKeys.length / 2) + 3, "right");
   },
 
   getPitchOffset: function (pitch) {
