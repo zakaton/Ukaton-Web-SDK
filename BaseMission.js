@@ -29,7 +29,7 @@ class BaseMission extends THREE.EventDispatcher {
   constructor() {
     super();
 
-    this.isLoggingEnabled = true;
+    this.isLoggingEnabled = !true;
     this._reconnectOnDisconnection = true;
 
     this._batteryLevel = null;

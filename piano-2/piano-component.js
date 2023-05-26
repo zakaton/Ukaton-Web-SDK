@@ -14,7 +14,8 @@ AFRAME.registerComponent("piano", {
     whiteKeyDimensions: { type: "vec3", default: { x: 23.75, y: 15, z: 150 } },
     blackKeyDimensions: { type: "vec3", default: { x: 12.5, y: 6, z: 90 } },
     spaceBetweenWhiteKeys: { type: "number", default: 1 },
-    release: { type: "number", default: 0.6 },
+    release: { type: "number", default: 0.4 },
+    handDistanceThreshold: { type: "number", default: 0.03 },
   },
   init: function () {
     window.piano = this;
@@ -30,15 +31,31 @@ AFRAME.registerComponent("piano", {
 
     this.otherSide = this.data.side == "left" ? "right" : "left";
 
-    this.hand = this.data[`${this.data.side}Hand`];
-    this.otherHand = this.data[`${this.otherSide}Hand`];
+    this.hands = {
+      left: this.data.leftHand,
+      right: this.data.rightHand,
+    };
+    for (const side in this.hands) {
+      const hand = this.hands[side];
+      hand.addEventListener("hand-tracking-extras-ready", (event) => {
+        hand.jointsAPI = event.detail.data.jointAPI;
+      });
+    }
+    this.wristPosition = new THREE.Vector3();
+    this.line3 = new THREE.Line3();
+    this.isHandOnDesk = {
+      left: true,
+      right: true,
+    };
 
-    this.hand.addEventListener("hand-tracking-extras-ready", (event) => {
-      this.hand.jointsAPI = event.detail.data.jointAPI;
-    });
-    this.otherHand.addEventListener("hand-tracking-extras-ready", (event) => {
-      this.otherHand.jointsAPI = event.detail.data.jointAPI;
-    });
+    this.handIndexOffsets = {
+      left: 5,
+      right: -5,
+    };
+
+    this.hand = this.hands[this.data.side];
+    this.otherHand = this.hands[this.otherSide];
+
     this.numberOfPinches = 0;
     this.resetNumberOfPinches = AFRAME.utils.debounce(
       () => (this.numberOfPinches = 0),
@@ -62,7 +79,6 @@ AFRAME.registerComponent("piano", {
 
     this.modes = ["notes", "scale", "perfect"];
     this.modeIndex = 1;
-    this.onModeIndexUpdate();
 
     this.scale = scale;
     this.scale.isPerfect = true;
@@ -113,13 +129,24 @@ AFRAME.registerComponent("piano", {
         //this.setScaleRoot("G");
         //this.setScaleIsMajor(false);
         this._onScaleUpdate();
+        this.onEntitiesLoaded(
+          this.pianoKeys.map((key) => key.entity),
+          () => {
+            this.hasPianoLoaded = true;
+            this.onPianoPlacement();
+            this.onModeIndexUpdate();
+          }
+        );
       },
       { once: true }
     );
   },
 
   tick: function (time, timeDelta) {
-    this.checkTriggeredKeys();
+    if (this.hasPianoLoaded) {
+      this.checkTriggeredKeys();
+      this.checkWristPositions();
+    }
   },
 
   checkTriggeredKeys: function () {
@@ -138,6 +165,43 @@ AFRAME.registerComponent("piano", {
         value.shouldRelease = shouldRelease;
       }
     });
+  },
+
+  onPianoPlacement: function () {
+    const { line3 } = this;
+    this.pianoKeys[0].entity.object3D.getWorldPosition(line3.start);
+
+    this.pianoKeys[this.pianoKeys.length - 1].entity.object3D.getWorldPosition(
+      line3.end
+    );
+  },
+
+  checkWristPositions: function () {
+    const { wristPosition, line3 } = this;
+
+    for (const side in this.hands) {
+      const hand = this.hands[side];
+      if (this.isHandVisible(side) && hand.jointsAPI) {
+        let handIndex;
+        hand.jointsAPI.getWrist().getPosition(wristPosition);
+        this.isHandOnDesk[side] =
+          Math.abs(wristPosition.y - this.el.object3D.position.y) <
+          this.data.handDistanceThreshold;
+        if (this.isHandOnDesk[side]) {
+          const interpolation = line3.closestPointToPointParameter(
+            wristPosition,
+            true
+          );
+          this.pianoKeys.some((key, keyIndex) => {
+            handIndex = keyIndex;
+            return key.interpolation >= interpolation;
+          });
+
+          handIndex += this.handIndexOffsets[side];
+          this.setHandIndex(handIndex, side);
+        }
+      }
+    }
   },
 
   _createPiano: function () {
@@ -218,7 +282,16 @@ AFRAME.registerComponent("piano", {
         box.setAttribute("position", boxPosition.join(" "));
         text.setAttribute("position", textPosition.join(" "));
 
-        const pianoKey = { frequency, entity, box, note, isSharp, _note, text };
+        const pianoKey = {
+          frequency,
+          entity,
+          box,
+          note,
+          isSharp,
+          _note,
+          text,
+          x: position[x],
+        };
         this.pianoKeys.push(pianoKey);
         this.pianoKeysByNote[note] = pianoKey;
         this.pianoKeysEntity.appendChild(entity);
@@ -226,12 +299,17 @@ AFRAME.registerComponent("piano", {
     }
     baseFrequency.dispose();
 
-    const pianoWidth =
-      whiteKeyIndex * (this.keyDimensions.white.x + spaceBetweenWhiteKeys);
+    this.pianoWidth =
+      (whiteKeyIndex - 1) *
+      (this.keyDimensions.white.x + spaceBetweenWhiteKeys);
     this.pianoKeysEntity.setAttribute(
       "position",
-      [-pianoWidth / 2, 0, 0].join(" ")
+      [-this.pianoWidth / 2, 0, 0].join(" ")
     );
+
+    this.pianoKeys.forEach((key, index) => {
+      key.interpolation = key.x / this.pianoWidth;
+    });
   },
 
   getClosestValidPianoKeyIndex: function (index, side) {
@@ -359,6 +437,7 @@ AFRAME.registerComponent("piano", {
       default:
         break;
     }
+    this._onScaleUpdate();
   },
 
   isHandVisible: function (side) {
@@ -381,7 +460,6 @@ AFRAME.registerComponent("piano", {
   setSustain: function (useSustain) {
     if (this.useSustain != useSustain) {
       this.useSustain = useSustain;
-      // TODO - UI indicating useSustain?
       this.setEntityVisibility(this.data.sustainText.parentEl, this.useSustain);
     }
   },
@@ -409,9 +487,28 @@ AFRAME.registerComponent("piano", {
   },
 
   playTaps: function (taps, side) {
-    this.hoveringKeys[side].forEach((hoveringKey, index) => {
-      const playKey = taps[index];
-      if (playKey) {
+    if (!this.isHandOnDesk[side]) {
+      return;
+    }
+
+    const isPerfectMode = this.mode == "perfect";
+    let hoveringKeys = this.hoveringKeys[side];
+    if (side == "left") {
+      hoveringKeys = hoveringKeys.slice().reverse();
+      taps = taps.slice().reverse();
+    }
+    let skips = 0;
+    hoveringKeys.forEach((hoveringKey, index) => {
+      let shouldPlayKey = taps[index];
+      if (shouldPlayKey && isPerfectMode) {
+        let keyIndex = this.pianoKeys.indexOf(hoveringKey);
+        for (let skip = 0; skip < skips; skip++) {
+          keyIndex = this.getNextClosestValidPianoKeyIndex(keyIndex, "right");
+        }
+        hoveringKey = this.pianoKeys[keyIndex];
+        skips++;
+      }
+      if (shouldPlayKey) {
         this.playKey(hoveringKey);
       }
     });
@@ -486,7 +583,10 @@ AFRAME.registerComponent("piano", {
     this._onScaleUpdate();
   },
   _onScaleUpdate: function () {
-    this.scaleKeys = this.scale.keys.map((key) => {
+    const scaleKeys =
+      this.mode == "notes" ? this.scale.allKeys : this.scale.keys;
+
+    this.scaleKeys = scaleKeys.map((key) => {
       if (Array.isArray(key)) {
         return key.find((_key) => _key.includes("#"));
       } else {
@@ -494,7 +594,7 @@ AFRAME.registerComponent("piano", {
       }
     });
 
-    piano.setText(piano.data.scaleText, this.scale.name);
+    this.setText(this.data.scaleText, this.scale.name);
 
     this.pianoKeys.forEach((key) => {
       key.enabled = this.scaleKeys.includes(key._note);

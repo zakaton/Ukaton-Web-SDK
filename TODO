@@ -1,9 +1,6 @@
 Tap Strap Piano
-  setup piano position (guardian)
-  wrist position => handIndex
-  scale UI
-  test insole
-  test tap strap
+  scale UI (mode, root, pitch, isMajor, exoticScale)
+    when hand is above desk for 0.5 seconds, show highlightable text things you can pinch
   
 IP
   rightForearm: 192.168.4.52
