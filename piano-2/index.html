@@ -80,11 +80,7 @@
         piano="side: right; leftHand: #leftHandControls; rightHand: #rightHandControls; modeText: #modeText; scaleText: #scaleText; camera: #camera; sustainText: #sustainText"
       >
         <a-entity class="treeboard" position="0 0.2 0" visible="false">
-          <a-entity
-            class="path"
-            position="0 0.05 0"
-            scale="0.1 0.1 0.1"
-          >
+          <a-entity class="path" position="0 0.05 0" scale="0.1 0.1 0.1">
             <a-text
               class="text"
               value=""
@@ -101,11 +97,14 @@
               position="0 0 -0.001"
             ></a-plane>
           </a-entity>
-          
+
           <a-entity class="options"
             ><a-plane
+              animation__near="property: opacity; to: 0.2; startEvents: near; dur: 200"
+              animation__far="property: opacity; to: 0; startEvents: far; dur: 100"
+              animation__reset="property: opacity; to: 0; startEvents: reset; dur: 0"
               class="back"
-              opacity="0.1"
+              opacity="0"
               color="white"
               width="1"
               height="0.05"
@@ -115,7 +114,13 @@
         </a-entity>
 
         <template id="treeboardOptionTemplate">
-          <a-entity class="treeboardOption" scale="0.1 0.1 0.1" visible="false">
+          <a-entity
+            class="treeboardOption"
+            scale="0.1 0.1 0.1"
+            animation__near="property: scale; to: 0.11 0.11 0.11; startEvents: near; dur: 100"
+            animation__far="property: scale; to: 0.1 0.1 0.1; startEvents: far; dur: 100"
+            animation__reset="property: scale; to: 0.1 0.1 0.1; startEvents: reset; dur: 0"
+          >
             <a-text
               class="text"
               value=""
@@ -130,6 +135,9 @@
               color="white"
               material="shader: flat;"
               position="0 0 -0.001"
+              animation__near="property: components.material.material.color; type: color; to: #c1ffbd; startEvents: near; dur: 100"
+              animation__far="property: components.material.material.color; type: color; to: white; startEvents: far; dur: 100"
+              animation__reset="property: components.material.material.color; type: color; to: white; startEvents: reset; dur: 0"
             ></a-plane>
           </a-entity>
         </template>

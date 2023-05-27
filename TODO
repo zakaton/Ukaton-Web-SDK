@@ -1,11 +1,13 @@
 Tap Strap Piano
   scale UI
-    hover animation
-    drag horizontally with hand (with min/max range)
+    animate backPlane when near/far
+    animate options when near/far
     pinch to select
+    drag horizontally with hand (with min/max range)
   song mode (moves towards keys)
+    shows all notes
     howl's moving castle
-  
+    
 IP
   rightForearm: 192.168.4.52
   rightBicep: 192.168.4.53
