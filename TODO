@@ -1,10 +1,9 @@
 Tap Strap Piano
   scale UI
-    display options (center or align-left if too many options)
     hover animation
     drag horizontally with hand (with min/max range)
     pinch to select
-  song mode
+  song mode (moves towards keys)
     howl's moving castle
   
 IP
