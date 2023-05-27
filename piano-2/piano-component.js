@@ -16,6 +16,9 @@ AFRAME.registerComponent("piano", {
     spaceBetweenWhiteKeys: { type: "number", default: 1 },
     release: { type: "number", default: 0.4 },
     handDistanceThreshold: { type: "number", default: 0.03 },
+    treeboardTime: { type: "number", default: 500 },
+    gapBetweenOptions: { type: "number", default: 0.3 },
+    treeboardMaxWidth: { type: "number", default: 0.1 },
   },
   init: function () {
     window.piano = this;
@@ -46,6 +49,10 @@ AFRAME.registerComponent("piano", {
     this.isHandOnDesk = {
       left: true,
       right: true,
+    };
+    this.lastTimeHandIsOnDesk = {
+      left: 0,
+      right: 0,
     };
 
     this.handIndexOffsets = {
@@ -121,6 +128,166 @@ AFRAME.registerComponent("piano", {
       100,
       this
     );
+    /*
+    this.checkWristPositions = AFRAME.utils.throttle(
+      this.checkWristPositions,
+      10,
+      this
+    );
+    */
+    this.checkTreeboardVisibility = AFRAME.utils.throttle(
+      this.checkTreeboardVisibility,
+      100,
+      this
+    );
+
+    this.treeboard = {
+      templates: {
+        option: document.getElementById("treeboardOptionTemplate"),
+      },
+      tree: {
+        mode: {
+          ...(() => {
+            const modes = {};
+            this.modes.forEach((mode, index) => {
+              modes[mode] = () => this.updateMode(index, false);
+            });
+            return modes;
+          })(),
+        },
+        root: {
+          ...(() => {
+            const roots = {};
+            this.scale.allKeys.forEach((root) => {
+              if (typeof root == "string") {
+                roots[root] = () => this.setScaleRoot(root);
+              }
+            });
+            return roots;
+          })(),
+        },
+        pitch: {
+          ...(() => {
+            const pitches = {};
+            ["natural", "sharp"].forEach((string, index) => {
+              pitches[string] = () => this.setScalePitch(string);
+            });
+            return pitches;
+          })(),
+        },
+        isMajor: {
+          ...(() => {
+            const isMajors = {};
+            ["minor", "major"].forEach((string, index) => {
+              isMajors[string] = () => this.setScaleIsMajor(Boolean(index));
+            });
+            return isMajors;
+          })(),
+        },
+        exoticScale: {
+          ...(() => {
+            const exoticScales = {};
+            this.scale.exoticScales.forEach((string, index) => {
+              exoticScales[string] = () => this.setScaleExoticScale(string);
+            });
+            return exoticScales;
+          })(),
+        },
+      },
+      _this: this,
+      update() {
+        this.options = this.getOptions();
+        this.optionEntityPool.forEach((optionEntity) => {
+          this._this.hideEntity(optionEntity);
+          optionEntity._available = true;
+        });
+
+        for (const option in this.options) {
+          let optionEntity = this.optionEntityPool.find(
+            (optionEntity) => optionEntity._available
+          );
+          if (!optionEntity) {
+            optionEntity = this.templates.option.content
+              .cloneNode(true)
+              .querySelector(".treeboardOption");
+            optionEntity._text = optionEntity.querySelector("a-text");
+            optionEntity._plane = optionEntity.querySelector("a-plane");
+            this.optionEntityPool.push(optionEntity);
+            this.optionsEntity.appendChild(optionEntity);
+          } else {
+            optionEntity._available = false;
+          }
+          this._this.setText(optionEntity.querySelector("a-text"), option);
+        }
+        
+        // FILL - center or align left if too long...
+        let optionsWidth = 0;
+        const optionEntities = this.optionEntityPool.filter(optionEntity => !optionEntity._isAvailable)
+        this._this.onEntitiesLoaded([...this.optionEntityPool, this.backPlaneEntity], () => {
+          console.log('loaded')
+          this.optionEntityPool.forEach((optionEntity, index) => {
+            optionEntity.object3D.position.x = optionsWidth/10
+            
+            optionsWidth += optionEntity._plane._totalWidth;
+            optionsWidth += this._this.data.gapBetweenOptions;
+          })
+          optionsWidth -= this._this.data.gapBetweenOptions;
+          optionsWidth /= 10;
+          console.log("optionsWidth", optionsWidth)
+          
+          this.backPlaneEntity.setAttribute("width", optionsWidth)
+          this.backPlaneEntity.object3D.position.x = optionsWidth/2;
+          
+          if (optionsWidth > this._this.data.treeboardMaxWidth) {
+            this.optionsEntity.object3D.position.x = 0;
+          }
+          else {
+            this.optionsEntity.object3D.position.x = -optionsWidth/2;
+          }
+        });
+      },
+      getOptions() {
+        let options = this.tree;
+        this.path.every((string) => {
+          options = options[string];
+          return options;
+        });
+        return options;
+      },
+      select(option) {
+        if (option in this.options) {
+          const value = this.options[option];
+          switch (typeof value) {
+            case "object":
+              this.path.push(option);
+              this.update();
+              break;
+            case "function":
+              value();
+              this.reset();
+              break;
+          }
+        } else {
+          console.warn(`no option "${option}"`);
+        }
+      },
+      goBack() {
+        this.path.pop();
+        this.update();
+      },
+      reset() {
+        this.path.length = 0;
+        this.update();
+      },
+      optionEntityPool: [],
+      path: [],
+      pathString: "",
+      pathEntity: this.el.querySelector(".path"),
+      backPlaneEntity: this.el.querySelector(".treeboard .options .back"),
+      optionsEntity: this.el.querySelector(".treeboard .options"),
+      entity: this.el.querySelector(".treeboard"),
+    };
+    this.treeboard.getOptions();
 
     this.el.addEventListener(
       "loaded",
@@ -135,6 +302,7 @@ AFRAME.registerComponent("piano", {
             this.hasPianoLoaded = true;
             this.onPianoPlacement();
             this.onModeIndexUpdate();
+            this.treeboard.update();
           }
         );
       },
@@ -142,14 +310,36 @@ AFRAME.registerComponent("piano", {
     );
   },
 
+  updateTextWidth: function (entity) {
+    const text = entity.querySelector("a-text");
+    const plane = entity.querySelector("a-plane");
+    this.onEntityLoaded(plane, () => {
+      const align = text.getAttribute("text").align;
+      const data = text.components.text.data;
+      const totalWidth = data.value.length * (data.width / data.wrapCount);
+      plane.setAttribute("width", totalWidth);
+      plane._totalWidth = totalWidth
+      if (align == "center") {
+        plane.object3D.position.x = 0;
+      } else {
+        let xOffset = totalWidth/2;
+        if (align == "right") {
+          xOffset *= -1;
+        }
+        plane.object3D.position.x = xOffset
+      }
+    });
+  },
+
   tick: function (time, timeDelta) {
     if (this.hasPianoLoaded) {
-      this.checkTriggeredKeys();
-      this.checkWristPositions();
+      this.checkTriggeredKeys(time, timeDelta);
+      this.checkWristPositions(time, timeDelta);
+      this.checkTreeboardVisibility(time, timeDelta);
     }
   },
 
-  checkTriggeredKeys: function () {
+  checkTriggeredKeys: function (time, timeDelta) {
     const now = Tone.now();
     this.triggeredKeys.forEach((value, key) => {
       let { endTime, shouldRelease, finalEndTime } = value;
@@ -167,6 +357,17 @@ AFRAME.registerComponent("piano", {
     });
   },
 
+  checkTreeboardVisibility: function (time, timeDelta) {
+    if (
+      time - this.lastTimeHandIsOnDesk[this.data.side] >
+      this.data.treeboardTime
+    ) {
+      this.showEntity(this.treeboard.entity);
+    } else {
+      this.hideEntity(this.treeboard.entity);
+    }
+  },
+
   onPianoPlacement: function () {
     const { line3 } = this;
     this.pianoKeys[0].entity.object3D.getWorldPosition(line3.start);
@@ -176,7 +377,7 @@ AFRAME.registerComponent("piano", {
     );
   },
 
-  checkWristPositions: function () {
+  checkWristPositions: function (time, timeDelta) {
     const { wristPosition, line3 } = this;
 
     for (const side in this.hands) {
@@ -187,6 +388,9 @@ AFRAME.registerComponent("piano", {
         this.isHandOnDesk[side] =
           Math.abs(wristPosition.y - this.el.object3D.position.y) <
           this.data.handDistanceThreshold;
+        if (this.isHandOnDesk[side]) {
+          this.lastTimeHandIsOnDesk[side] = time;
+        }
         if (this.isHandOnDesk[side]) {
           const interpolation = line3.closestPointToPointParameter(
             wristPosition,
@@ -376,6 +580,9 @@ AFRAME.registerComponent("piano", {
     }
   },
 
+  onEntityLoaded: function (entity, callback) {
+    return this.onEntitiesLoaded([entity], callback);
+  },
   onEntitiesLoaded: function (entities, callback) {
     const firstUnloadedEntity = entities.find((entity) => !entity.hasLoaded);
     if (!firstUnloadedEntity) {
@@ -424,7 +631,7 @@ AFRAME.registerComponent("piano", {
   onModeIndexUpdate: function () {
     this.mode = this.modes[this.modeIndex];
     console.log("new mode:", this.mode);
-    this.data.modeText.setAttribute("value", this.mode);
+    this.setText(this.data.modeText, this.mode);
 
     switch (this.mode) {
       case "notes":
@@ -515,13 +722,18 @@ AFRAME.registerComponent("piano", {
   },
 
   setText: function (text, value, color) {
-    if (value || value == "") {
-      text.setAttribute("value", value);
-      this.showEntity(text.parentEl);
-      if (color) {
-        text.setAttribute("color", color);
+    this.onEntityLoaded(text, () => {
+      if (value || value == "") {
+        text.setAttribute("text", "value", value);
+        if (text.parentEl.querySelector("a-plane")) {
+          this.updateTextWidth(text.parentEl);
+        }
+        this.showEntity(text.parentEl);
+        if (color) {
+          text.setAttribute("color", color);
+        }
       }
-    }
+    });
   },
 
   updateKeyColor: function (key) {
@@ -575,6 +787,7 @@ AFRAME.registerComponent("piano", {
     this._onScaleUpdate();
   },
   setScaleExoticScale: function (exoticScale = -1) {
+    this.setScaleIsMajor(true);
     if (typeof exoticScale == "number") {
       this.scale.exoticScaleIndex = exoticScale;
     } else {

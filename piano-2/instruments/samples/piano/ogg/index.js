@@ -2,6 +2,7 @@
 const notes = [];
 const _notes = {
   A: 7,
+  /*
   As: 7,
   B: 7,
   C: 8,
@@ -13,6 +14,7 @@ const _notes = {
   Fs: 7,
   G: 7,
   Gs: 7,
+  */
 };
 for (let prefix in _notes) {
   const maxIndex = _notes[prefix];

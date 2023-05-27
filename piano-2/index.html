@@ -45,9 +45,7 @@
       <button disabled class="clickable connect tapStrap right">
         right tap strap
       </button>
-      <button class="clickable calibrate">
-        calibrate
-      </button>
+      <button class="clickable calibrate">calibrate</button>
     </div>
 
     <a-scene webxr="optionalFeatures:  hit-test;" ar-hit-test="target:#piano;">
@@ -81,6 +79,61 @@
         position="0 1.4 -0.3"
         piano="side: right; leftHand: #leftHandControls; rightHand: #rightHandControls; modeText: #modeText; scaleText: #scaleText; camera: #camera; sustainText: #sustainText"
       >
+        <a-entity class="treeboard" position="0 0.2 0" visible="false">
+          <a-entity
+            class="path"
+            position="0 0.05 0"
+            scale="0.1 0.1 0.1"
+          >
+            <a-text
+              class="text"
+              value=""
+              color="black"
+              material="shader: flat;"
+              align="center"
+            ></a-text>
+            <a-plane
+              height="0.3"
+              opacity="0.7"
+              width="0.3"
+              color="white"
+              material="shader: flat;"
+              position="0 0 -0.001"
+            ></a-plane>
+          </a-entity>
+          
+          <a-entity class="options"
+            ><a-plane
+              class="back"
+              opacity="0.1"
+              color="white"
+              width="1"
+              height="0.05"
+              position="0 0 -0.002"
+            ></a-plane
+          ></a-entity>
+        </a-entity>
+
+        <template id="treeboardOptionTemplate">
+          <a-entity class="treeboardOption" scale="0.1 0.1 0.1" visible="false">
+            <a-text
+              class="text"
+              value=""
+              color="black"
+              material="shader: flat;"
+              align="left"
+            ></a-text>
+            <a-plane
+              height="0.3"
+              opacity="0.7"
+              width="0.3"
+              color="white"
+              material="shader: flat;"
+              position="0 0 -0.001"
+            ></a-plane>
+          </a-entity>
+        </template>
+
         <a-entity position="-0.4 0.1 0" scale="0.1 0.1 0.1">
           <a-text
             id="modeText"
@@ -88,16 +141,16 @@
             color="black"
             material="shader: flat;"
             position="0 0 0"
-            align="left"
+            align="center"
           ></a-text>
-          <a-entity scale="3 1 1">
+          <a-entity scale="1 1 1">
             <a-plane
               height="0.3"
               opacity="0.7"
               width="0.3"
               color="white"
               material="shader: flat;"
-              position="0.15 0 -0.001"
+              position="0 0 -0.001"
             ></a-plane>
           </a-entity>
         </a-entity>
@@ -105,17 +158,17 @@
         <a-entity position="0 0.1 0" scale="0.1 0.1 0.1">
           <a-text
             id="scaleText"
-            value="C"
+            value=""
             color="black"
             material="shader: flat;"
             position="0 0 0"
             align="center"
           ></a-text>
-          <a-entity scale="3 1 1">
+          <a-entity scale="1 1 1">
             <a-plane
               height="0.3"
               opacity="0.7"
-              width="0.5"
+              width="0.3"
               color="white"
               material="shader: flat;"
               position="0 0 -0.001"
@@ -132,11 +185,11 @@
             position="0 0 0"
             align="center"
           ></a-text>
-          <a-entity scale="3 1 1">
+          <a-entity scale="1 1 1">
             <a-plane
               height="0.3"
               opacity="0.7"
-              width="0.3"
+              width="0.8"
               color="white"
               material="shader: flat;"
               position="0 0 -0.001"
@@ -209,8 +262,8 @@
     });
     missionDevice.addEventListener("heelToToe", (event) => {
       if (sustainConfiguration.shouldCalibrate) {
-        const {mass, heelToToe} = missionDevice.pressure;
-        sustainConfiguration.calibrate(mass, heelToToe)
+        const { mass, heelToToe } = missionDevice.pressure;
+        sustainConfiguration.calibrate(mass, heelToToe);
         sustainConfiguration.shouldCalibrate = false;
       }
       const exceededThreshold = sustainConfiguration.didExceedThreshold(
@@ -236,12 +289,10 @@
         this.thresholds.heelToToe = heelToToe;
       },
     };
-    const calibrateButton = document.querySelector(
-      ".calibrate"
-    );
+    const calibrateButton = document.querySelector(".calibrate");
     calibrateButton.addEventListener("click", () => {
       sustainConfiguration.shouldCalibrate = true;
-    })
+    });
 
     const tapStraps = {
       left: new TapStrap(),
