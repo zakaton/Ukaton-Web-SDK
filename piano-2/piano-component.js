@@ -14,7 +14,11 @@ AFRAME.registerComponent("piano", {
     whiteKeyDimensions: { type: "vec3", default: { x: 23.75, y: 15, z: 150 } },
     blackKeyDimensions: { type: "vec3", default: { x: 12.5, y: 6, z: 90 } },
     spaceBetweenWhiteKeys: { type: "number", default: 1 },
-    release: { type: "number", default: 0.6 },
+    release: { type: "number", default: 0.4 },
+    handDistanceThreshold: { type: "number", default: 0.03 },
+    treeboardTime: { type: "number", default: 500 },
+    gapBetweenOptions: { type: "number", default: 0.3 },
+    treeboardMaxWidth: { type: "number", default: 0.1 },
   },
   init: function () {
     window.piano = this;
@@ -30,15 +34,35 @@ AFRAME.registerComponent("piano", {
 
     this.otherSide = this.data.side == "left" ? "right" : "left";
 
-    this.hand = this.data[`${this.data.side}Hand`];
-    this.otherHand = this.data[`${this.otherSide}Hand`];
+    this.hands = {
+      left: this.data.leftHand,
+      right: this.data.rightHand,
+    };
+    for (const side in this.hands) {
+      const hand = this.hands[side];
+      hand.addEventListener("hand-tracking-extras-ready", (event) => {
+        hand.jointsAPI = event.detail.data.jointAPI;
+      });
+    }
+    this.wristPosition = new THREE.Vector3();
+    this.line3 = new THREE.Line3();
+    this.isHandOnDesk = {
+      left: true,
+      right: true,
+    };
+    this.lastTimeHandIsOnDesk = {
+      left: 0,
+      right: 0,
+    };
 
-    this.hand.addEventListener("hand-tracking-extras-ready", (event) => {
-      this.hand.jointsAPI = event.detail.data.jointAPI;
-    });
-    this.otherHand.addEventListener("hand-tracking-extras-ready", (event) => {
-      this.otherHand.jointsAPI = event.detail.data.jointAPI;
-    });
+    this.handIndexOffsets = {
+      left: 5,
+      right: -5,
+    };
+
+    this.hand = this.hands[this.data.side];
+    this.otherHand = this.hands[this.otherSide];
+
     this.numberOfPinches = 0;
     this.resetNumberOfPinches = AFRAME.utils.debounce(
       () => (this.numberOfPinches = 0),
@@ -62,7 +86,6 @@ AFRAME.registerComponent("piano", {
 
     this.modes = ["notes", "scale", "perfect"];
     this.modeIndex = 1;
-    this.onModeIndexUpdate();
 
     this.scale = scale;
     this.scale.isPerfect = true;
@@ -105,6 +128,166 @@ AFRAME.registerComponent("piano", {
       100,
       this
     );
+    /*
+    this.checkWristPositions = AFRAME.utils.throttle(
+      this.checkWristPositions,
+      10,
+      this
+    );
+    */
+    this.checkTreeboardVisibility = AFRAME.utils.throttle(
+      this.checkTreeboardVisibility,
+      100,
+      this
+    );
+
+    this.treeboard = {
+      templates: {
+        option: document.getElementById("treeboardOptionTemplate"),
+      },
+      tree: {
+        mode: {
+          ...(() => {
+            const modes = {};
+            this.modes.forEach((mode, index) => {
+              modes[mode] = () => this.updateMode(index, false);
+            });
+            return modes;
+          })(),
+        },
+        root: {
+          ...(() => {
+            const roots = {};
+            this.scale.allKeys.forEach((root) => {
+              if (typeof root == "string") {
+                roots[root] = () => this.setScaleRoot(root);
+              }
+            });
+            return roots;
+          })(),
+        },
+        pitch: {
+          ...(() => {
+            const pitches = {};
+            ["natural", "sharp"].forEach((string, index) => {
+              pitches[string] = () => this.setScalePitch(string);
+            });
+            return pitches;
+          })(),
+        },
+        isMajor: {
+          ...(() => {
+            const isMajors = {};
+            ["minor", "major"].forEach((string, index) => {
+              isMajors[string] = () => this.setScaleIsMajor(Boolean(index));
+            });
+            return isMajors;
+          })(),
+        },
+        exoticScale: {
+          ...(() => {
+            const exoticScales = {};
+            this.scale.exoticScales.forEach((string, index) => {
+              exoticScales[string] = () => this.setScaleExoticScale(string);
+            });
+            return exoticScales;
+          })(),
+        },
+      },
+      _this: this,
+      update() {
+        this.options = this.getOptions();
+        this.optionEntityPool.forEach((optionEntity) => {
+          this._this.hideEntity(optionEntity);
+          optionEntity._available = true;
+        });
+
+        for (const option in this.options) {
+          let optionEntity = this.optionEntityPool.find(
+            (optionEntity) => optionEntity._available
+          );
+          if (!optionEntity) {
+            optionEntity = this.templates.option.content
+              .cloneNode(true)
+              .querySelector(".treeboardOption");
+            optionEntity._text = optionEntity.querySelector("a-text");
+            optionEntity._plane = optionEntity.querySelector("a-plane");
+            this.optionEntityPool.push(optionEntity);
+            this.optionsEntity.appendChild(optionEntity);
+          } else {
+            optionEntity._available = false;
+          }
+          this._this.setText(optionEntity.querySelector("a-text"), option);
+        }
+        
+        // FILL - center or align left if too long...
+        let optionsWidth = 0;
+        const optionEntities = this.optionEntityPool.filter(optionEntity => !optionEntity._isAvailable)
+        this._this.onEntitiesLoaded([...this.optionEntityPool, this.backPlaneEntity], () => {
+          console.log('loaded')
+          this.optionEntityPool.forEach((optionEntity, index) => {
+            optionEntity.object3D.position.x = optionsWidth/10
+            
+            optionsWidth += optionEntity._plane._totalWidth;
+            optionsWidth += this._this.data.gapBetweenOptions;
+          })
+          optionsWidth -= this._this.data.gapBetweenOptions;
+          optionsWidth /= 10;
+          console.log("optionsWidth", optionsWidth)
+          
+          this.backPlaneEntity.setAttribute("width", optionsWidth)
+          this.backPlaneEntity.object3D.position.x = optionsWidth/2;
+          
+          if (optionsWidth > this._this.data.treeboardMaxWidth) {
+            this.optionsEntity.object3D.position.x = 0;
+          }
+          else {
+            this.optionsEntity.object3D.position.x = -optionsWidth/2;
+          }
+        });
+      },
+      getOptions() {
+        let options = this.tree;
+        this.path.every((string) => {
+          options = options[string];
+          return options;
+        });
+        return options;
+      },
+      select(option) {
+        if (option in this.options) {
+          const value = this.options[option];
+          switch (typeof value) {
+            case "object":
+              this.path.push(option);
+              this.update();
+              break;
+            case "function":
+              value();
+              this.reset();
+              break;
+          }
+        } else {
+          console.warn(`no option "${option}"`);
+        }
+      },
+      goBack() {
+        this.path.pop();
+        this.update();
+      },
+      reset() {
+        this.path.length = 0;
+        this.update();
+      },
+      optionEntityPool: [],
+      path: [],
+      pathString: "",
+      pathEntity: this.el.querySelector(".path"),
+      backPlaneEntity: this.el.querySelector(".treeboard .options .back"),
+      optionsEntity: this.el.querySelector(".treeboard .options"),
+      entity: this.el.querySelector(".treeboard"),
+    };
+    this.treeboard.getOptions();
 
     this.el.addEventListener(
       "loaded",
@@ -113,16 +296,50 @@ AFRAME.registerComponent("piano", {
         //this.setScaleRoot("G");
         //this.setScaleIsMajor(false);
         this._onScaleUpdate();
+        this.onEntitiesLoaded(
+          this.pianoKeys.map((key) => key.entity),
+          () => {
+            this.hasPianoLoaded = true;
+            this.onPianoPlacement();
+            this.onModeIndexUpdate();
+            this.treeboard.update();
+          }
+        );
       },
       { once: true }
     );
   },
 
-  tick: function (time, timeDelta) {
-    this.checkTriggeredKeys();
+  updateTextWidth: function (entity) {
+    const text = entity.querySelector("a-text");
+    const plane = entity.querySelector("a-plane");
+    this.onEntityLoaded(plane, () => {
+      const align = text.getAttribute("text").align;
+      const data = text.components.text.data;
+      const totalWidth = data.value.length * (data.width / data.wrapCount);
+      plane.setAttribute("width", totalWidth);
+      plane._totalWidth = totalWidth
+      if (align == "center") {
+        plane.object3D.position.x = 0;
+      } else {
+        let xOffset = totalWidth/2;
+        if (align == "right") {
+          xOffset *= -1;
+        }
+        plane.object3D.position.x = xOffset
+      }
+    });
   },
 
-  checkTriggeredKeys: function () {
+  tick: function (time, timeDelta) {
+    if (this.hasPianoLoaded) {
+      this.checkTriggeredKeys(time, timeDelta);
+      this.checkWristPositions(time, timeDelta);
+      this.checkTreeboardVisibility(time, timeDelta);
+    }
+  },
+
+  checkTriggeredKeys: function (time, timeDelta) {
     const now = Tone.now();
     this.triggeredKeys.forEach((value, key) => {
       let { endTime, shouldRelease, finalEndTime } = value;
@@ -138,6 +355,57 @@ AFRAME.registerComponent("piano", {
         value.shouldRelease = shouldRelease;
       }
     });
+  },
+
+  checkTreeboardVisibility: function (time, timeDelta) {
+    if (
+      time - this.lastTimeHandIsOnDesk[this.data.side] >
+      this.data.treeboardTime
+    ) {
+      this.showEntity(this.treeboard.entity);
+    } else {
+      this.hideEntity(this.treeboard.entity);
+    }
+  },
+
+  onPianoPlacement: function () {
+    const { line3 } = this;
+    this.pianoKeys[0].entity.object3D.getWorldPosition(line3.start);
+
+    this.pianoKeys[this.pianoKeys.length - 1].entity.object3D.getWorldPosition(
+      line3.end
+    );
+  },
+
+  checkWristPositions: function (time, timeDelta) {
+    const { wristPosition, line3 } = this;
+
+    for (const side in this.hands) {
+      const hand = this.hands[side];
+      if (this.isHandVisible(side) && hand.jointsAPI) {
+        let handIndex;
+        hand.jointsAPI.getWrist().getPosition(wristPosition);
+        this.isHandOnDesk[side] =
+          Math.abs(wristPosition.y - this.el.object3D.position.y) <
+          this.data.handDistanceThreshold;
+        if (this.isHandOnDesk[side]) {
+          this.lastTimeHandIsOnDesk[side] = time;
+        }
+        if (this.isHandOnDesk[side]) {
+          const interpolation = line3.closestPointToPointParameter(
+            wristPosition,
+            true
+          );
+          this.pianoKeys.some((key, keyIndex) => {
+            handIndex = keyIndex;
+            return key.interpolation >= interpolation;
+          });
+
+          handIndex += this.handIndexOffsets[side];
+          this.setHandIndex(handIndex, side);
+        }
+      }
+    }
   },
 
   _createPiano: function () {
@@ -218,7 +486,16 @@ AFRAME.registerComponent("piano", {
         box.setAttribute("position", boxPosition.join(" "));
         text.setAttribute("position", textPosition.join(" "));
 
-        const pianoKey = { frequency, entity, box, note, isSharp, _note, text };
+        const pianoKey = {
+          frequency,
+          entity,
+          box,
+          note,
+          isSharp,
+          _note,
+          text,
+          x: position[x],
+        };
         this.pianoKeys.push(pianoKey);
         this.pianoKeysByNote[note] = pianoKey;
         this.pianoKeysEntity.appendChild(entity);
@@ -226,12 +503,17 @@ AFRAME.registerComponent("piano", {
     }
     baseFrequency.dispose();
 
-    const pianoWidth =
-      whiteKeyIndex * (this.keyDimensions.white.x + spaceBetweenWhiteKeys);
+    this.pianoWidth =
+      (whiteKeyIndex - 1) *
+      (this.keyDimensions.white.x + spaceBetweenWhiteKeys);
     this.pianoKeysEntity.setAttribute(
       "position",
-      [-pianoWidth / 2, 0, 0].join(" ")
+      [-this.pianoWidth / 2, 0, 0].join(" ")
     );
+
+    this.pianoKeys.forEach((key, index) => {
+      key.interpolation = key.x / this.pianoWidth;
+    });
   },
 
   getClosestValidPianoKeyIndex: function (index, side) {
@@ -298,6 +580,9 @@ AFRAME.registerComponent("piano", {
     }
   },
 
+  onEntityLoaded: function (entity, callback) {
+    return this.onEntitiesLoaded([entity], callback);
+  },
   onEntitiesLoaded: function (entities, callback) {
     const firstUnloadedEntity = entities.find((entity) => !entity.hasLoaded);
     if (!firstUnloadedEntity) {
@@ -346,7 +631,7 @@ AFRAME.registerComponent("piano", {
   onModeIndexUpdate: function () {
     this.mode = this.modes[this.modeIndex];
     console.log("new mode:", this.mode);
-    this.data.modeText.setAttribute("value", this.mode);
+    this.setText(this.data.modeText, this.mode);
 
     switch (this.mode) {
       case "notes":
@@ -359,6 +644,7 @@ AFRAME.registerComponent("piano", {
       default:
         break;
     }
+    this._onScaleUpdate();
   },
 
   isHandVisible: function (side) {
@@ -381,7 +667,6 @@ AFRAME.registerComponent("piano", {
   setSustain: function (useSustain) {
     if (this.useSustain != useSustain) {
       this.useSustain = useSustain;
-      // TODO - UI indicating useSustain?
       this.setEntityVisibility(this.data.sustainText.parentEl, this.useSustain);
     }
   },
@@ -409,22 +694,46 @@ AFRAME.registerComponent("piano", {
   },
 
   playTaps: function (taps, side) {
-    this.hoveringKeys[side].forEach((hoveringKey, index) => {
-      const playKey = taps[index];
-      if (playKey) {
+    if (!this.isHandOnDesk[side]) {
+      return;
+    }
+
+    const isPerfectMode = this.mode == "perfect";
+    let hoveringKeys = this.hoveringKeys[side];
+    if (side == "left") {
+      hoveringKeys = hoveringKeys.slice().reverse();
+      taps = taps.slice().reverse();
+    }
+    let skips = 0;
+    hoveringKeys.forEach((hoveringKey, index) => {
+      let shouldPlayKey = taps[index];
+      if (shouldPlayKey && isPerfectMode) {
+        let keyIndex = this.pianoKeys.indexOf(hoveringKey);
+        for (let skip = 0; skip < skips; skip++) {
+          keyIndex = this.getNextClosestValidPianoKeyIndex(keyIndex, "right");
+        }
+        hoveringKey = this.pianoKeys[keyIndex];
+        skips++;
+      }
+      if (shouldPlayKey) {
         this.playKey(hoveringKey);
       }
     });
   },
 
   setText: function (text, value, color) {
-    if (value || value == "") {
-      text.setAttribute("value", value);
-      this.showEntity(text.parentEl);
-      if (color) {
-        text.setAttribute("color", color);
+    this.onEntityLoaded(text, () => {
+      if (value || value == "") {
+        text.setAttribute("text", "value", value);
+        if (text.parentEl.querySelector("a-plane")) {
+          this.updateTextWidth(text.parentEl);
+        }
+        this.showEntity(text.parentEl);
+        if (color) {
+          text.setAttribute("color", color);
+        }
       }
-    }
+    });
   },
 
   updateKeyColor: function (key) {
@@ -478,6 +787,7 @@ AFRAME.registerComponent("piano", {
     this._onScaleUpdate();
   },
   setScaleExoticScale: function (exoticScale = -1) {
+    this.setScaleIsMajor(true);
     if (typeof exoticScale == "number") {
       this.scale.exoticScaleIndex = exoticScale;
     } else {
@@ -486,7 +796,10 @@ AFRAME.registerComponent("piano", {
     this._onScaleUpdate();
   },
   _onScaleUpdate: function () {
-    this.scaleKeys = this.scale.keys.map((key) => {
+    const scaleKeys =
+      this.mode == "notes" ? this.scale.allKeys : this.scale.keys;
+
+    this.scaleKeys = scaleKeys.map((key) => {
       if (Array.isArray(key)) {
         return key.find((_key) => _key.includes("#"));
       } else {
@@ -494,7 +807,7 @@ AFRAME.registerComponent("piano", {
       }
     });
 
-    piano.setText(piano.data.scaleText, this.scale.name);
+    this.setText(this.data.scaleText, this.scale.name);
 
     this.pianoKeys.forEach((key) => {
       key.enabled = this.scaleKeys.includes(key._note);

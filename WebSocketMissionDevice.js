@@ -829,7 +829,7 @@ Object.assign(BaseMission, {
 });
 
 class WebSocketGenericBLEPeer extends THREE.EventDispatcher {
-  isLoggingEnabled = true;
+  isLoggingEnabled = !true;
   log() {
     if (this.isLoggingEnabled) {
       console.groupCollapsed(
