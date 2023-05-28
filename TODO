@@ -1,9 +1,7 @@
 Tap Strap Piano
   scale UI
-    animate backPlane when near/far
-    animate options when near/far
     pinch to select
-    drag horizontally with hand (with min/max range)
+    pinch to drag
   song mode (moves towards keys)
     shows all notes
     howl's moving castle

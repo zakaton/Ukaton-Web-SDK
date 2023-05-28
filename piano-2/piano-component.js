@@ -19,7 +19,8 @@ AFRAME.registerComponent("piano", {
     treeboardTime: { type: "number", default: 500 },
     gapBetweenOptions: { type: "number", default: 0.3 },
     treeboardMaxWidth: { type: "number", default: 0.7 },
-    treeboardDistanceThreshold: {type: "number", default: 0.1}
+    treeboardDistanceThreshold: { type: "number", default: 0.1 },
+    treeboardOptionDistanceThreshold: { type: "number", default: 0.1 },
   },
   init: function () {
     window.piano = this;
@@ -85,6 +86,9 @@ AFRAME.registerComponent("piano", {
     });
 
     for (const side in this.hands) {
+      if (side != this.data.side) {
+        continue;
+      }
       const hand = this.hands[side];
       hand.addEventListener("pinchstarted", (event) => {
         this.onPinchStarted(event, side);
@@ -176,6 +180,32 @@ AFRAME.registerComponent("piano", {
           }
         }
       },
+      _isClose: false,
+      get isClose() {
+        return this._isClose;
+      },
+      set isClose(isClose) {
+        if (this._isClose != isClose) {
+          this._isClose = isClose;
+          this.animateBackPlaneEntity(isClose ? "near" : "far");
+          if (!this._isClose) {
+            this.treeboard.isMoving = false;
+          }
+        }
+      },
+
+      _isMoving: false,
+      get isMoving() {
+        return this._isMoving;
+      },
+      set isMoving(isMoving) {
+        if (this._isMoving != isMoving) {
+          this._isMoving = isMoving;
+          if (this.isMoving) {
+            this.optionsEntityStartX = this.optionsEntity.object3D.position.x;
+          }
+        }
+      },
       tree: {
         mode: {
           ...(() => {
@@ -236,7 +266,7 @@ AFRAME.registerComponent("piano", {
       update() {
         this.options = this.getOptions();
         this.optionEntityPool.forEach((optionEntity) => {
-          this.animateOptionEntity(optionEntity, "reset")
+          this.animateOptionEntity(optionEntity, "reset");
           this._this.hideEntity(optionEntity);
           optionEntity._available = true;
         });
@@ -256,24 +286,29 @@ AFRAME.registerComponent("piano", {
               .querySelector(".treeboardOption");
             optionEntity._text = optionEntity.querySelector("a-text");
             optionEntity._plane = optionEntity.querySelector("a-plane");
+            optionEntity._box = new THREE.Box3();
             this.optionEntityPool.push(optionEntity);
             this.optionsEntity.appendChild(optionEntity);
           } else {
             optionEntity._available = false;
+            optionEntity._isNear = false;
+            optionEntity._isPinched = false;
           }
+          optionEntity._option = option;
           this._this.showEntity(optionEntity);
           this._this.setText(optionEntity.querySelector("a-text"), option);
         }
 
         let optionsWidth = 0;
-        const optionEntities = this.optionEntityPool.filter(
+        this.optionEntities = this.optionEntityPool.filter(
           (optionEntity) => !optionEntity._available
         );
         this._this.onEntitiesLoaded(
-          [...optionEntities, this.backPlaneEntity],
+          [...this.optionEntities, this.backPlaneEntity],
           () => {
-            optionEntities.forEach((optionEntity, index) => {
+            this.optionEntities.forEach((optionEntity, index) => {
               optionEntity.object3D.position.x = optionsWidth / 10;
+              optionEntity._box.setFromObject(optionEntity.object3D);
 
               optionsWidth += optionEntity._plane._totalWidth;
               optionsWidth += this._this.data.gapBetweenOptions;
@@ -289,6 +324,11 @@ AFRAME.registerComponent("piano", {
             } else {
               this.optionsEntity.object3D.position.x = -optionsWidth / 2;
             }
+            this.optionsWidth = optionsWidth;
+
+            this.optionsEntity._box =
+              this.optionsEntity._box || new THREE.Box3();
+            this.optionsEntity._box.setFromObject(this.optionsEntity.object3D);
           }
         );
       },
@@ -326,12 +366,16 @@ AFRAME.registerComponent("piano", {
         this.update();
       },
       optionEntityPool: [],
+      optionEntities: [],
       path: [],
       pathString: "",
       pathEntity: this.el.querySelector(".path"),
       backPlaneEntity: this.el.querySelector(".treeboard .options .back"),
       optionsEntity: this.el.querySelector(".treeboard .options"),
       entity: this.el.querySelector(".treeboard"),
+      getNearOptionEntity() {
+        return this.optionEntities.find((optionEntity) => optionEntity._isNear);
+      },
     };
     this.treeboard.getOptions();
 
@@ -357,13 +401,31 @@ AFRAME.registerComponent("piano", {
   },
 
   onPinchStarted: function (event, side) {
-    // FILL
+    if (this.treeboard.isClose) {
+      const optionEntity = this.treeboard.getNearOptionEntity();
+      if (optionEntity) {
+        this.treeboard.animateOptionEntity(optionEntity, "pinch");
+        optionEntity._isPinched = true;
+      }
+      // FILL - get start pinch position
+      this.treeboard.isMoving = true;
+    }
   },
   onPinchMoved: function (event, side) {
-    // FILL
+    if (this.treeboard.isMoving) {
+      // this.treeboard.optionsEntity, this.treeboard.optionsWidth, this.treeboard.optionsEntityStartX
+      // FILL - move
+      // FILL - remove "pinched" if moved "too far"
+    }
   },
   onPinchEnded: function (event, side) {
-    // FILL
+    if (this.treeboard.isMoving) {
+      this.treeboard.isMoving = false;
+      const optionEntity = this.treeboard.getNearOptionEntity();
+      if (optionEntity?._isPinched) {
+        this.treeboard.selectOption(optionEntity._option);
+      }
+    }
   },
 
   updateTextWidth: function (entity) {
@@ -464,17 +526,54 @@ AFRAME.registerComponent("piano", {
 
   checkHandsForTreeboard: function (time, timeDelta) {
     const { indexTipPosition, indexTipDistance, entityPosition } = this;
-    
+
     if (this.treeboard.isVisible) {
       for (const side in this.hands) {
+        if (side != this.data.side) {
+          return;
+        }
+
         if (!this.isHandOnDesk[side]) {
           const hand = this.hands[side];
           hand.jointsAPI.getIndexTip().getPosition(indexTipPosition);
-          this.treeboard.backPlaneEntity.object3D.getWorldPosition(entityPosition);
-          if (indexTipPosition.distanceTo(entityPosition) < this.data.treeboardDistanceThreshold) {
-            // FILL - close to plane
+          this.treeboard.backPlaneEntity.object3D.getWorldPosition(
+            entityPosition
+          );
+
+          this.treeboard.isClose =
+            this.treeboard.optionsEntity._box.distanceToPoint(
+              indexTipPosition
+            ) < this.data.treeboardDistanceThreshold;
+          if (this.treeboard.isClose) {
+            let closestOptionEntity;
+            let closestOptionEntityDistance = Infinity;
+            this.treeboard.optionEntities.forEach((optionEntity) => {
+              const distanceToOptionEntity =
+                optionEntity._box.distanceToPoint(indexTipPosition);
+              if (
+                distanceToOptionEntity <
+                this.data.treeboardOptionDistanceThreshold
+              ) {
+                if (distanceToOptionEntity < closestOptionEntityDistance) {
+                  closestOptionEntityDistance = distanceToOptionEntity;
+                  closestOptionEntity = optionEntity;
+                }
+              }
+            });
+            if (closestOptionEntity) {
+              if (!closestOptionEntity._isNear) {
+                this.treeboard.optionEntities.forEach((optionEntity) => {
+                  if (optionEntity._isNear) {
+                    optionEntity._isNear = false;
+                    this.treeboard.animateOptionEntity(optionEntity, "far");
+                  }
+                });
+
+                closestOptionEntity._isNear = true;
+                this.treeboard.animateOptionEntity(closestOptionEntity, "near");
+              }
+            }
           }
-          // FILL - get distance to each option
           break;
         }
       }

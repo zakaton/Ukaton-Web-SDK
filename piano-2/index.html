@@ -1,7 +1,7 @@
 <html>
   <head>
     <title>Piano WebXR</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="/aframe-1.4.0.min.js"></script>
     <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
     <script src="/BaseMission.js"></script>
     <script src="/WebSocketMissionDevice.js"></script>
@@ -135,7 +135,8 @@
               color="white"
               material="shader: flat;"
               position="0 0 -0.001"
-              animation__near="property: components.material.material.color; type: color; to: #c1ffbd; startEvents: near; dur: 100"
+              animation__near="property: components.material.material.color; type: color; to: #bdfffe; startEvents: near; dur: 100"
+              animation__pinch="property: components.material.material.color; type: color; to: #c1ffbd; startEvents: pinch; dur: 100"
               animation__far="property: components.material.material.color; type: color; to: white; startEvents: far; dur: 100"
               animation__reset="property: components.material.material.color; type: color; to: white; startEvents: reset; dur: 0"
             ></a-plane>
