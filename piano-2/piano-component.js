@@ -19,8 +19,9 @@ AFRAME.registerComponent("piano", {
     treeboardTime: { type: "number", default: 500 },
     gapBetweenOptions: { type: "number", default: 0.3 },
     treeboardMaxWidth: { type: "number", default: 0.7 },
-    treeboardDistanceThreshold: { type: "number", default: 0.1 },
-    treeboardOptionDistanceThreshold: { type: "number", default: 0.1 },
+    treeboardDistanceThreshold: { type: "number", default: 0.05 },
+    treeboardOptionDistanceThreshold: { type: "number", default: 0.05 },
+    dragDistanceThreshold: { type: "number", default: 0.1 },
   },
   init: function () {
     window.piano = this;
@@ -50,6 +51,7 @@ AFRAME.registerComponent("piano", {
     this.indexTipPosition = new THREE.Vector3();
     this.indexTipDistance = new THREE.Vector3();
     this.entityPosition = new THREE.Vector3();
+    this.pinchDrag = new THREE.Vector3();
     this.line3 = new THREE.Line3();
     this.isHandOnDesk = {
       left: true,
@@ -161,6 +163,405 @@ AFRAME.registerComponent("piano", {
       100,
       this
     );
+    
+    // B flat
+    this.songKey = {
+      root: "A",
+      pitch: "sharp"
+    }
+    // https://youtu.be/jGSuTdHEthc?t=56
+    this.songNotes = [
+      {
+        hand: "left",
+        notes: ["G2"],
+        start: 0,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["G3", "A#3"],
+        start: 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["G3", "A#3"],
+        start: 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["D2"],
+        start: 1,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["G3", "A#3"],
+        start: 1 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["G3", "A#3"],
+        start: 1 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["G2"],
+        start: 2,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["G3", "A#3"],
+        start: 2 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["G3", "A#3"],
+        start: 2 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["D2"],
+        start: 3,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["D4"],
+        start: 3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["G4"],
+        start: 3 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["A#4"],
+        start: 3 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["C3"],
+        start: 4,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["D5"],
+        start: 4,
+        duration: 2/3
+      },
+      {
+        hand: "right",
+        notes: ["D5"],
+        start: 4 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["D3"],
+        start: 5,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["C5"],
+        start: 5,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["A#4"],
+        start: 5 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["A4"],
+        start: 5 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["G2"],
+        start: 6,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["A#4"],
+        start: 6,
+        duration: 1
+      },
+      
+      {
+        hand: "left",
+        notes: ["G2"],
+        start: 7,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["G4"],
+        start: 7,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["A#4"],
+        start: 7 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["D5"],
+        start: 7 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["C3"],
+        start: 8,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["G5"],
+        start: 8,
+        duration: 2/3
+      },
+      {
+        hand: "right",
+        notes: ["G5"],
+        start: 8 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["F3"],
+        start: 9,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["G5"],
+        start: 9,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["F5"],
+        start: 9 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["D#5"],
+        start: 9 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["A#2"],
+        start: 10,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["F5"],
+        start: 10,
+        duration: 1
+      },
+      
+      {
+        hand: "left",
+        notes: ["F2"],
+        start: 11,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["A4"],
+        start: 11,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["D5"],
+        start: 11 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["F5"],
+        start: 11 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["E2"],
+        start: 12,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["A5"],
+        start: 12,
+        duration: 2/3
+      },
+      {
+        hand: "right",
+        notes: ["G5"],
+        start: 12 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["A2"],
+        start: 13,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["F5"],
+        start: 13,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["E5"],
+        start: 13 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["F5"],
+        start: 13 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["D2"],
+        start: 14,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["G5"],
+        start: 14,
+        duration: 2/3
+      },
+      {
+        hand: "right",
+        notes: ["F5"],
+        start: 14 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["C2"],
+        start: 15,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["E5"],
+        start: 15,
+        duration: 2/3
+      },
+      {
+        hand: "right",
+        notes: ["D5"],
+        start: 15 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["A#2"],
+        start: 16,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["C5"],
+        start: 16,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["A#4"],
+        start: 16 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["C5"],
+        start: 16 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["A2"],
+        start: 17,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["D5"],
+        start: 17,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["C5"],
+        start: 17 + 1/3,
+        duration: 1/3
+      },
+      {
+        hand: "right",
+        notes: ["G4"],
+        start: 17 + 2/3,
+        duration: 1/3
+      },
+      
+      {
+        hand: "left",
+        notes: ["D3"],
+        start: 18,
+        duration: 1
+      },
+      {
+        hand: "right",
+        notes: ["A4"],
+        start: 18,
+        duration: 1
+      },
+    ];
 
     this.treeboard = {
       templates: {
@@ -189,7 +590,7 @@ AFRAME.registerComponent("piano", {
           this._isClose = isClose;
           this.animateBackPlaneEntity(isClose ? "near" : "far");
           if (!this._isClose) {
-            this.treeboard.isMoving = false;
+            this.isMoving = false;
           }
         }
       },
@@ -247,7 +648,7 @@ AFRAME.registerComponent("piano", {
         },
         exoticScale: {
           ...(() => {
-            const exoticScales = {};
+            const exoticScales = { none: () => this.setScaleExoticScale() };
             this.scale.exoticScales.forEach((string, index) => {
               exoticScales[string] = () => this.setScaleExoticScale(string);
             });
@@ -276,7 +677,8 @@ AFRAME.registerComponent("piano", {
           `/${this.path.join("/")}`
         );
 
-        for (const option in this.options) {
+        
+        const addOption = (option) => {
           let optionEntity = this.optionEntityPool.find(
             (optionEntity) => optionEntity._available
           );
@@ -298,6 +700,12 @@ AFRAME.registerComponent("piano", {
           this._this.showEntity(optionEntity);
           this._this.setText(optionEntity.querySelector("a-text"), option);
         }
+                if (this.path.length > 0 && !this.options["go back"]) {
+          addOption("go back")
+        }
+        for (const option in this.options) {
+          addOption(option);
+        }
 
         let optionsWidth = 0;
         this.optionEntities = this.optionEntityPool.filter(
@@ -308,7 +716,6 @@ AFRAME.registerComponent("piano", {
           () => {
             this.optionEntities.forEach((optionEntity, index) => {
               optionEntity.object3D.position.x = optionsWidth / 10;
-              optionEntity._box.setFromObject(optionEntity.object3D);
 
               optionsWidth += optionEntity._plane._totalWidth;
               optionsWidth += this._this.data.gapBetweenOptions;
@@ -326,11 +733,18 @@ AFRAME.registerComponent("piano", {
             }
             this.optionsWidth = optionsWidth;
 
-            this.optionsEntity._box =
-              this.optionsEntity._box || new THREE.Box3();
-            this.optionsEntity._box.setFromObject(this.optionsEntity.object3D);
+            this.updateBoxes();
           }
         );
+      },
+      updateBoxes() {
+        setTimeout(() => {
+          this.optionEntities.forEach((optionEntity, index) => {
+            optionEntity._box.setFromObject(optionEntity.object3D);
+          });
+          this.optionsEntity._box = this.optionsEntity._box || new THREE.Box3();
+          this.optionsEntity._box.setFromObject(this.optionsEntity.object3D);
+        }, 100);
       },
       getOptions() {
         let options = this.tree;
@@ -354,7 +768,12 @@ AFRAME.registerComponent("piano", {
               break;
           }
         } else {
+          if (option == "go back") {
+            this.goBack();
+          }
+          else {
           console.warn(`no option "${option}"`);
+          }
         }
       },
       goBack() {
@@ -401,29 +820,55 @@ AFRAME.registerComponent("piano", {
   },
 
   onPinchStarted: function (event, side) {
-    if (this.treeboard.isClose) {
-      const optionEntity = this.treeboard.getNearOptionEntity();
-      if (optionEntity) {
-        this.treeboard.animateOptionEntity(optionEntity, "pinch");
-        optionEntity._isPinched = true;
+    if (this.treeboard.isClose && !this.treeboard.isMoving) {
+      const nearOption = this.treeboard.getNearOptionEntity();
+      if (nearOption) {
+        this.treeboard.animateOptionEntity(nearOption, "pinch");
+        nearOption._isPinched = true;
       }
-      // FILL - get start pinch position
+      this.hands[side].isPinching = true;
+      const { position } = event.detail;
+      this.startPinchPosition = position.clone();
+      console.log("FROM", this.startPinchPosition)
       this.treeboard.isMoving = true;
     }
   },
   onPinchMoved: function (event, side) {
     if (this.treeboard.isMoving) {
-      // this.treeboard.optionsEntity, this.treeboard.optionsWidth, this.treeboard.optionsEntityStartX
-      // FILL - move
-      // FILL - remove "pinched" if moved "too far"
+      const { position } = event.detail;
+      this.pinchDrag.subVectors(position, this.startPinchPosition);
+
+      const nearOption = this.treeboard.getNearOptionEntity();
+      if (
+        nearOption &&
+        Math.abs(this.pinchDrag.x) > this.data.dragDistanceThreshold
+      ) {
+        if (nearOption) {
+          this.treeboard.animateOptionEntity(nearOption, "far");
+          nearOption._isPinched = false;
+        }
+      }
+      
+      let optionsEntityStartX =
+        this.treeboard.optionsEntityStartX + this.pinchDrag.x;
+      optionsEntityStartX = THREE.MathUtils.clamp(
+        optionsEntityStartX,
+        -this.treeboard.optionsWidth,
+        this.treeboard.optionsWidth / 2
+      );
+      this.treeboard.optionsEntity.object3D.position.x = optionsEntityStartX;
+
+      this.treeboard.updateBoxes();
     }
   },
   onPinchEnded: function (event, side) {
+    this.hands[side].isPinching = false;
+
     if (this.treeboard.isMoving) {
       this.treeboard.isMoving = false;
       const optionEntity = this.treeboard.getNearOptionEntity();
       if (optionEntity?._isPinched) {
-        this.treeboard.selectOption(optionEntity._option);
+        this.treeboard.select(optionEntity._option);
       }
     }
   },
@@ -478,7 +923,6 @@ AFRAME.registerComponent("piano", {
   },
 
   checkTreeboardVisibility: function (time, timeDelta) {
-    return; // FIX
     this.treeboard.isVisible =
       time - this.lastTimeHandIsOnDesk[this.data.side] >
       this.data.treeboardTime;
@@ -530,7 +974,7 @@ AFRAME.registerComponent("piano", {
     if (this.treeboard.isVisible) {
       for (const side in this.hands) {
         if (side != this.data.side) {
-          return;
+          continue;
         }
 
         if (!this.isHandOnDesk[side]) {
@@ -560,18 +1004,23 @@ AFRAME.registerComponent("piano", {
                 }
               }
             });
-            if (closestOptionEntity) {
-              if (!closestOptionEntity._isNear) {
-                this.treeboard.optionEntities.forEach((optionEntity) => {
-                  if (optionEntity._isNear) {
-                    optionEntity._isNear = false;
-                    this.treeboard.animateOptionEntity(optionEntity, "far");
-                  }
-                });
+            const nearOption = this.treeboard.getNearOptionEntity();
+            if (nearOption && closestOptionEntity != nearOption) {
+              nearOption._isNear = false;
+              this.treeboard.animateOptionEntity(nearOption, "far");
+            }
 
+            if (closestOptionEntity && !hand.isPinching) {
+              if (!closestOptionEntity._isNear) {
                 closestOptionEntity._isNear = true;
                 this.treeboard.animateOptionEntity(closestOptionEntity, "near");
               }
+            }
+          } else {
+            const nearOption = this.treeboard.getNearOptionEntity();
+            if (nearOption) {
+              nearOption._isNear = false;
+              this.treeboard.animateOptionEntity(nearOption, "far");
             }
           }
           break;

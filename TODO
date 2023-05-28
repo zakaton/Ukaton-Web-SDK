@@ -1,10 +1,8 @@
 Tap Strap Piano
-  scale UI
-    pinch to select
-    pinch to drag
-  song mode (moves towards keys)
-    shows all notes
-    howl's moving castle
+  song mode
+    move blocks towards keys
+    "autoplay" feature to test keys
+    
     
 IP
   rightForearm: 192.168.4.52
