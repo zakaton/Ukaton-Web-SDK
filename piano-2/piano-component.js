@@ -10,7 +10,7 @@ AFRAME.registerComponent("piano", {
     camera: { type: "selector", default: "[camera]" },
     scaleText: { type: "selector" },
     octaves: { type: "number", default: 6 },
-    octaveStart: { type: "number", default: 2 },
+    octaveStart: { type: "number", default: 1 },
     whiteKeyDimensions: { type: "vec3", default: { x: 23.75, y: 15, z: 150 } },
     blackKeyDimensions: { type: "vec3", default: { x: 12.5, y: 6, z: 90 } },
     spaceBetweenWhiteKeys: { type: "number", default: 1 },
@@ -22,6 +22,9 @@ AFRAME.registerComponent("piano", {
     treeboardDistanceThreshold: { type: "number", default: 0.05 },
     treeboardOptionDistanceThreshold: { type: "number", default: 0.05 },
     dragDistanceThreshold: { type: "number", default: 0.1 },
+    playSongKeys: { type: "boolean", default: true },
+    songScalar: { type: "vec3", default: { x: 1, y: 1, z: 0.2 } },
+    songKeyGap: { type: "number", default: 0.01 },
   },
   init: function () {
     window.piano = this;
@@ -114,6 +117,7 @@ AFRAME.registerComponent("piano", {
     this.scale.isPerfect = true;
 
     this.pianoKeysEntity = this.el.querySelector(".keys");
+    this.songKeysEntity = this.el.querySelector(".song");
     this.highlightColors = {
       left: {
         white: {
@@ -163,403 +167,415 @@ AFRAME.registerComponent("piano", {
       100,
       this
     );
-    
-    // B flat
-    this.songKey = {
+
+    // B flat major
+    this.songScale = {
       root: "A",
-      pitch: "sharp"
-    }
+      pitch: "sharp",
+      isMajor: true,
+      set: () => {
+        const { root, pitch, isMajor } = this.songScale;
+        this.setScaleIsMajor(isMajor);
+        this.setScaleRoot(root);
+        this.setScalePitch(pitch);
+      },
+      reset: () => {
+        this.setScaleIsMajor(true);
+        this.setScaleRoot("C");
+        this.setScalePitch("natural");
+      },
+    };
     // https://youtu.be/jGSuTdHEthc?t=56
     this.songNotes = [
       {
-        hand: "left",
+        side: "left",
         notes: ["G2"],
         start: 0,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G3", "A#3"],
-        start: 1/3,
-        duration: 1/3
+        start: 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G3", "A#3"],
-        start: 2/3,
-        duration: 1/3
+        start: 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["D2"],
         start: 1,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G3", "A#3"],
-        start: 1 + 1/3,
-        duration: 1/3
+        start: 1 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G3", "A#3"],
-        start: 1 + 2/3,
-        duration: 1/3
+        start: 1 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["G2"],
         start: 2,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G3", "A#3"],
-        start: 2 + 1/3,
-        duration: 1/3
+        start: 2 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G3", "A#3"],
-        start: 2 + 2/3,
-        duration: 1/3
+        start: 2 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["D2"],
         start: 3,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["D4"],
         start: 3,
-        duration: 1/3
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G4"],
-        start: 3 + 1/3,
-        duration: 1/3
+        start: 3 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A#4"],
-        start: 3 + 2/3,
-        duration: 1/3
+        start: 3 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["C3"],
         start: 4,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["D5"],
         start: 4,
-        duration: 2/3
+        duration: 2 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["D5"],
-        start: 4 + 2/3,
-        duration: 1/3
+        start: 4 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["D3"],
         start: 5,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["C5"],
         start: 5,
-        duration: 1/3
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A#4"],
-        start: 5 + 1/3,
-        duration: 1/3
+        start: 5 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A4"],
-        start: 5 + 2/3,
-        duration: 1/3
+        start: 5 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["G2"],
         start: 6,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A#4"],
         start: 6,
-        duration: 1
+        duration: 1,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["G2"],
         start: 7,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G4"],
         start: 7,
-        duration: 1/3
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A#4"],
-        start: 7 + 1/3,
-        duration: 1/3
+        start: 7 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["D5"],
-        start: 7 + 2/3,
-        duration: 1/3
+        start: 7 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["C3"],
         start: 8,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G5"],
         start: 8,
-        duration: 2/3
+        duration: 2 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G5"],
-        start: 8 + 2/3,
-        duration: 1/3
+        start: 8 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["F3"],
         start: 9,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G5"],
         start: 9,
-        duration: 1/3
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["F5"],
-        start: 9 + 1/3,
-        duration: 1/3
+        start: 9 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["D#5"],
-        start: 9 + 2/3,
-        duration: 1/3
+        start: 9 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["A#2"],
         start: 10,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["F5"],
         start: 10,
-        duration: 1
+        duration: 1,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["F2"],
         start: 11,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A4"],
         start: 11,
-        duration: 1/3
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["D5"],
-        start: 11 + 1/3,
-        duration: 1/3
+        start: 11 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["F5"],
-        start: 11 + 2/3,
-        duration: 1/3
+        start: 11 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["E2"],
         start: 12,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A5"],
         start: 12,
-        duration: 2/3
+        duration: 2 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G5"],
-        start: 12 + 2/3,
-        duration: 1/3
+        start: 12 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["A2"],
         start: 13,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["F5"],
         start: 13,
-        duration: 1/3
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["E5"],
-        start: 13 + 1/3,
-        duration: 1/3
+        start: 13 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["F5"],
-        start: 13 + 2/3,
-        duration: 1/3
+        start: 13 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["D2"],
         start: 14,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G5"],
         start: 14,
-        duration: 2/3
+        duration: 2 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["F5"],
-        start: 14 + 2/3,
-        duration: 1/3
+        start: 14 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["C2"],
         start: 15,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["E5"],
         start: 15,
-        duration: 2/3
+        duration: 2 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["D5"],
-        start: 15 + 2/3,
-        duration: 1/3
+        start: 15 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["A#2"],
         start: 16,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["C5"],
         start: 16,
-        duration: 1/3
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A#4"],
-        start: 16 + 1/3,
-        duration: 1/3
+        start: 16 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["C5"],
-        start: 16 + 2/3,
-        duration: 1/3
+        start: 16 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["A2"],
         start: 17,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["D5"],
         start: 17,
-        duration: 1/3
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["C5"],
-        start: 17 + 1/3,
-        duration: 1/3
+        start: 17 + 1 / 3,
+        duration: 1 / 3,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["G4"],
-        start: 17 + 2/3,
-        duration: 1/3
+        start: 17 + 2 / 3,
+        duration: 1 / 3,
       },
-      
+
       {
-        hand: "left",
+        side: "left",
         notes: ["D3"],
         start: 18,
-        duration: 1
+        duration: 1,
       },
       {
-        hand: "right",
+        side: "right",
         notes: ["A4"],
         start: 18,
-        duration: 1
+        duration: 1,
       },
     ];
 
@@ -677,7 +693,6 @@ AFRAME.registerComponent("piano", {
           `/${this.path.join("/")}`
         );
 
-        
         const addOption = (option) => {
           let optionEntity = this.optionEntityPool.find(
             (optionEntity) => optionEntity._available
@@ -699,9 +714,9 @@ AFRAME.registerComponent("piano", {
           optionEntity._option = option;
           this._this.showEntity(optionEntity);
           this._this.setText(optionEntity.querySelector("a-text"), option);
-        }
-                if (this.path.length > 0 && !this.options["go back"]) {
-          addOption("go back")
+        };
+        if (this.path.length > 0 && !this.options["go back"]) {
+          addOption("go back");
         }
         for (const option in this.options) {
           addOption(option);
@@ -770,9 +785,8 @@ AFRAME.registerComponent("piano", {
         } else {
           if (option == "go back") {
             this.goBack();
-          }
-          else {
-          console.warn(`no option "${option}"`);
+          } else {
+            console.warn(`no option "${option}"`);
           }
         }
       },
@@ -810,6 +824,7 @@ AFRAME.registerComponent("piano", {
           () => {
             this.hasPianoLoaded = true;
             this.onPianoPlacement();
+            this.setupSong();
             this.onModeIndexUpdate();
             this.treeboard.update();
           }
@@ -829,7 +844,7 @@ AFRAME.registerComponent("piano", {
       this.hands[side].isPinching = true;
       const { position } = event.detail;
       this.startPinchPosition = position.clone();
-      console.log("FROM", this.startPinchPosition)
+      console.log("FROM", this.startPinchPosition);
       this.treeboard.isMoving = true;
     }
   },
@@ -848,7 +863,7 @@ AFRAME.registerComponent("piano", {
           nearOption._isPinched = false;
         }
       }
-      
+
       let optionsEntityStartX =
         this.treeboard.optionsEntityStartX + this.pinchDrag.x;
       optionsEntityStartX = THREE.MathUtils.clamp(
@@ -901,6 +916,9 @@ AFRAME.registerComponent("piano", {
       this.checkWristPositions(time, timeDelta);
       this.checkTreeboardVisibility(time, timeDelta);
       this.checkHandsForTreeboard(time, timeDelta);
+      if (this.isSongPlaying) {
+        this.songTick(time, timeDelta);
+      }
     }
   },
 
@@ -1256,17 +1274,115 @@ AFRAME.registerComponent("piano", {
 
     switch (this.mode) {
       case "notes":
-      case "song":
         this.hideEntity(this.data.scaleText.parentEl);
         break;
       case "scale":
       case "perfect":
+      case "song":
         this.showEntity(this.data.scaleText.parentEl);
         break;
       default:
         break;
     }
+
+    if (this.mode == "song") {
+      this.startSong();
+    } else {
+      this.stopSong();
+    }
+
     this._onScaleUpdate();
+  },
+
+  setupSong: function () {
+    this.songNotes.forEach((songNote, index) => {
+      const { side, notes, start, duration } = songNote;
+      const pianoKeys = notes.map((note) => this.pianoKeysByNote[note]);
+      songNote.keys = pianoKeys.map((pianoKey) => {
+        const songKey = Object.assign({}, pianoKey);
+        songKey.entity = pianoKey.entity.cloneNode(true);
+        songKey.box = songKey.entity.querySelector("a-box");
+        songKey.isHovering = true;
+        songKey.enabled = true;
+        songKey.side = side;
+        return songKey;
+      });
+
+      songNote.keys.forEach((songKey) => {
+        this.onEntityLoaded(songKey.entity, () => {
+          const boxDepth =
+            duration * this.data.songScalar.z - this.data.songKeyGap;
+          const boxPosition = songKey.box.object3D.position;
+          boxPosition.z = -boxDepth / 2;
+
+          songKey.box.setAttribute("depth", boxDepth);
+
+          const position = songKey.entity.object3D.position;
+          position.z = -start * this.data.songScalar.z;
+          songKey.entity._z = position.z;
+        });
+        this.updateKeyColor(songKey);
+        this.songKeysEntity.appendChild(songKey.entity);
+      });
+    });
+  },
+  startSong: function () {
+    this.clearInstrument();
+    this.isSongPlaying = true;
+    this.songScale.set();
+    this.songStartTime = Tone.now() + 1;
+    this.songNotes.forEach((songNote) => {
+      const { keys } = songNote;
+      songNote.didPlay = false;
+      songNote.didFinish = false;
+      keys.forEach((key) => {
+        key.entity.object3D.scale.z = 1;
+        key.entity.object3D.position.z = key.entity._z;
+        this.showEntity(key.entity);
+      });
+    });
+    this.showEntity(this.songKeysEntity);
+  },
+  stopSong: function () {
+    if (this.isSongPlaying) {
+      this.isSongPlaying = false;
+      this.hideEntity(this.songKeysEntity);
+      this.songScale.reset();
+      this.clearInstrument();
+    }
+  },
+  songTick: function (time, timeDelta) {
+    const now = Tone.now();
+    const songTime = now - this.songStartTime;
+    this.songKeysEntity.object3D.position.z = songTime * this.data.songScalar.z;
+    this.songNotes.forEach((songNote) => {
+      const { keys, start, duration, notes } = songNote;
+      if (songTime >= start) {
+        if (!songNote.didPlay) {
+          songNote.didPlay = true;
+          if (this.data.playSongKeys) {
+            notes.forEach((note) => {
+              this.playKey(this.pianoKeysByNote[note], duration);
+            });
+          }
+        }
+
+        if (songTime >= start + duration && !songNote.didFinish) {
+          songNote.didFinish = true;
+          keys.forEach((key) => {
+            this.hideEntity(key.entity);
+          });
+        } else {
+          const durationInterpolation = 1 - (songTime - start) / duration;
+          keys.forEach((key) => {
+            key.entity.object3D.scale.z = durationInterpolation;
+            key.entity.object3D.position.z = -songTime * this.data.songScalar.z;
+
+            // FILL - counter position
+          });
+        }
+      }
+    });
   },
 
   isHandVisible: function (side) {
@@ -1299,7 +1415,7 @@ AFRAME.registerComponent("piano", {
     return 69 + (12 * Math.log(pitch / this.A4)) / Math.LN2;
   },
 
-  playKey: function (key) {
+  playKey: function (key, release = this.data.release) {
     key.isPlaying = true;
     this.instrument.triggerRelease(key.note);
     this.instrument.triggerAttack(key.note);
@@ -1307,7 +1423,7 @@ AFRAME.registerComponent("piano", {
     this.updateKeyColor(key);
     const triggeredNote = {
       startTime: Tone.now(),
-      endTime: Tone.now() + this.data.release,
+      endTime: Tone.now() + release,
       finalEndTime: Tone.now() + 5,
     };
     this.triggeredKeys.set(key, triggeredNote);
@@ -1423,7 +1539,7 @@ AFRAME.registerComponent("piano", {
     this._onScaleUpdate();
   },
   _onScaleUpdate: function () {
-    const useAllKeys = this.mode == "notes" || this.mode == "song";
+    const useAllKeys = this.mode == "notes";
     const scaleKeys = useAllKeys ? this.scale.allKeys : this.scale.keys;
 
     this.scaleKeys = scaleKeys.map((key) => {
@@ -1438,6 +1554,10 @@ AFRAME.registerComponent("piano", {
 
     this.pianoKeys.forEach((key) => {
       key.enabled = this.scaleKeys.includes(key._note);
+      if (this.mode == "song") {
+        // SONG EXCEPTIONS
+        key.enabled = key.enabled || key._note == "E";
+      }
       this.updateKeyColor(key);
     });
 

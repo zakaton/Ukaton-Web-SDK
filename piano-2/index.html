@@ -2,11 +2,11 @@
   <head>
     <title>Piano WebXR</title>
     <script src="/aframe-1.4.0.min.js"></script>
-    <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
+    <script src="/aframe-hand-tracking-controls-extras.js"></script>
     <script src="/BaseMission.js"></script>
     <script src="/WebSocketMissionDevice.js"></script>
     <script src="/TapStrap.js"></script>
-    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    <script src="/Tone.js"></script>
     <script src="/piano-2/scales.js"></script>
     <script src="/piano-2/instruments/index.js" type="module"></script>
     <script src="/piano-2/piano-component.js" defer></script>
@@ -82,6 +82,7 @@
         <a-entity class="treeboard" position="0 0.2 0" visible="false">
           <a-entity class="path" position="0 0.05 0" scale="0.1 0.1 0.1">
             <a-text
+              font="/Roboto-msdf.json"
               class="text"
               value=""
               color="black"
@@ -122,6 +123,7 @@
             animation__reset="property: scale; to: 0.1 0.1 0.1; startEvents: reset; dur: 0"
           >
             <a-text
+              font="/Roboto-msdf.json"
               class="text"
               value=""
               color="black"
@@ -145,6 +147,7 @@
 
         <a-entity position="-0.4 0.1 0" scale="0.1 0.1 0.1">
           <a-text
+            font="/Roboto-msdf.json"
             id="modeText"
             value=""
             color="black"
@@ -166,6 +169,7 @@
 
         <a-entity position="0 0.1 0" scale="0.1 0.1 0.1">
           <a-text
+            font="/Roboto-msdf.json"
             id="scaleText"
             value=""
             color="black"
@@ -187,6 +191,7 @@
 
         <a-entity position="0.3 0.1 0" scale="0.1 0.1 0.1" visible="false">
           <a-text
+            font="/Roboto-msdf.json"
             id="sustainText"
             value="sustain"
             color="black"
@@ -213,6 +218,7 @@
             animation__rotateUp="property: rotation.x; to: 0; startEvents: up; dur: 100"
           >
             <a-text
+              font="/Roboto-msdf.json"
               scale="0.1 0.1 0.1"
               rotation="-90 0 0"
               value=""
@@ -230,6 +236,7 @@
             animation__rotateUp="property: rotation.x; to: 0; startEvents: up; dur: 100"
           >
             <a-text
+              font="/Roboto-msdf.json"
               scale="0.1 0.1 0.1"
               rotation="-90 0 0"
               value=""
@@ -240,7 +247,9 @@
             <a-box color="black"></a-box>
           </a-entity>
         </template>
-        <a-entity class="keys"></a-entity>
+        <a-entity class="keys">
+          <a-entity class="song" visible="false"></a-entity>
+        </a-entity>
       </a-entity>
     </a-scene>
   </body>

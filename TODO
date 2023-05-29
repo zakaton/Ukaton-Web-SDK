@@ -1,8 +1,12 @@
 Tap Strap Piano
-  song mode
-    move blocks towards keys
-    "autoplay" feature to test keys
-    
+  test song
+  demo
+    play notes
+    play scale
+    play perfect
+    change scale
+    try exotic scale
+    play song
     
 IP
   rightForearm: 192.168.4.52
