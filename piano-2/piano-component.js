@@ -824,7 +824,6 @@ AFRAME.registerComponent("piano", {
           () => {
             this.hasPianoLoaded = true;
             this.onPianoPlacement();
-            this.setupSong();
             this.onModeIndexUpdate();
             this.treeboard.update();
           }
@@ -844,7 +843,6 @@ AFRAME.registerComponent("piano", {
       this.hands[side].isPinching = true;
       const { position } = event.detail;
       this.startPinchPosition = position.clone();
-      console.log("FROM", this.startPinchPosition);
       this.treeboard.isMoving = true;
     }
   },
@@ -1295,6 +1293,11 @@ AFRAME.registerComponent("piano", {
   },
 
   setupSong: function () {
+    if (this.didSetupSong) {
+      return;
+    }
+    this.didSetupSong = true;
+
     this.songNotes.forEach((songNote, index) => {
       const { side, notes, start, duration } = songNote;
       const pianoKeys = notes.map((note) => this.pianoKeysByNote[note]);
@@ -1302,7 +1305,7 @@ AFRAME.registerComponent("piano", {
         const songKey = Object.assign({}, pianoKey);
         songKey.entity = pianoKey.entity.cloneNode(true);
         songKey.box = songKey.entity.querySelector("a-box");
-        songKey.isHovering = true;
+        songKey.isHovering = false;
         songKey.enabled = true;
         songKey.side = side;
         return songKey;
