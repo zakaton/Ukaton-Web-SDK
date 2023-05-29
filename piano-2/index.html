@@ -45,7 +45,7 @@
       <button disabled class="clickable connect tapStrap right">
         right tap strap
       </button>
-      <button class="clickable pressure">enable pressure</button>
+      <button class="clickable pressure" disabled>enable pressure</button>
       <button class="clickable calibrate">calibrate</button>
     </div>
 
@@ -266,6 +266,7 @@
     });
     missionDevice.addEventListener("connected", () => {
       connectMissionDeviceButton.disabled = true;
+      togglePressureDataButton.disabled = false;
       for (const side in connectTapStrapButtons) {
         connectTapStrapButtons[side].disabled = false;
       }
@@ -282,6 +283,7 @@
     });
     missionDevice.addEventListener("disconnected", () => {
       connectMissionDeviceButton.disabled = false;
+      togglePressureDataButton.disabled = true;
       for (const side in connectTapStrapButtons) {
         connectTapStrapButtons[side].disabled = true;
       }
