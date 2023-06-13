@@ -15,16 +15,17 @@ AFRAME.registerComponent("piano", {
     blackKeyDimensions: { type: "vec3", default: { x: 12.5, y: 6, z: 90 } },
     spaceBetweenWhiteKeys: { type: "number", default: 1 },
     release: { type: "number", default: 0.4 },
-    handDistanceThreshold: { type: "number", default: 0.03 },
+    handDistanceThreshold: { type: "number", default: 0.05 },
     treeboardTime: { type: "number", default: 500 },
     gapBetweenOptions: { type: "number", default: 0.3 },
     treeboardMaxWidth: { type: "number", default: 0.7 },
     treeboardDistanceThreshold: { type: "number", default: 0.05 },
     treeboardOptionDistanceThreshold: { type: "number", default: 0.05 },
     dragDistanceThreshold: { type: "number", default: 0.1 },
-    playSongKeys: { type: "boolean", default: true },
+    playSongKeys: { type: "boolean", default: false },
     songScalar: { type: "vec3", default: { x: 1, y: 1, z: 0.2 } },
     songKeyGap: { type: "number", default: 0.01 },
+    songTimeScalar: { type: "number", default: 0.5 },
   },
   init: function () {
     window.piano = this;
@@ -48,6 +49,19 @@ AFRAME.registerComponent("piano", {
       const hand = this.hands[side];
       hand.addEventListener("hand-tracking-extras-ready", (event) => {
         hand.jointsAPI = event.detail.data.jointAPI;
+        const clearHand = () => {
+          const material =
+            hand.components["hand-tracking-controls"]?.skinnedMesh?.material;
+          if (material) {
+            console.log(material);
+            material.colorWrite = false;
+            clearInterval(intervalId);
+          }
+        };
+        let intervalId = setInterval(() => {
+          clearHand();
+        }, 1000);
+        clearHand();
       });
     }
     this.wristPosition = new THREE.Vector3();
@@ -66,8 +80,8 @@ AFRAME.registerComponent("piano", {
     };
 
     this.handIndexOffsets = {
-      left: 5,
-      right: -5,
+      left: 3,
+      right: -6,
     };
 
     this.hand = this.hands[this.data.side];
@@ -155,16 +169,19 @@ AFRAME.registerComponent("piano", {
       100,
       this
     );
-    /*
     this.checkWristPositions = AFRAME.utils.throttle(
       this.checkWristPositions,
-      10,
+      100,
       this
     );
-    */
     this.checkTreeboardVisibility = AFRAME.utils.throttle(
       this.checkTreeboardVisibility,
       100,
+      this
+    );
+    this.checkHandsForTreeboard = AFRAME.utils.throttle(
+      this.checkHandsForTreeboard,
+      10,
       this
     );
 
@@ -175,6 +192,7 @@ AFRAME.registerComponent("piano", {
       isMajor: true,
       set: () => {
         const { root, pitch, isMajor } = this.songScale;
+        this.setScaleExoticScale();
         this.setScaleIsMajor(isMajor);
         this.setScaleRoot(root);
         this.setScalePitch(pitch);
@@ -920,6 +938,15 @@ AFRAME.registerComponent("piano", {
     }
   },
 
+  hideHands: function () {
+    for (const side in this.hands) {
+      const hand = this.hands[side];
+      hand.components[
+        "hand-tracking-controls"
+      ].skinnedMesh.material.colorWrite = false;
+    }
+  },
+
   checkTriggeredKeys: function (time, timeDelta) {
     const now = Tone.now();
     this.triggeredKeys.forEach((value, key) => {
@@ -1100,7 +1127,8 @@ AFRAME.registerComponent("piano", {
         box.setAttribute("height", height);
         box.setAttribute("depth", depth);
 
-        const text = entity.querySelector("a-text");
+        const text = entity.querySelector("a-text.bottom");
+        const text2 = entity.querySelector("a-text.top");
 
         const position = [0, 0, 0];
         const boxPosition = [0, 0, 0];
@@ -1117,11 +1145,14 @@ AFRAME.registerComponent("piano", {
         }
         boxPosition[y] = -height / 2;
         boxPosition[z] = depth / 2;
-        textPosition[z] = depth - 0.01;
+        textPosition[z] = (depth - 0.01);
 
         entity.setAttribute("position", position.join(" "));
         box.setAttribute("position", boxPosition.join(" "));
         text.setAttribute("position", textPosition.join(" "));
+        
+        textPosition[z] = 0.01
+        text2.setAttribute("position", textPosition.join(" "));
 
         const pianoKey = {
           frequency,
@@ -1131,6 +1162,8 @@ AFRAME.registerComponent("piano", {
           isSharp,
           _note,
           text,
+          text2,
+          texts: [text],
           x: position[x],
         };
         this.pianoKeys.push(pianoKey);
@@ -1209,12 +1242,15 @@ AFRAME.registerComponent("piano", {
   },
 
   updateKeyIndex: function (key, fingerIndex = -1) {
-    const { text } = key;
-    if (fingerIndex >= 0) {
+    const { texts } = key;
+    texts.forEach(text => {
+          if (fingerIndex >= 0) {
       this.setText(text, fingerIndex + 1);
     } else {
       this.setText(text, "");
     }
+    })
+
   },
 
   onEntityLoaded: function (entity, callback) {
@@ -1356,7 +1392,8 @@ AFRAME.registerComponent("piano", {
   },
   songTick: function (time, timeDelta) {
     const now = Tone.now();
-    const songTime = now - this.songStartTime;
+    let songTime = now - this.songStartTime;
+    songTime *= this.data.songTimeScalar;
     this.songKeysEntity.object3D.position.z = songTime * this.data.songScalar.z;
     this.songNotes.forEach((songNote) => {
       const { keys, start, duration, notes } = songNote;
