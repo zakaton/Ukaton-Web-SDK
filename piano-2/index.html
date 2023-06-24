@@ -1,8 +1,8 @@
 <html>
   <head>
     <title>Piano WebXR</title>
-    <script src="/aframe-1.4.0.min.js"></script>
-    <script src="/aframe-hand-tracking-controls-extras.js"></script>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
     <script src="/BaseMission.js"></script>
     <script src="/WebSocketMissionDevice.js"></script>
     <script src="/TapStrap.js"></script>
@@ -45,6 +45,7 @@
       <button disabled class="clickable connect tapStrap right">
         right tap strap
       </button>
+      <button class="clickable pressure" disabled>enable pressure</button>
       <button class="clickable calibrate">calibrate</button>
     </div>
 
@@ -218,6 +219,17 @@
             animation__rotateUp="property: rotation.x; to: 0; startEvents: up; dur: 100"
           >
             <a-text
+              class="top"
+              font="/Roboto-msdf.json"
+              scale="0.1 0.1 0.1"
+              rotation="-90 0 0"
+              value=""
+              color="black"
+              material="shader: flat;"
+              align="center"
+            ></a-text>
+            <a-text
+              class="bottom"
               font="/Roboto-msdf.json"
               scale="0.1 0.1 0.1"
               rotation="-90 0 0"
@@ -236,6 +248,17 @@
             animation__rotateUp="property: rotation.x; to: 0; startEvents: up; dur: 100"
           >
             <a-text
+              class="top"
+              font="/Roboto-msdf.json"
+              scale="0.1 0.1 0.1"
+              rotation="-90 0 0"
+              value=""
+              color="black"
+              material="shader: flat;"
+              align="center"
+            ></a-text>
+            <a-text
+              class="bottom"
               font="/Roboto-msdf.json"
               scale="0.1 0.1 0.1"
               rotation="-90 0 0"
@@ -261,19 +284,32 @@
       ".connect.missionDevice"
     );
     connectMissionDeviceButton.addEventListener("click", (event) => {
-      missionDevice.connect("192.168.1.30");
+      missionDevice.connect("192.168.4.23");
     });
     missionDevice.addEventListener("connected", () => {
       connectMissionDeviceButton.disabled = true;
+      togglePressureDataButton.disabled = false;
       for (const side in connectTapStrapButtons) {
         connectTapStrapButtons[side].disabled = false;
       }
+    });
+    const togglePressureDataButton = document.querySelector(
+      ".clickable.pressure"
+    );
+    let isPressureEnabled = false;
+    togglePressureDataButton.addEventListener("click", () => {
+      isPressureEnabled = !isPressureEnabled;
+      togglePressureDataButton.innerText = isPressureEnabled
+        ? "disable pressure"
+        : "enable pressure";
+      const rate = isPressureEnabled ? 100 : 0;
       missionDevice.setSensorDataConfigurations({
-        pressure: { mass: 80, heelToToe: 80 },
+        pressure: { mass: rate, heelToToe: rate },
       });
     });
     missionDevice.addEventListener("disconnected", () => {
       connectMissionDeviceButton.disabled = false;
+      togglePressureDataButton.disabled = true;
       for (const side in connectTapStrapButtons) {
         connectTapStrapButtons[side].disabled = true;
       }
@@ -371,16 +407,25 @@
       bleGenericPeer.tapStrap = tapStrap;
       tapStrap.addEventListener("tapdata", (event) => {
         const { taps } = event.message;
-        console.log("tap data", side, taps);
+        //console.log("tap data", side, taps);
         piano.playTaps(taps, side);
       });
 
       const connectButton = document.querySelector(`.connect.tapStrap.${side}`);
+      let isConnecting = false;
       connectButton.addEventListener("click", async (event) => {
+        if (isConnecting || bleGenericPeer.isConnected) {
+          return;
+        }
+        isConnecting = true;
+        const innerText = connectButton.innerText;
+        connectButton.innerText = "connecting...";
         await bleGenericPeer.requestDevice({
           name,
           services: tapStrapServices,
         });
+        isConnecting = false;
+        connectButton.innerText = innerText;
         bleGenericPeer.writeCharacteristic(
           "tapMode",
           TapStrap.InputModes.controller
@@ -394,7 +439,7 @@
       });
 
       let intervalId;
-      bleGenericPeer.addEventListener("isConnected", (event) => {
+      bleGenericPeer.addEventListener("didRequestDevice", (event) => {
         connectButton.disabled = bleGenericPeer.isConnected;
         if (bleGenericPeer.isConnected) {
         } else {
@@ -402,6 +447,30 @@
         }
       });
       connectTapStrapButtons[side] = connectButton;
+    });
+
+    const keyboardToKey = {
+      left: ["1", "2", "3", "4", "5"].reverse(),
+      right: ["6", "7", "8", "9", "0"],
+    };
+
+    document.addEventListener("keydown", (event) => {
+      const { key } = event;
+      //console.log(key, "down");
+      let side, keyIndex;
+      for (const _side in keyboardToKey) {
+        const _sideKeys = keyboardToKey[_side];
+        if (_sideKeys.includes(key)) {
+          side = _side;
+          keyIndex = _sideKeys.indexOf(key);
+          break;
+        }
+      }
+      if (side) {
+        const taps = new Array(5).fill(false);
+        taps[keyIndex] = true;
+        piano.playTaps(taps, side);
+      }
     });
   </script>
 
@@ -412,6 +481,9 @@
       if (!didSetInitialHitTest) {
         toggleARHitTest();
         didSetInitialHitTest = true;
+        setTimeout(() => {
+          piano.setupSong();
+        }, 1000);
       }
       piano.onPianoPlacement();
     });
