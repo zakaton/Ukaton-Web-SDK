@@ -284,7 +284,7 @@
       ".connect.missionDevice"
     );
     connectMissionDeviceButton.addEventListener("click", (event) => {
-      missionDevice.connect("192.168.4.23");
+      missionDevice.connect("192.168.1.30");
     });
     missionDevice.addEventListener("connected", () => {
       connectMissionDeviceButton.disabled = true;
@@ -448,15 +448,56 @@
       });
       connectTapStrapButtons[side] = connectButton;
     });
+    
+    // https://github.com/aframevr/aframe/blob/f5f2790eca841bf633bdaa0110b0b59d36d7e854/src/utils/index.js#L132
+    /**
+     * Returns debounce function that gets called only once after a set of repeated calls.
+     *
+     * @param {function} functionToDebounce
+     * @param {number} wait - Time to wait for repeated function calls (milliseconds).
+     * @param {boolean} immediate - Calls the function immediately regardless of if it should be waiting.
+     * @returns {function} Debounced function.
+     */
+    function debounce(func, wait, immediate) {
+      var timeout;
+      return function () {
+        var context = this;
+        var args = arguments;
+        var later = function () {
+          timeout = null;
+          if (!immediate) func.apply(context, args);
+        };
+        var callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+      };
+    }
+
+    const keyboardBitmaskArrays = {
+      left: new Array(5).fill(false),
+      right: new Array(5).fill(false),
+    };
+    const triggerKeyboardEvent = {
+      left: debounce(() => {
+        const bitmaskArray = keyboardBitmaskArrays.left;
+        piano.playTaps(bitmaskArray, "left");
+        bitmaskArray.fill(false)
+      }, 10),
+      right: debounce(() => {
+        const bitmaskArray = keyboardBitmaskArrays.right;
+        piano.playTaps(bitmaskArray, "right");
+        bitmaskArray.fill(false)
+      }, 10),
+    };
 
     const keyboardToKey = {
       left: ["1", "2", "3", "4", "5"].reverse(),
       right: ["6", "7", "8", "9", "0"],
     };
-
+    
     document.addEventListener("keydown", (event) => {
       const { key } = event;
-      //console.log(key, "down");
       let side, keyIndex;
       for (const _side in keyboardToKey) {
         const _sideKeys = keyboardToKey[_side];
@@ -467,9 +508,9 @@
         }
       }
       if (side) {
-        const taps = new Array(5).fill(false);
-        taps[keyIndex] = true;
-        piano.playTaps(taps, side);
+        const keyboardBitmaskArray = keyboardBitmaskArrays[side];
+        keyboardBitmaskArray[keyIndex] = true;
+        triggerKeyboardEvent[side]();
       }
     });
   </script>

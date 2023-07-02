@@ -84,6 +84,8 @@ Object.assign(UDPMissionDevice, {
     "SET_SENSOR_DATA_CONFIGURATIONS",
 
     "SENSOR_DATA",
+    
+    "VIBRATION"
   ],
 });
 

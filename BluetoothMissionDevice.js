@@ -1208,26 +1208,7 @@ class BluetoothMissionDevice extends BaseMission {
     });
   }
 
-  // HAPTICS
-  static VIBRATION_TYPES = { waveform: 0, sequence: 1 };
-  get VIBRATION_TYPES() {
-    return this.constructor.VIBRATION_TYPES;
-  }
-  async vibrateWaveform(waveform) {
-    return this._vibrate([this.VIBRATION_TYPES.waveform, ...waveform]);
-  }
-  async vibrateSequence(sequence) {
-    // must be an even number
-    if (sequence.length % 2) {
-      sequence = sequence.slice(0, -1);
-    }
-    return this._vibrate([
-      this.VIBRATION_TYPES.sequence,
-      ...sequence.map((value, index) =>
-        index % 2 ? Math.floor(value / 10) : value
-      ),
-    ]);
-  }
+  // VIBRATION
   async _vibrate(array) {
     await this._hapticsVibrationCharacteristic.writeValue(
       Uint8Array.from(array)
