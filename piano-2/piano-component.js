@@ -125,7 +125,7 @@ AFRAME.registerComponent("piano", {
     this.audioContext = Tone.context.rawContext._nativeAudioContext;
 
     this.modes = ["notes", "scale", "perfect", "song"];
-    this.modeIndex = 1;
+    this.modeIndex = 2;
 
     this.scale = scale;
     this.scale.isPerfect = true;

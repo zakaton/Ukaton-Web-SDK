@@ -770,6 +770,31 @@ class WebSocketMissionDevice extends BaseMission {
       byteOffset += bleGenericPeerDataLength;
     }
   }
+  
+  // VIBRATION
+  async setName(newName, sendImmediately = true) {
+    this._assertConnection();
+
+    newName = newName.substr(0, 30);
+
+    const promise = this._waitForResponse("name");
+
+    this._messageMap.delete(this.MessageTypes.GET_NAME);
+    this._messageMap.set(this.MessageTypes.SET_NAME, newName);
+    if (sendImmediately) {
+      this.send();
+    }
+
+    return promise;
+  }
+  async _vibrate(array, sendImmediately = true) {
+    this._assertConnection();
+    
+    this._messageMap.set(this.MessageTypes.VIBRATION, [array.length, ...array]);
+    if (sendImmediately) {
+      this.send();
+    }
+  }
 }
 
 Object.assign(BaseMission, {
@@ -803,6 +828,8 @@ Object.assign(BaseMission, {
     "FIRMWARE_UPDATE",
 
     "BLE_GENERIC_PEER",
+    
+    "VIBRATION"
   ],
   BLEGenericPeerMessageTypeStrings: [
     "GET_CONNECTION",
