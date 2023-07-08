@@ -497,6 +497,7 @@ class BaseMission extends THREE.EventDispatcher {
             },
             { x: 0, y: 0 }
           );
+          centerOfMass.y = 1-centerOfMass.y
 
           const heelToToe = centerOfMass.y;
 
