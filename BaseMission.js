@@ -498,7 +498,7 @@ class BaseMission extends THREE.EventDispatcher {
             { x: 0, y: 0 }
           );
 
-          const heelToToe = 1 - centerOfMass.y;
+          const heelToToe = centerOfMass.y;
 
           let mass = pressure.sum;
           if (
@@ -589,7 +589,7 @@ class BaseMission extends THREE.EventDispatcher {
           break;
         case this.PressureDataTypes.heelToToe:
           {
-            const heelToToe = 1 - dataView.getFloat64(byteOffset, true);
+            const heelToToe = dataView.getFloat64(byteOffset, true);
             this.pressure.heelToToe = heelToToe;
             byteOffset += 8;
 
