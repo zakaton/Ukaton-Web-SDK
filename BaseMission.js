@@ -40,7 +40,7 @@ class BaseMission extends THREE.EventDispatcher {
 
     this._isUsingBNO080 = false;
     this._isUsingBNO085 = true;
-    
+
     this._lastTimeReceivedSensorData = 0;
 
     this.motion = {
@@ -497,7 +497,7 @@ class BaseMission extends THREE.EventDispatcher {
             },
             { x: 0, y: 0 }
           );
-          centerOfMass.y = 1-centerOfMass.y
+          centerOfMass.y = 1 - centerOfMass.y;
 
           const heelToToe = centerOfMass.y;
 
@@ -827,21 +827,27 @@ class BaseMission extends THREE.EventDispatcher {
     const y = dataView.getInt16(offset + 4, true) * scalar;
     const z = dataView.getInt16(offset + 6, true) * scalar;
 
-    if (this._isUsingBNO080) {
-      quaternion.set(-z, -y, -w, -x);
-      //quaternion.multiply(this.bno080CorrectionQuaternion);
-    } else if (this._isUsingBNO085) {
-      quaternion.set(-y, -w, -x, z);
+    if (true) {
+      if (this._isUsingBNO080) {
+        quaternion.set(-z, -y, -w, -x);
+        //quaternion.multiply(this.bno080CorrectionQuaternion);
+      } else if (this._isUsingBNO085) {
+        //quaternion.set(-y, -w, -x, z);
+        quaternion.set(x, -z, -y, -w); // [1, -3, -2, -4]
+      } else {
+        quaternion.set(-y, -w, -x, z);
+      }
+
+      if (this.isInsole) {
+        quaternion.multiply(this.insoleCorrectionQuaternion);
+      }
+
+      if (this._isUsingBNO085) {
+        //quaternion.multiply(this.bno085CorrectionQuaternion);
+      }
     } else {
-      quaternion.set(-y, -w, -x, z);
-    }
-
-    if (this.isInsole) {
-      quaternion.multiply(this.insoleCorrectionQuaternion);
-    }
-
-    if (this._isUsingBNO085) {
-      quaternion.multiply(this.bno085CorrectionQuaternion);
+      quaternion.set(x, y, z, w);
+      return BaseMission.permuteQuaternion(quaternion);
     }
 
     return quaternion;
@@ -919,7 +925,7 @@ class BaseMission extends THREE.EventDispatcher {
       }
     };
   }
-  
+
   // HELPERS
   _flattenMessageDatum(datum) {
     switch (typeof datum) {
@@ -967,7 +973,7 @@ class BaseMission extends THREE.EventDispatcher {
         break;
     }
   }
-  
+
   // VIBRATION
   static VIBRATION_TYPES = { waveform: 0, sequence: 1 };
   get VIBRATION_TYPES() {
@@ -1152,12 +1158,12 @@ BaseMission.SensorDataTypeStrings = {
   BaseMission.bno080CorrectionQuaternion.setFromEuler(bno080CorrectionEuler);
 
   const insoleCorrectionEuler = new THREE.Euler();
-  insoleCorrectionEuler.set(0, Math.PI / 2, -Math.PI / 2);
+  insoleCorrectionEuler.set(-Math.PI / 2, -Math.PI / 2, 0);
   BaseMission.InsoleCorrectionQuaternions.right.setFromEuler(
     insoleCorrectionEuler
   );
 
-  insoleCorrectionEuler.set(-Math.PI / 2, -Math.PI / 2, 0);
+  insoleCorrectionEuler.set(-Math.PI / 2, Math.PI / 2, 0);
   BaseMission.InsoleCorrectionQuaternions.left.setFromEuler(
     insoleCorrectionEuler
   );
@@ -1250,3 +1256,36 @@ class BaseMissions extends THREE.EventDispatcher {
   }
 }
 //Object.assign(BaseMissions.prototype, THREE.EventDispatcher.prototype);
+
+function generatePermutations(arr) {
+  const results = [];
+
+  function permute(current, remaining) {
+    if (remaining.length === 0) {
+      results.push(current);
+    } else {
+      for (let i = 0; i < remaining.length; i++) {
+        const next = remaining.slice();
+        const nextItem = next.splice(i, 1)[0];
+        permute(current.concat(nextItem), next);
+        permute(current.concat(-nextItem), next);
+      }
+    }
+  }
+
+  permute([], arr);
+  return results;
+}
+BaseMission.quaternionPermutations = generatePermutations([1, 2, 3, 4]);
+BaseMission.quaternionPermutationIndex = 0;
+BaseMission.permuteQuaternion = function (quaternion) {
+  const permutation =
+    this.quaternionPermutations[this.quaternionPermutationIndex];
+  const quaternionArray = quaternion.toArray();
+  const newQuaternionArray = permutation.map((value) => {
+    const sign = Math.sign(value);
+    const index = Math.abs(value) - 1;
+    return quaternionArray[index] * sign;
+  });
+  return quaternion.fromArray(newQuaternionArray);
+};
