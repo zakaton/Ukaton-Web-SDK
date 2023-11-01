@@ -29,7 +29,7 @@ class BaseMission extends THREE.EventDispatcher {
   constructor() {
     super();
 
-    this.isLoggingEnabled = !true;
+    this.isLoggingEnabled = true;
     this._reconnectOnDisconnection = true;
 
     this._batteryLevel = null;
@@ -326,6 +326,8 @@ class BaseMission extends THREE.EventDispatcher {
   }
 
   _parseSensorData(dataView, byteOffset = 0) {
+    this.log("sensor data array", Array.from(new Uint8Array(dataView.buffer)));
+
     this._lastTimeReceivedSensorData = Date.now();
     const rawTimestamp = dataView.getUint16(byteOffset, true);
     if (rawTimestamp < this._lastRawSensorDataTimestamp) {

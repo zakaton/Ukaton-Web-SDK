@@ -32,7 +32,8 @@ class BluetoothMissionDevice extends BaseMission {
     this._device = await navigator.bluetooth.requestDevice({
       filters: [
         {
-          services: [this.GENERATE_UUID("0000")],
+          //services: [this.GENERATE_UUID("0000")],
+          services: [0x0000],
         },
       ],
       optionalServices: ["battery_service"],
@@ -72,9 +73,7 @@ class BluetoothMissionDevice extends BaseMission {
     }
 
     this.log("getting service...");
-    this._service = await this._server.getPrimaryService(
-      this.GENERATE_UUID("0000")
-    );
+    this._service = await this._server.getPrimaryService(0x0000);
     this.log("got service!");
 
     // TYPE
