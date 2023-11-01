@@ -38,6 +38,23 @@ class BluetoothMissionDevice extends BaseMission {
       ],
       optionalServices: ["battery_service"],
     });
+
+    if (false) {
+      this._device.addEventListener("advertisementreceived", (event) => {
+        //this.log("advertismeent", event);
+        event.serviceData.forEach((dataView, key) => {
+          this.log(
+            "serviceData",
+            Array.from(new Uint8Array(dataView.buffer)).join(",")
+          );
+        });
+      });
+
+      this._device.watchAdvertisements();
+
+      return;
+    }
+
     this.log("got device!");
     this._device.addEventListener(
       "gattserverdisconnected",
