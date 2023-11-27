@@ -1,82 +1,79 @@
 <html>
-  <head>
-    <title>Both Insoles | Ukaton Missions</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.rawgit.com/tizzle/aframe-orbit-controls-component/v0.1.14/dist/aframe-orbit-controls-component.min.js"></script>
-    <script src="./BaseMission.js"></script>
-    <script src="./BluetoothMissionDevice.js"></script>
-    <script src="./PeerBluetoothMissionDevice.js"></script>
-  </head>
+    <head>
+        <title>Both Insoles | Ukaton Missions</title>
+        <link rel="icon" href="/favicon.png" />
+        <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+        <script src="https://cdn.rawgit.com/tizzle/aframe-orbit-controls-component/v0.1.14/dist/aframe-orbit-controls-component.min.js"></script>
+        <script src="./BaseMission.js"></script>
+        <script src="./BluetoothMissionDevice.js"></script>
+        <script src="./PeerBluetoothMissionDevice.js"></script>
+    </head>
 
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #container {
-      width: 100%;
-      height: 100%;
-      display: grid;
-      grid-template-rows: 1fr;
-      grid-template-columns: 1fr 1fr;
-      grid-template-areas: "pressure scene";
-    }
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #container {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-rows: 1fr;
+            grid-template-columns: 1fr 1fr;
+            grid-template-areas: "pressure scene";
+        }
 
-    #container > * {
-      margin: auto;
-    }
+        #container > * {
+            margin: auto;
+        }
 
-    #container.connected > :not(.connected) {
-      display: none;
-    }
+        #container.connected > :not(.connected) {
+            display: none;
+        }
 
-    #controls {
-      grid-column: 1 / -1;
-    }
+        #controls {
+            grid-column: 1 / -1;
+        }
 
-    #pressure {
-      border: none;
-      grid-area: pressure;
-      aspect-ratio: 0.8;
-      height: 100%;
-    }
+        #pressure {
+            border: none;
+            grid-area: pressure;
+            aspect-ratio: 0.8;
+            height: 100%;
+        }
 
-    #scene {
-      grid-area: scene;
-      width: 100%;
-      height: 100%;
-    }
-  </style>
-  <body>
-    <div id="container" class="">
-      <div id="controls">
-        <button onclick="missions.left.connect()">left</button>
-        <button onclick="missions.right.connect()">right</button>
-      </div>
+        #scene {
+            grid-area: scene;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <body>
+        <div id="container" class="">
+            <div id="controls">
+                <button onclick="missions.left.connect()">left</button>
+                <button onclick="missions.right.connect()">right</button>
+            </div>
 
-      <iframe id="pressure" class="connected" src="/pressure"></iframe>
-      <div id="scene" class="connected">
-        <a-scene
-          embedded
-          vr-mode-ui="enabled: false"
-          device-orientation-permission-ui="enabled: false"
-          renderer="colorManagement: true;"
-        >
-          <a-assets>
-            <a-asset-item
-              id="leftShoeAsset"
-              src="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/leftShoe.glb?v=1646246609416"
-            ></a-asset-item>
-          </a-assets>
-          <a-camera
-            id="camera"
-            camera="fov: 50; zoom: 2;"
-            position="0 2 5"
-            orbit-controls="
+            <iframe id="pressure" class="connected" src="/pressure"></iframe>
+            <div id="scene" class="connected">
+                <a-scene
+                    embedded
+                    vr-mode-ui="enabled: false"
+                    device-orientation-permission-ui="enabled: false"
+                    renderer="colorManagement: true;"
+                >
+                    <a-assets>
+                        <a-asset-item
+                            id="leftShoeAsset"
+                            src="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/leftShoe.glb?v=1646246609416"
+                        ></a-asset-item>
+                    </a-assets>
+                    <a-camera
+                        id="camera"
+                        camera="fov: 50; zoom: 2;"
+                        position="0 2 5"
+                        orbit-controls="
               autoRotate: false;
               target: #target;
               enableDamping: true;
@@ -85,156 +82,154 @@
               minDistance:3;
               maxDistance:100;
               "
-          ></a-camera>
-          <a-entity id="target"
-            ><a-entity class="left shoe" position="-0.5 0 0">
-              <a-entity gltf-model="#leftShoeAsset"></a-entity>
-            </a-entity>
-            <a-entity class="right shoe" position="0.5 0 0">
-              <a-entity gltf-model="#leftShoeAsset" scale="-1 1 1"></a-entity>
-            </a-entity>
-          </a-entity>
-          <a-sky color="darkgrey"></a-sky>
-        </a-scene>
-      </div>
-    </div>
-  </body>
-  <script>
-    // to remove that stupid THREE.js warning
-    THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
+                    ></a-camera>
+                    <a-entity id="target"
+                        ><a-entity class="left shoe" position="-0.5 0 0">
+                            <a-entity gltf-model="#leftShoeAsset"></a-entity>
+                        </a-entity>
+                        <a-entity class="right shoe" position="0.5 0 0">
+                            <a-entity gltf-model="#leftShoeAsset" scale="-1 1 1"></a-entity>
+                        </a-entity>
+                    </a-entity>
+                    <a-sky color="darkgrey"></a-sky>
+                </a-scene>
+            </div>
+        </div>
+    </body>
+    <script>
+        // to remove that stupid THREE.js warning
+        THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 
-    const missions = new BluetoothMissions();
+        const missions = new BluetoothMissions();
 
-    const container = document.querySelector("#container");
+        const container = document.querySelector("#container");
 
-    missions.sides.forEach((side) => {
-      missions[side].addEventListener(
-        "connected",
-        async (event) => {
-          container.classList.add("connected");
-
-          onMissionDevice(missions[side], side);
-
-          const otherSide = side == "left" ? "right" : "left";
-          missions[side].peers.forEach(async (peer) => {
-            let isConnected = await peer._isConnected();
-            if (isConnected) {
-              onMissionDevice(peer, otherSide, true);
-            } else {
-              peer.addEventListener(
+        missions.sides.forEach((side) => {
+            missions[side].addEventListener(
                 "connected",
-                () => {
-                  onMissionDevice(peer, otherSide, true);
+                async (event) => {
+                    container.classList.add("connected");
+
+                    onMissionDevice(missions[side], side);
+
+                    const otherSide = side == "left" ? "right" : "left";
+                    missions[side].peers.forEach(async (peer) => {
+                        let isConnected = await peer._isConnected();
+                        if (isConnected) {
+                            onMissionDevice(peer, otherSide, true);
+                        } else {
+                            peer.addEventListener(
+                                "connected",
+                                () => {
+                                    onMissionDevice(peer, otherSide, true);
+                                },
+                                { once: true }
+                            );
+                        }
+                    });
                 },
                 { once: true }
-              );
+            );
+        });
+
+        document.addEventListener("keypress", (event) => {
+            if (event.key == "c") {
+                calibrate();
             }
-          });
-        },
-        { once: true }
-      );
-    });
-
-    document.addEventListener("keypress", (event) => {
-      if (event.key == "c") {
-        calibrate();
-      }
-    });
-
-    const quaternions = {};
-    const quaternionOffsets = {};
-    const yawQuaternionOffsets = {};
-    const pitchRollQuaternionOffsets = {};
-    missions.sides.forEach((side) => {
-      quaternions[side] = new THREE.Quaternion();
-      quaternionOffsets[side] = new THREE.Quaternion();
-      yawQuaternionOffsets[side] = new THREE.Quaternion();
-      pitchRollQuaternionOffsets[side] = new THREE.Quaternion();
-    });
-
-    function calibrate() {
-      missions.sides.forEach((side) => {
-        quaternionOffsets[side].copy(quaternions[side]).invert();
-
-        const euler = new THREE.Euler();
-        euler.order = "YXZ";
-
-        euler.setFromQuaternion(quaternionOffsets[side]);
-        euler.x = euler.z = 0;
-        yawQuaternionOffsets[side].setFromEuler(euler);
-
-        euler.order = "XZY";
-        euler.setFromQuaternion(quaternionOffsets[side]);
-        euler.y = 0;
-        pitchRollQuaternionOffsets[side].setFromEuler(euler);
-      });
-    }
-
-    const shoeEntities = {};
-    const scene = document.querySelector("a-scene");
-    scene.addEventListener("loaded", (event) => {
-      missions.sides.forEach((side) => {
-        entity = scene.querySelector(`.shoe.${side}`);
-        shoeEntities[side] = entity;
-        entity.object3D.matrixAutoUpdate = false;
-        entity.object3D.updateMatrix();
-      });
-    });
-
-    async function onMissionDevice(missionDevice, side, isPeer = false) {
-      console.log(
-        `connected to ${side} device. Is ${isPeer ? "" : "not"} a peer`
-      );
-      missionDevice.addEventListener("quaternion", (event) => {
-        const { quaternion } = event.message;
-        quaternions[side].copy(quaternion);
-
-        const entity = shoeEntities[side];
-
-        const quaternionOffset = quaternionOffsets[side];
-        const yawQuaternionOffset = yawQuaternionOffsets[side];
-        const pitchRollQuaternionOffset = pitchRollQuaternionOffsets[side];
-
-        const yawEuler = new THREE.Euler().setFromQuaternion(quaternion);
-        yawEuler.reorder("YXZ");
-        yawEuler.x = yawEuler.z = 0;
-        const yawQuaternion = new THREE.Quaternion().setFromEuler(yawEuler);
-        const inverseYawQuaternion = yawQuaternion.clone().invert();
-
-        const modifiedQuaternion = quaternion
-          .clone()
-          .premultiply(inverseYawQuaternion)
-          .premultiply(pitchRollQuaternionOffset)
-          .premultiply(yawQuaternion)
-          .premultiply(yawQuaternionOffset);
-
-        entity.object3D.quaternion.copy(modifiedQuaternion);
-        entity.object3D.updateMatrix();
-      });
-      if (isPeer) {
-        missionDevice.addEventListener("pressure", (event) => {
-          Object.assign(missions[side].pressure, missionDevice.pressure);
-          missions[side].dispatchEvent(event);
         });
-      }
 
-      missionDevice.setSensorDataConfigurations({
-        motion: { quaternion: 40 },
-        pressure: { pressureSingleByte: 40 },
-      });
-    }
-
-    const pressureIframe = document.getElementById("pressure");
-    pressureIframe.addEventListener("load", (event) => {
-      pressureMissions = pressureIframe.contentWindow.missions;
-      missions.sides.forEach((side) => {
-        missions[side].addEventListener("pressure", (event) => {
-          pressureIframe.contentWindow.missions[side].dispatchEvent({
-            missions,
-            ...event,
-          });
+        const quaternions = {};
+        const quaternionOffsets = {};
+        const yawQuaternionOffsets = {};
+        const pitchRollQuaternionOffsets = {};
+        missions.sides.forEach((side) => {
+            quaternions[side] = new THREE.Quaternion();
+            quaternionOffsets[side] = new THREE.Quaternion();
+            yawQuaternionOffsets[side] = new THREE.Quaternion();
+            pitchRollQuaternionOffsets[side] = new THREE.Quaternion();
         });
-      });
-    });
-  </script>
+
+        function calibrate() {
+            missions.sides.forEach((side) => {
+                quaternionOffsets[side].copy(quaternions[side]).invert();
+
+                const euler = new THREE.Euler();
+                euler.order = "YXZ";
+
+                euler.setFromQuaternion(quaternionOffsets[side]);
+                euler.x = euler.z = 0;
+                yawQuaternionOffsets[side].setFromEuler(euler);
+
+                euler.order = "XZY";
+                euler.setFromQuaternion(quaternionOffsets[side]);
+                euler.y = 0;
+                pitchRollQuaternionOffsets[side].setFromEuler(euler);
+            });
+        }
+
+        const shoeEntities = {};
+        const scene = document.querySelector("a-scene");
+        scene.addEventListener("loaded", (event) => {
+            missions.sides.forEach((side) => {
+                entity = scene.querySelector(`.shoe.${side}`);
+                shoeEntities[side] = entity;
+                entity.object3D.matrixAutoUpdate = false;
+                entity.object3D.updateMatrix();
+            });
+        });
+
+        async function onMissionDevice(missionDevice, side, isPeer = false) {
+            console.log(`connected to ${side} device. Is ${isPeer ? "" : "not"} a peer`);
+            missionDevice.addEventListener("quaternion", (event) => {
+                const { quaternion } = event.message;
+                quaternions[side].copy(quaternion);
+
+                const entity = shoeEntities[side];
+
+                const quaternionOffset = quaternionOffsets[side];
+                const yawQuaternionOffset = yawQuaternionOffsets[side];
+                const pitchRollQuaternionOffset = pitchRollQuaternionOffsets[side];
+
+                const yawEuler = new THREE.Euler().setFromQuaternion(quaternion);
+                yawEuler.reorder("YXZ");
+                yawEuler.x = yawEuler.z = 0;
+                const yawQuaternion = new THREE.Quaternion().setFromEuler(yawEuler);
+                const inverseYawQuaternion = yawQuaternion.clone().invert();
+
+                const modifiedQuaternion = quaternion
+                    .clone()
+                    .premultiply(inverseYawQuaternion)
+                    .premultiply(pitchRollQuaternionOffset)
+                    .premultiply(yawQuaternion)
+                    .premultiply(yawQuaternionOffset);
+
+                entity.object3D.quaternion.copy(modifiedQuaternion);
+                entity.object3D.updateMatrix();
+            });
+            if (isPeer) {
+                missionDevice.addEventListener("pressure", (event) => {
+                    Object.assign(missions[side].pressure, missionDevice.pressure);
+                    missions[side].dispatchEvent(event);
+                });
+            }
+
+            missionDevice.setSensorDataConfigurations({
+                motion: { quaternion: 40 },
+                pressure: { pressureSingleByte: 40 },
+            });
+        }
+
+        const pressureIframe = document.getElementById("pressure");
+        pressureIframe.addEventListener("load", (event) => {
+            pressureMissions = pressureIframe.contentWindow.missions;
+            missions.sides.forEach((side) => {
+                missions[side].addEventListener("pressure", (event) => {
+                    pressureIframe.contentWindow.missions[side].dispatchEvent({
+                        missions,
+                        ...event,
+                    });
+                });
+            });
+        });
+    </script>
 </html>

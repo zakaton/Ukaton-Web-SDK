@@ -1,799 +1,705 @@
 <html>
-  <head>
-    <title>WebSocket Web SDK | Ukaton</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
+    <head>
+        <title>WebSocket Web SDK | Ukaton</title>
+        <link rel="icon" href="/favicon.png" />
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
-    <script src="./BaseMission.js"></script>
-    <script src="./WebSocketMissionDevice.js"></script>
-  </head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+        <script src="./BaseMission.js"></script>
+        <script src="./WebSocketMissionDevice.js"></script>
+    </head>
 
-  <style>
-    .device:not(.pressure) .pressure {
-      display: none;
-    }
-    .device:not(.motion) .motion {
-      display: none;
-    }
-    .calibration label,
-    .configuration label {
-      display: block;
-    }
-
-    .device {
-      margin-bottom: 20px;
-    }
-    .hidden {
-      display: none;
-    }
-  </style>
-
-  <body>
-    <h1>WebSocket Mission Device | Ukaton Missions</h1>
-
-    <div id="connection">
-      <label class="ip">
-        <b>ip address:</b> <input value="192.168.1.30" />
-      </label>
-      <button class="connect">connect</button>
-    </div>
-
-    <br /><br />
-
-    <div id="device">
-      <div class="name">
-        <label><b>name:</b> <input /> </label>
-        <button>change name</button>
-      </div>
-
-      <div class="type">
-        <label>
-          type
-          <select>
-            <option value="0">motion module</option>
-            <option value="1">left insole</option>
-            <option value="2">right insole</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="batteryLevel">
-        <label><b>battery level:</b> <span></span></label>
-      </div>
-
-      <div class="motion calibration">
-        <b>motion calibration</b>
-        <label data-calibration="system"> system: <span>0</span></label>
-        <label data-calibration="gyroscope"> gyroscope: <span>0</span></label>
-        <label data-calibration="accelerometer">
-          accelerometer: <span>0</span></label
-        >
-        <label data-calibration="magnetometer">
-          magnetometer: <span>0</span></label
-        >
-        <label data-calibration="isFullyCalibrated">
-          fully calibrated: <span>0</span></label
-        >
-      </div>
-
-      <div class="motion configuration">
-        <b>motion configuration</b>
-        <label data-configuration="acceleration"
-          >acceleration:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="gravity"
-          >gravity: <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="linearAcceleration"
-          >linear acceleration:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="rotationRate"
-          >rotation rate:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="magnetometer"
-          >magnetometer:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="quaternion"
-          >quaternion:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-      </div>
-      <div class="motion data">
-        <b>motion data</b>
-        <div data-type="acceleration">acceleration: <span></span></div>
-        <div data-type="gravity">gravity: <span></span></div>
-        <div data-type="linearAcceleration">
-          linear acceleration: <span></span>
-        </div>
-        <div data-type="rotationRate">rotation rate: <span></span></div>
-        <div data-type="magnetometer">magnetometer: <span></span></div>
-        <div data-type="quaternion">quaternion: <span></span></div>
-        <div data-type="euler">euler: <span></span></div>
-      </div>
-
-      <div class="pressure configuration">
-        <b>pressure configuration</b>
-        <label data-configuration="pressureSingleByte"
-          >pressure (single byte):
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="pressureDoubleByte"
-          >pressure (double byte):
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="centerOfMass"
-          >center of mass:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="mass"
-          >mass: <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="heelToToe"
-          >heel to toe:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-      </div>
-      <div class="pressure data">
-        <b>pressure data</b>
-        <div data-type="pressureSingleByte">
-          pressure (single byte): <span></span>
-        </div>
-        <div data-type="pressureDoubleByte">
-          pressure (double byte): <span></span>
-        </div>
-        <div data-type="centerOfMass">center of mass: <span></span></div>
-        <div data-type="mass">mass: <span></span></div>
-        <div data-type="heelToToe">heel to toe: <span></span></div>
-      </div>
-
-      <div class="weight delay configuration">
-        <b>weight delay</b>
-        <label data-configuration="weight"
-          >weight: <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-      </div>
-      <div class="weight data">
-        <b>weight data</b>
-        <div data-type="weight">weight (kg): <span></span></div>
-      </div>
-    </div>
-
-    <hr />
-
-    <div id="fileTransfer">
-      <h2>File Transfer</h2>
-
-      <label>sending file? <input type="checkbox" checked /></label>
-      <br />
-      <input type="file" />
-      <br />
-      <label>filePath: <input type="text" /></label>
-      <br />
-      <button class="transfer" disabled>transfer file</button>
-
-      <progress value="0"></progress>
-
-      <br />
-      <button class="remove">remove file</button>
-
-      <button class="format">format filesystem</button>
-    </div>
-
-    <hr />
-
-    <div id="firmware">
-      <h2>Firmware</h2>
-
-      <div class="firmware version">
-        <label> version: <input type="string" readonly /></label>
-      </div>
-
-      <div class="firmware update">
-        <button onclick="updateFirmware()">update firmware</button>
-        <progress value="0"></progress>
-      </div>
-    </div>
-
-    <hr />
-
-    <div id="bleGenericPeers">
-      <h2>BLE Generic Peers</h2>
-
-      <template id="bleGenericPeerTemplate">
-        <div class="bleGenericPeer">
-          <h3>BLE Generic Peer #<span class="index"></span></h3>
-
-          <label>name <input class="name" type="text" /></label>
-          <button class="connect">connect</button>
-
-          <button class="addService">add service</button>
-
-          <br /><br />
-          <div class="services"></div>
-        </div>
-      </template>
-
-      <template id="bleGenericPeerServiceTemplate">
-        <div class="bleGenericPeerService">
-          <b>Service #<span class="index"></span></b>
-          <br />
-          <label>uuid <input class="uuid" type="text" size="38"/></label>
-          <button class="get">get</button>
-          <button class="addCharacteristic">add characteristic</button>
-          <button class="remove">remove</button>
-
-          <br /><br />
-          <div class="characteristics"></div>
-        </div>
-      </template>
-
-      <template id="bleGenericPeerCharacteristicTemplate">
-        <div class="bleGenericPeerCharacteristic">
-          <b>Characteristic #<span class="index"></span></b>
-          <br />
-          <label>uuid <input class="uuid" type="text" size="38" /></label>
-          <button class="get">get</button>
-          <br />
-          <label>value <input class="value" size="60" /></label>
-          <button class="read">read</button>
-          <button class="write">write</button>
-          <select class="dataType">
-            <option>uint8</option>
-            <option>utf-8</option>
-          </select>
-          <br />
-          <label>subscribe <input class="subscribe" type="checkbox" /></label>
-          <br />
-          <button class="remove">remove</button>
-        </div>
-      </template>
-    </div>
-  </body>
-
-  <script>
-    const missionDevice = new WebSocketMissionDevice();
-    const deviceContainer = document.getElementById("device");
-
-    missionDevice.addEventListener("connected", (event) => {
-      document.getElementById("connection").remove();
-      deviceContainer.removeAttribute("hidden");
-    });
-    document
-      .querySelector("#connection .connect")
-      .addEventListener("click", (event) => {
-        connect();
-      });
-    async function connect() {
-      const ipAddress = document.querySelector(".ip input").value;
-      await missionDevice.connect(ipAddress);
-    }
-
-    missionDevice.addEventListener("batteryLevel", (event) => {
-      const { batteryLevel } = event.message;
-      deviceContainer.querySelector(".batteryLevel span").innerText =
-        batteryLevel;
-    });
-
-    missionDevice.addEventListener("name", (event) => {
-      const { name } = event.message;
-      deviceContainer.querySelector(".name input").value = name;
-    });
-    deviceContainer
-      .querySelector(".name button")
-      .addEventListener("click", (event) => {
-        const name = deviceContainer.querySelector(".name input").value;
-        missionDevice.setName(name);
-      });
-
-    missionDevice.addEventListener("type", (event) => {
-      const { type } = event.message;
-      if (type == missionDevice.Types.MOTION_MODULE) {
-        deviceContainer.classList.add("motion");
-      }
-      if (type != missionDevice.Types.MOTION_MODULE) {
-        deviceContainer.classList.add("pressure", "motion");
-      }
-      deviceContainer.querySelector(".type select").value = type;
-    });
-    deviceContainer
-      .querySelector(".type select")
-      .addEventListener("input", (event) => {
-        const type = event.target.value;
-        missionDevice.setType(type);
-      });
-
-    missionDevice.addEventListener("motioncalibration", (event) => {
-      const { motionCalibration } = event.message;
-      for (const type in motionCalibration) {
-        deviceContainer.querySelector(
-          `[data-calibration="${type}"] span`
-        ).innerText = motionCalibration[type];
-      }
-    });
-
-    missionDevice.addEventListener("sensordataconfigurations", (event) => {
-      const { sensorDataConfigurations } = event.message;
-      for (const sensorType in sensorDataConfigurations) {
-        for (const sensorDataType in sensorDataConfigurations[sensorType]) {
-          deviceContainer.querySelector(
-            `.${sensorType}.configuration [data-configuration="${sensorDataType}"] input`
-          ).value = sensorDataConfigurations[sensorType][sensorDataType];
+    <style>
+        .device:not(.pressure) .pressure {
+            display: none;
         }
-      }
-    });
+        .device:not(.motion) .motion {
+            display: none;
+        }
+        .calibration label,
+        .configuration label {
+            display: block;
+        }
 
-    missionDevice.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
-      missionDevice.SensorDataTypeStrings[sensorTypeString].forEach(
-        (sensorDataTypeString) => {
-          const configurationContainer = document.querySelector(
-            `.${sensorTypeString.toLowerCase()}.configuration [data-configuration="${sensorDataTypeString}"]`
-          );
-          const input = configurationContainer.querySelector("input");
-          input.addEventListener("input", (event) => {
-            const rate = Number(event.target.value);
-            missionDevice.setSensorDataConfigurations({
-              [sensorTypeString.toLowerCase()]: {
-                [sensorDataTypeString]: rate,
-              },
-            });
-          });
+        .device {
+            margin-bottom: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
 
-          const dataContainer = document.querySelector(
-            `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
-          );
-          const span = dataContainer.querySelector("span");
-          missionDevice.addEventListener(sensorDataTypeString, (event) => {
-            const value = event.message[sensorDataTypeString];
+    <body>
+        <h1>WebSocket Mission Device | Ukaton Missions</h1>
 
-            const { timestamp } = event.message;
-            let string = `[${timestamp}] `;
+        <div id="connection">
+            <label class="ip"> <b>ip address:</b> <input value="192.168.1.30" /> </label>
+            <button class="connect">connect</button>
+        </div>
 
-            switch (sensorType) {
-              case missionDevice.SensorTypes.MOTION:
-                string += value
-                  .toArray()
-                  .map((x) => (x.toFixed ? x.toFixed(2) : x))
-                  .toString();
-                break;
-              case missionDevice.SensorTypes.PRESSURE:
-                switch (sensorDataTypeString) {
-                  case "pressureSingleByte":
-                  case "pressureDoubleByte":
-                    string += value.map((sensor) => sensor.value).toString();
-                    break;
-                  case "mass":
-                  case "heelToToe":
-                    string += value.toFixed(2);
-                    break;
-                  case "centerOfMass":
-                    string += [
-                      value.x.toFixed(2),
-                      value.y.toFixed(2),
-                    ].toString();
-                    break;
+        <br /><br />
+
+        <div id="device">
+            <div class="name">
+                <label><b>name:</b> <input /> </label>
+                <button>change name</button>
+            </div>
+
+            <div class="type">
+                <label>
+                    type
+                    <select>
+                        <option value="0">motion module</option>
+                        <option value="1">left insole</option>
+                        <option value="2">right insole</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="batteryLevel">
+                <label><b>battery level:</b> <span></span></label>
+            </div>
+
+            <div class="motion calibration">
+                <b>motion calibration</b>
+                <label data-calibration="system"> system: <span>0</span></label>
+                <label data-calibration="gyroscope"> gyroscope: <span>0</span></label>
+                <label data-calibration="accelerometer"> accelerometer: <span>0</span></label>
+                <label data-calibration="magnetometer"> magnetometer: <span>0</span></label>
+                <label data-calibration="isFullyCalibrated"> fully calibrated: <span>0</span></label>
+            </div>
+
+            <div class="motion configuration">
+                <b>motion configuration</b>
+                <label data-configuration="acceleration"
+                    >acceleration: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="gravity"
+                    >gravity: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="linearAcceleration"
+                    >linear acceleration: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="rotationRate"
+                    >rotation rate: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="magnetometer"
+                    >magnetometer: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="quaternion"
+                    >quaternion: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+            </div>
+            <div class="motion data">
+                <b>motion data</b>
+                <div data-type="acceleration">acceleration: <span></span></div>
+                <div data-type="gravity">gravity: <span></span></div>
+                <div data-type="linearAcceleration">linear acceleration: <span></span></div>
+                <div data-type="rotationRate">rotation rate: <span></span></div>
+                <div data-type="magnetometer">magnetometer: <span></span></div>
+                <div data-type="quaternion">quaternion: <span></span></div>
+                <div data-type="euler">euler: <span></span></div>
+            </div>
+
+            <div class="pressure configuration">
+                <b>pressure configuration</b>
+                <label data-configuration="pressureSingleByte"
+                    >pressure (single byte): <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="pressureDoubleByte"
+                    >pressure (double byte): <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="centerOfMass"
+                    >center of mass: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="mass"
+                    >mass: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="heelToToe"
+                    >heel to toe: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+            </div>
+            <div class="pressure data">
+                <b>pressure data</b>
+                <div data-type="pressureSingleByte">pressure (single byte): <span></span></div>
+                <div data-type="pressureDoubleByte">pressure (double byte): <span></span></div>
+                <div data-type="centerOfMass">center of mass: <span></span></div>
+                <div data-type="mass">mass: <span></span></div>
+                <div data-type="heelToToe">heel to toe: <span></span></div>
+            </div>
+
+            <div class="weight delay configuration">
+                <b>weight delay</b>
+                <label data-configuration="weight"
+                    >weight: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+            </div>
+            <div class="weight data">
+                <b>weight data</b>
+                <div data-type="weight">weight (kg): <span></span></div>
+            </div>
+        </div>
+
+        <hr />
+
+        <div id="fileTransfer">
+            <h2>File Transfer</h2>
+
+            <label>sending file? <input type="checkbox" checked /></label>
+            <br />
+            <input type="file" />
+            <br />
+            <label>filePath: <input type="text" /></label>
+            <br />
+            <button class="transfer" disabled>transfer file</button>
+
+            <progress value="0"></progress>
+
+            <br />
+            <button class="remove">remove file</button>
+
+            <button class="format">format filesystem</button>
+        </div>
+
+        <hr />
+
+        <div id="firmware">
+            <h2>Firmware</h2>
+
+            <div class="firmware version">
+                <label> version: <input type="string" readonly /></label>
+            </div>
+
+            <div class="firmware update">
+                <button onclick="updateFirmware()">update firmware</button>
+                <progress value="0"></progress>
+            </div>
+        </div>
+
+        <hr />
+
+        <div id="bleGenericPeers">
+            <h2>BLE Generic Peers</h2>
+
+            <template id="bleGenericPeerTemplate">
+                <div class="bleGenericPeer">
+                    <h3>BLE Generic Peer #<span class="index"></span></h3>
+
+                    <label>name <input class="name" type="text" /></label>
+                    <button class="connect">connect</button>
+
+                    <button class="addService">add service</button>
+
+                    <br /><br />
+                    <div class="services"></div>
+                </div>
+            </template>
+
+            <template id="bleGenericPeerServiceTemplate">
+                <div class="bleGenericPeerService">
+                    <b>Service #<span class="index"></span></b>
+                    <br />
+                    <label>uuid <input class="uuid" type="text" size="38" /></label>
+                    <button class="get">get</button>
+                    <button class="addCharacteristic">add characteristic</button>
+                    <button class="remove">remove</button>
+
+                    <br /><br />
+                    <div class="characteristics"></div>
+                </div>
+            </template>
+
+            <template id="bleGenericPeerCharacteristicTemplate">
+                <div class="bleGenericPeerCharacteristic">
+                    <b>Characteristic #<span class="index"></span></b>
+                    <br />
+                    <label>uuid <input class="uuid" type="text" size="38" /></label>
+                    <button class="get">get</button>
+                    <br />
+                    <label>value <input class="value" size="60" /></label>
+                    <button class="read">read</button>
+                    <button class="write">write</button>
+                    <select class="dataType">
+                        <option>uint8</option>
+                        <option>utf-8</option>
+                    </select>
+                    <br />
+                    <label>subscribe <input class="subscribe" type="checkbox" /></label>
+                    <br />
+                    <button class="remove">remove</button>
+                </div>
+            </template>
+        </div>
+    </body>
+
+    <script>
+        const missionDevice = new WebSocketMissionDevice();
+        const deviceContainer = document.getElementById("device");
+
+        missionDevice.addEventListener("connected", (event) => {
+            document.getElementById("connection").remove();
+            deviceContainer.removeAttribute("hidden");
+        });
+        document.querySelector("#connection .connect").addEventListener("click", (event) => {
+            connect();
+        });
+        async function connect() {
+            const ipAddress = document.querySelector(".ip input").value;
+            await missionDevice.connect(ipAddress);
+        }
+
+        missionDevice.addEventListener("batteryLevel", (event) => {
+            const { batteryLevel } = event.message;
+            deviceContainer.querySelector(".batteryLevel span").innerText = batteryLevel;
+        });
+
+        missionDevice.addEventListener("name", (event) => {
+            const { name } = event.message;
+            deviceContainer.querySelector(".name input").value = name;
+        });
+        deviceContainer.querySelector(".name button").addEventListener("click", (event) => {
+            const name = deviceContainer.querySelector(".name input").value;
+            missionDevice.setName(name);
+        });
+
+        missionDevice.addEventListener("type", (event) => {
+            const { type } = event.message;
+            if (type == missionDevice.Types.MOTION_MODULE) {
+                deviceContainer.classList.add("motion");
+            }
+            if (type != missionDevice.Types.MOTION_MODULE) {
+                deviceContainer.classList.add("pressure", "motion");
+            }
+            deviceContainer.querySelector(".type select").value = type;
+        });
+        deviceContainer.querySelector(".type select").addEventListener("input", (event) => {
+            const type = event.target.value;
+            missionDevice.setType(type);
+        });
+
+        missionDevice.addEventListener("motioncalibration", (event) => {
+            const { motionCalibration } = event.message;
+            for (const type in motionCalibration) {
+                deviceContainer.querySelector(`[data-calibration="${type}"] span`).innerText = motionCalibration[type];
+            }
+        });
+
+        missionDevice.addEventListener("sensordataconfigurations", (event) => {
+            const { sensorDataConfigurations } = event.message;
+            for (const sensorType in sensorDataConfigurations) {
+                for (const sensorDataType in sensorDataConfigurations[sensorType]) {
+                    deviceContainer.querySelector(
+                        `.${sensorType}.configuration [data-configuration="${sensorDataType}"] input`
+                    ).value = sensorDataConfigurations[sensorType][sensorDataType];
                 }
-                break;
             }
+        });
 
-            span.innerText = string;
-          });
+        missionDevice.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
+            missionDevice.SensorDataTypeStrings[sensorTypeString].forEach((sensorDataTypeString) => {
+                const configurationContainer = document.querySelector(
+                    `.${sensorTypeString.toLowerCase()}.configuration [data-configuration="${sensorDataTypeString}"]`
+                );
+                const input = configurationContainer.querySelector("input");
+                input.addEventListener("input", (event) => {
+                    const rate = Number(event.target.value);
+                    missionDevice.setSensorDataConfigurations({
+                        [sensorTypeString.toLowerCase()]: {
+                            [sensorDataTypeString]: rate,
+                        },
+                    });
+                });
 
-          if (sensorDataTypeString == "quaternion") {
-            const sensorDataTypeString = "euler";
-            const dataContainer = document.querySelector(
-              `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
-            );
-            const span = dataContainer.querySelector("span");
-            missionDevice.addEventListener(sensorDataTypeString, (event) => {
-              const value = event.message[sensorDataTypeString];
+                const dataContainer = document.querySelector(
+                    `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
+                );
+                const span = dataContainer.querySelector("span");
+                missionDevice.addEventListener(sensorDataTypeString, (event) => {
+                    const value = event.message[sensorDataTypeString];
 
-              const { timestamp } = event.message;
-              let string = `[${timestamp}] `;
+                    const { timestamp } = event.message;
+                    let string = `[${timestamp}] `;
 
-              switch (sensorType) {
-                case missionDevice.SensorTypes.MOTION:
-                  string += value
-                    .toArray()
-                    .map((x) => (x.toFixed ? x.toFixed(2) : x))
-                    .toString();
-                  break;
-                case missionDevice.SensorTypes.PRESSURE:
-                  switch (sensorDataTypeString) {
-                    case "pressureSingleByte":
-                    case "pressureDoubleByte":
-                      string += value.map((sensor) => sensor.value).toString();
-                      break;
-                    case "mass":
-                    case "heelToToe":
-                      string += value.toFixed(2);
-                      break;
-                    case "centerOfMass":
-                      string += [
-                        value.x.toFixed(2),
-                        value.y.toFixed(2),
-                      ].toString();
-                      break;
-                  }
-                  break;
-              }
+                    switch (sensorType) {
+                        case missionDevice.SensorTypes.MOTION:
+                            string += value
+                                .toArray()
+                                .map((x) => (x.toFixed ? x.toFixed(2) : x))
+                                .toString();
+                            break;
+                        case missionDevice.SensorTypes.PRESSURE:
+                            switch (sensorDataTypeString) {
+                                case "pressureSingleByte":
+                                case "pressureDoubleByte":
+                                    string += value.map((sensor) => sensor.value).toString();
+                                    break;
+                                case "mass":
+                                case "heelToToe":
+                                    string += value.toFixed(2);
+                                    break;
+                                case "centerOfMass":
+                                    string += [value.x.toFixed(2), value.y.toFixed(2)].toString();
+                                    break;
+                            }
+                            break;
+                    }
 
-              span.innerText = string;
+                    span.innerText = string;
+                });
+
+                if (sensorDataTypeString == "quaternion") {
+                    const sensorDataTypeString = "euler";
+                    const dataContainer = document.querySelector(
+                        `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
+                    );
+                    const span = dataContainer.querySelector("span");
+                    missionDevice.addEventListener(sensorDataTypeString, (event) => {
+                        const value = event.message[sensorDataTypeString];
+
+                        const { timestamp } = event.message;
+                        let string = `[${timestamp}] `;
+
+                        switch (sensorType) {
+                            case missionDevice.SensorTypes.MOTION:
+                                string += value
+                                    .toArray()
+                                    .map((x) => (x.toFixed ? x.toFixed(2) : x))
+                                    .toString();
+                                break;
+                            case missionDevice.SensorTypes.PRESSURE:
+                                switch (sensorDataTypeString) {
+                                    case "pressureSingleByte":
+                                    case "pressureDoubleByte":
+                                        string += value.map((sensor) => sensor.value).toString();
+                                        break;
+                                    case "mass":
+                                    case "heelToToe":
+                                        string += value.toFixed(2);
+                                        break;
+                                    case "centerOfMass":
+                                        string += [value.x.toFixed(2), value.y.toFixed(2)].toString();
+                                        break;
+                                }
+                                break;
+                        }
+
+                        span.innerText = string;
+                    });
+                }
             });
-          }
+        });
+
+        // Weight stuff
+        deviceContainer.querySelector(".weight.delay input").addEventListener("input", (event) => {
+            const delay = Number(event.target.value);
+            missionDevice.setWeightDataDelay(delay);
+        });
+        missionDevice.addEventListener("weight", (event) => {
+            const { weight } = event.message;
+            deviceContainer.querySelector(".weight.data [data-type='weight'] span").innerText = weight;
+        });
+
+        // File Transfer
+        const fileTransferContainer = document.querySelector("#fileTransfer");
+        const fileTransferCheckbox = fileTransferContainer.querySelector("input[type='checkbox']");
+        const fileTransferInput = fileTransferContainer.querySelector("input[type='file']");
+        const fileTransferFilePathInput = fileTransferContainer.querySelector("input[type='text']");
+        const fileTransferButton = fileTransferContainer.querySelector("button.transfer");
+        const fileTransferProgress = fileTransferContainer.querySelector("progress");
+        const removeFileButton = fileTransferContainer.querySelector("button.remove");
+        const formatFilesystemButton = fileTransferContainer.querySelector("button.format");
+
+        function getIsSendingFile() {
+            return fileTransferCheckbox.checked;
         }
-      );
-    });
+        function getIsValidInput() {
+            var isValidInput = true;
+            isValidInput &&= fileTransferFilePathInput.value.length > 0;
+            if (getIsSendingFile()) {
+                isValidInput &&= fileTransferInput.files.length > 0;
+            }
+            return isValidInput;
+        }
+        function updateFileTransferButton() {
+            fileTransferButton.disabled = !getIsValidInput();
+            fileTransferButton.innerText = getIsSendingFile() ? "send file" : "receive file";
+        }
+        fileTransferCheckbox.addEventListener("input", (event) => {
+            const isSendingFile = getIsSendingFile();
+            fileTransferInput.disabled = !isSendingFile;
+            updateFileTransferButton();
+        });
+        fileTransferInput.addEventListener("input", (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileTransferFilePathInput.value = "/" + file.name;
+            }
+            fileTransferFilePathInput.value;
+            updateFileTransferButton();
+        });
+        missionDevice.addEventListener("connected", async (event) => {
+            const maxFileTransferFilePathLength = 31;
+            fileTransferFilePathInput.maxLength = maxFileTransferFilePathLength;
+            fileTransferFilePathInput.size = maxFileTransferFilePathLength;
+        });
+        fileTransferFilePathInput.addEventListener("input", (event) => {
+            updateFileTransferButton();
+        });
+        fileTransferButton.addEventListener("click", async (event) => {
+            const fileTransferFilePath = fileTransferFilePathInput.value;
+            if (getIsSendingFile()) {
+                var file = fileTransferInput.files[0];
+                fileTransferInput.value = "";
+                await missionDevice.sendFile(file, fileTransferFilePath);
+            } else {
+                const file = await missionDevice.receiveFile(fileTransferFilePath);
+                console.log("file received", file);
+            }
+        });
 
-    // Weight stuff
-    deviceContainer
-      .querySelector(".weight.delay input")
-      .addEventListener("input", (event) => {
-        const delay = Number(event.target.value);
-        missionDevice.setWeightDataDelay(delay);
-      });
-    missionDevice.addEventListener("weight", (event) => {
-      const { weight } = event.message;
-      deviceContainer.querySelector(
-        ".weight.data [data-type='weight'] span"
-      ).innerText = weight;
-    });
+        removeFileButton.addEventListener("click", async (event) => {
+            event.target.disabled = true;
+            const fileTransferFilePath = fileTransferFilePathInput.value;
+            await missionDevice.removeFile(fileTransferFilePath);
+            event.target.disabled = false;
+        });
+        formatFilesystemButton.addEventListener("click", (event) => {
+            missionDevice.formatFilesystem();
+        });
 
-    // File Transfer
-    const fileTransferContainer = document.querySelector("#fileTransfer");
-    const fileTransferCheckbox = fileTransferContainer.querySelector(
-      "input[type='checkbox']"
-    );
-    const fileTransferInput =
-      fileTransferContainer.querySelector("input[type='file']");
-    const fileTransferFilePathInput =
-      fileTransferContainer.querySelector("input[type='text']");
-    const fileTransferButton =
-      fileTransferContainer.querySelector("button.transfer");
-    const fileTransferProgress =
-      fileTransferContainer.querySelector("progress");
-    const removeFileButton =
-      fileTransferContainer.querySelector("button.remove");
-    const formatFilesystemButton =
-      fileTransferContainer.querySelector("button.format");
+        missionDevice.addEventListener("filetransferprogress", (event) => {
+            const { progress } = event.message;
+            fileTransferProgress.value = progress;
+        });
+        missionDevice.addEventListener("filetransfercomplete", async (event) => {
+            if (event.message.type == "receive") {
+                const { file } = event.message;
+                const link = document.createElement("a");
+                link.download = file.name;
+                link.href = URL.createObjectURL(file);
+                link.click();
+            }
+        });
 
-    function getIsSendingFile() {
-      return fileTransferCheckbox.checked;
-    }
-    function getIsValidInput() {
-      var isValidInput = true;
-      isValidInput &&= fileTransferFilePathInput.value.length > 0;
-      if (getIsSendingFile()) {
-        isValidInput &&= fileTransferInput.files.length > 0;
-      }
-      return isValidInput;
-    }
-    function updateFileTransferButton() {
-      fileTransferButton.disabled = !getIsValidInput();
-      fileTransferButton.innerText = getIsSendingFile()
-        ? "send file"
-        : "receive file";
-    }
-    fileTransferCheckbox.addEventListener("input", (event) => {
-      const isSendingFile = getIsSendingFile();
-      fileTransferInput.disabled = !isSendingFile;
-      updateFileTransferButton();
-    });
-    fileTransferInput.addEventListener("input", (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        fileTransferFilePathInput.value = "/" + file.name;
-      }
-      fileTransferFilePathInput.value;
-      updateFileTransferButton();
-    });
-    missionDevice.addEventListener("connected", async (event) => {
-      const maxFileTransferFilePathLength = 31;
-      fileTransferFilePathInput.maxLength = maxFileTransferFilePathLength;
-      fileTransferFilePathInput.size = maxFileTransferFilePathLength;
-    });
-    fileTransferFilePathInput.addEventListener("input", (event) => {
-      updateFileTransferButton();
-    });
-    fileTransferButton.addEventListener("click", async (event) => {
-      const fileTransferFilePath = fileTransferFilePathInput.value;
-      if (getIsSendingFile()) {
-        var file = fileTransferInput.files[0];
-        fileTransferInput.value = "";
-        await missionDevice.sendFile(file, fileTransferFilePath);
-      } else {
-        const file = await missionDevice.receiveFile(fileTransferFilePath);
-        console.log("file received", file);
-      }
-    });
+        function sendArrayBuffer(length = 100, filePath = "/test.txt") {
+            const array = [];
+            while (array.length < length) {
+                array.push(array.length);
+            }
+            const arrayBuffer = Uint8Array.from(array).buffer;
+            missionDevice.sendFile(arrayBuffer, filePath);
+        }
 
-    removeFileButton.addEventListener("click", async (event) => {
-      event.target.disabled = true;
-      const fileTransferFilePath = fileTransferFilePathInput.value;
-      await missionDevice.removeFile(fileTransferFilePath);
-      event.target.disabled = false;
-    });
-    formatFilesystemButton.addEventListener("click", (event) => {
-      missionDevice.formatFilesystem();
-    });
+        // Firmware update
+        const firmwareContainer = document.getElementById("firmware");
 
-    missionDevice.addEventListener("filetransferprogress", (event) => {
-      const { progress } = event.message;
-      fileTransferProgress.value = progress;
-    });
-    missionDevice.addEventListener("filetransfercomplete", async (event) => {
-      if (event.message.type == "receive") {
-        const { file } = event.message;
-        const link = document.createElement("a");
-        link.download = file.name;
-        link.href = URL.createObjectURL(file);
-        link.click();
-      }
-    });
+        const firmwareVersionInput = firmwareContainer.querySelector(".version input");
+        missionDevice.addEventListener("connected", async (event) => {
+            const version = await missionDevice.getFirmwareVersion();
+            firmwareVersionInput.value = version;
+        });
 
-    function sendArrayBuffer(length = 100, filePath = "/test.txt") {
-      const array = [];
-      while (array.length < length) {
-        array.push(array.length);
-      }
-      const arrayBuffer = Uint8Array.from(array).buffer;
-      missionDevice.sendFile(arrayBuffer, filePath);
-    }
+        const updateFirmwareButton = firmwareContainer.querySelector(".update button");
+        const updateFirmwareProgress = firmwareContainer.querySelector(".update progress");
+        missionDevice.addEventListener("firmwareupdateprogress", (event) => {
+            const { progress } = event.message;
+            updateFirmwareProgress.value = progress;
+        });
 
-    // Firmware update
-    const firmwareContainer = document.getElementById("firmware");
+        function updateFirmware() {
+            if (!missionDevice.isConnected) {
+                return;
+            }
 
-    const firmwareVersionInput =
-      firmwareContainer.querySelector(".version input");
-    missionDevice.addEventListener("connected", async (event) => {
-      const version = await missionDevice.getFirmwareVersion();
-      firmwareVersionInput.value = version;
-    });
+            updateFirmwareButton.disabled = true;
+            updateFirmwareProgress.value = 0;
 
-    const updateFirmwareButton =
-      firmwareContainer.querySelector(".update button");
-    const updateFirmwareProgress =
-      firmwareContainer.querySelector(".update progress");
-    missionDevice.addEventListener("firmwareupdateprogress", (event) => {
-      const { progress } = event.message;
-      updateFirmwareProgress.value = progress;
-    });
+            missionDevice.updateFirmware(
+                "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/firmware.bin?v=1647219503819"
+            );
+        }
 
-    function updateFirmware() {
-      if (!missionDevice.isConnected) {
-        return;
-      }
+        missionDevice.addEventListener("disconnected", (event) => {
+            //window.location = window.location
+        });
 
-      updateFirmwareButton.disabled = true;
-      updateFirmwareProgress.value = 0;
+        function throttle(functionToThrottle, minimumInterval, optionalContext) {
+            var lastTime;
+            if (optionalContext) {
+                functionToThrottle = module.exports.bind(functionToThrottle, optionalContext);
+            }
+            return function () {
+                var time = Date.now();
+                var sinceLastTime = typeof lastTime === "undefined" ? minimumInterval : time - lastTime;
+                if (typeof lastTime === "undefined" || sinceLastTime >= minimumInterval) {
+                    lastTime = time;
+                    functionToThrottle.apply(null, arguments);
+                }
+            };
+        }
 
-      missionDevice.updateFirmware(
-        "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/firmware.bin?v=1647219503819"
-      );
-    }
+        // BLE GENERIC PEER
+        const bleGenericPeerTemplate = document.getElementById("bleGenericPeerTemplate");
+        const bleGenericPeerServiceTemplate = document.getElementById("bleGenericPeerServiceTemplate");
+        const bleGenericPeerCharacteristicTemplate = document.getElementById("bleGenericPeerCharacteristicTemplate");
+        const bleGenericPeersContainer = document.getElementById("bleGenericPeers");
 
-    missionDevice.addEventListener("disconnected", (event) => {
-      //window.location = window.location
-    });
-
-    function throttle(functionToThrottle, minimumInterval, optionalContext) {
-      var lastTime;
-      if (optionalContext) {
-        functionToThrottle = module.exports.bind(
-          functionToThrottle,
-          optionalContext
-        );
-      }
-      return function () {
-        var time = Date.now();
-        var sinceLastTime =
-          typeof lastTime === "undefined" ? minimumInterval : time - lastTime;
-        if (
-          typeof lastTime === "undefined" ||
-          sinceLastTime >= minimumInterval
+        const textEncoder = new TextEncoder();
+        const textDecoder = new TextDecoder();
+        for (
+            let bleGenericPeerIndex = 0;
+            bleGenericPeerIndex < missionDevice.MAX_NUMBER_OF_BLE_GENERIC_PEERS;
+            bleGenericPeerIndex++
         ) {
-          lastTime = time;
-          functionToThrottle.apply(null, arguments);
+            const bleGenericPeer = missionDevice._bleGenericPeers[bleGenericPeerIndex];
+
+            const bleGenericPeerContainer = bleGenericPeerTemplate.content
+                .cloneNode(true)
+                .querySelector(".bleGenericPeer");
+            bleGenericPeerContainer.querySelector(".index").innerText = bleGenericPeerIndex + 1;
+
+            const nameInput = bleGenericPeerContainer.querySelector(".name");
+
+            const connectButton = bleGenericPeerContainer.querySelector(".connect");
+            connectButton.addEventListener("click", async () => {
+                connectButton.disabled = true;
+                if (bleGenericPeer.isConnected) {
+                    await bleGenericPeer.disconnect();
+                } else {
+                    await bleGenericPeer.connect(nameInput.value);
+                }
+                connectButton.disabled = false;
+            });
+            bleGenericPeer.addEventListener("isConnected", () => {
+                connectButton.innerText = bleGenericPeer.isConnected ? "disconnect" : "connect";
+            });
+
+            const servicesContainer = bleGenericPeerContainer.querySelector(".services");
+
+            const addServiceButton = bleGenericPeerContainer.querySelector(".addService");
+            addServiceButton.addEventListener("click", () => {
+                const serviceIndex = servicesContainer.children.length;
+                const bleGenericPeerServiceContainer = bleGenericPeerServiceTemplate.content
+                    .cloneNode(true)
+                    .querySelector(".bleGenericPeerService");
+                bleGenericPeerServiceContainer.querySelector(".index").innerText = serviceIndex + 1;
+
+                const removeServiceButton = bleGenericPeerServiceContainer.querySelector(".remove");
+                removeServiceButton.addEventListener("click", () => {
+                    const isLast =
+                        bleGenericPeerServiceContainer ==
+                        servicesContainer.childNodes[servicesContainer.childNodes.length - 1];
+                    if (isLast) {
+                        bleGenericPeerServiceContainer.remove();
+                    }
+                });
+
+                const serviceUuidInput = bleGenericPeerServiceContainer.querySelector(".uuid");
+
+                const getServiceButton = bleGenericPeerServiceContainer.querySelector(".get");
+                getServiceButton.addEventListener("click", async () => {
+                    const uuid = serviceUuidInput.value;
+                    await bleGenericPeer.getService(serviceIndex, uuid);
+                    getServiceButton.disabled = true;
+                    serviceUuidInput.disabled = true;
+                    removeServiceButton.disabled = true;
+                });
+
+                const characteristicsContainer = bleGenericPeerServiceContainer.querySelector(".characteristics");
+
+                const addCharacteristicButton = bleGenericPeerServiceContainer.querySelector(".addCharacteristic");
+                addCharacteristicButton.addEventListener("click", () => {
+                    //const characteristicIndex = characteristicsContainer.children.length;
+                    const characteristicIndex = bleGenericPeer._characteristics.length;
+                    const bleGenericPeerCharacteristicContainer = bleGenericPeerCharacteristicTemplate.content
+                        .cloneNode(true)
+                        .querySelector(".bleGenericPeerCharacteristic");
+                    bleGenericPeerCharacteristicContainer.querySelector(".index").innerText = characteristicIndex + 1;
+
+                    const characteristicUuidInput = bleGenericPeerCharacteristicContainer.querySelector(".uuid");
+                    const characteristicValueInput = bleGenericPeerCharacteristicContainer.querySelector(".value");
+
+                    const characteristicValueDataTypeInput =
+                        bleGenericPeerCharacteristicContainer.querySelector(".dataType");
+                    let dataType = characteristicValueDataTypeInput.value;
+                    characteristicValueDataTypeInput.addEventListener("input", async (event) => {
+                        dataType = characteristicValueDataTypeInput.value;
+                        const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+                        characteristicValueInput.value = dataViewToInputString(dataView);
+                    });
+                    const inputStringToDataView = (string) => {
+                        let dataView;
+                        switch (dataType) {
+                            case "uint8":
+                                dataView = new DataView(Uint8Array.from(string.split("-")).buffer);
+                                break;
+                            case "utf-8":
+                                dataView = string;
+                                break;
+                        }
+                        return dataView;
+                    };
+                    const dataViewToInputString = (dataView) => {
+                        let string;
+                        switch (dataType) {
+                            case "uint8":
+                                string = Array.from(new Uint8Array(dataView.buffer)).join("-");
+                                break;
+                            case "utf-8":
+                                string = textDecoder.decode(dataView);
+                                break;
+                        }
+                        return string;
+                    };
+
+                    const getCharacteristicButton = bleGenericPeerCharacteristicContainer.querySelector(".get");
+                    getCharacteristicButton.addEventListener("click", async () => {
+                        const uuid = characteristicUuidInput.value;
+                        await bleGenericPeer.getCharacteristic(serviceIndex, characteristicIndex, uuid);
+                        getCharacteristicButton.disabled = true;
+                        characteristicUuidInput.disabled = true;
+                        removeCharacteristicButton.disabled = true;
+                    });
+                    bleGenericPeer.addEventListener(`characteristicValue${characteristicIndex}`, async (event) => {
+                        const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+                        characteristicValueInput.value = dataViewToInputString(dataView);
+                    });
+                    const readCharacteristicButton = bleGenericPeerCharacteristicContainer.querySelector(".read");
+                    readCharacteristicButton.addEventListener("click", async () => {
+                        const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
+                        characteristicValueInput.value = dataViewToInputString(dataView);
+                    });
+                    const writeCharacteristicButton = bleGenericPeerCharacteristicContainer.querySelector(".write");
+                    writeCharacteristicButton.addEventListener("click", async () => {
+                        let inputString = characteristicValueInput.value;
+                        let dataView = inputStringToDataView(inputString);
+                        console.log(dataView);
+                        dataView = await bleGenericPeer.writeCharacteristic(characteristicIndex, dataView);
+                        characteristicValueInput.value = dataViewToInputString(dataView);
+                    });
+                    const subscribeCharacteristicButton =
+                        bleGenericPeerCharacteristicContainer.querySelector(".subscribe");
+                    subscribeCharacteristicButton.addEventListener("input", async (event) => {
+                        const shouldSubscribe = event.target.checked;
+                        await bleGenericPeer.setCharacteristicSubscription(characteristicIndex, shouldSubscribe);
+                    });
+
+                    const removeCharacteristicButton = bleGenericPeerCharacteristicContainer.querySelector(".remove");
+                    removeCharacteristicButton.addEventListener("click", () => {
+                        const isLast =
+                            bleGenericPeerCharacteristicContainer ==
+                            characteristicsContainer.childNodes[characteristicsContainer.childNodes.length - 1];
+                        if (isLast) {
+                            bleGenericPeerCharacteristicContainer.remove();
+                        }
+                    });
+
+                    characteristicsContainer.appendChild(bleGenericPeerCharacteristicContainer);
+                });
+
+                servicesContainer.appendChild(bleGenericPeerServiceContainer);
+            });
+
+            bleGenericPeersContainer.appendChild(bleGenericPeerContainer);
         }
-      };
-    }
-
-    // BLE GENERIC PEER
-    const bleGenericPeerTemplate = document.getElementById(
-      "bleGenericPeerTemplate"
-    );
-    const bleGenericPeerServiceTemplate = document.getElementById(
-      "bleGenericPeerServiceTemplate"
-    );
-    const bleGenericPeerCharacteristicTemplate = document.getElementById(
-      "bleGenericPeerCharacteristicTemplate"
-    );
-    const bleGenericPeersContainer = document.getElementById("bleGenericPeers");
-    
-    const textEncoder = new TextEncoder();
-    const textDecoder = new TextDecoder();
-    for (
-      let bleGenericPeerIndex = 0;
-      bleGenericPeerIndex < missionDevice.MAX_NUMBER_OF_BLE_GENERIC_PEERS;
-      bleGenericPeerIndex++
-    ) {
-      const bleGenericPeer = missionDevice._bleGenericPeers[bleGenericPeerIndex];
-      
-      const bleGenericPeerContainer = bleGenericPeerTemplate.content
-        .cloneNode(true)
-        .querySelector(".bleGenericPeer");
-      bleGenericPeerContainer.querySelector(".index").innerText = bleGenericPeerIndex + 1;
-
-      const nameInput = bleGenericPeerContainer.querySelector(".name");
-
-      const connectButton = bleGenericPeerContainer.querySelector(".connect");
-      connectButton.addEventListener("click", async () => {
-        connectButton.disabled = true;
-        if (bleGenericPeer.isConnected) {
-          await bleGenericPeer.disconnect()
-        }
-        else {
-          await bleGenericPeer.connect(nameInput.value)
-        }
-        connectButton.disabled = false;
-      });
-      bleGenericPeer.addEventListener("isConnected", () => {
-        connectButton.innerText = bleGenericPeer.isConnected? "disconnect":"connect"
-      })
-
-      const servicesContainer =
-        bleGenericPeerContainer.querySelector(".services");
-
-      const addServiceButton =
-        bleGenericPeerContainer.querySelector(".addService");
-      addServiceButton.addEventListener("click", () => {
-        const serviceIndex = servicesContainer.children.length;
-        const bleGenericPeerServiceContainer =
-          bleGenericPeerServiceTemplate.content
-            .cloneNode(true)
-            .querySelector(".bleGenericPeerService");
-        bleGenericPeerServiceContainer.querySelector(".index").innerText =
-          serviceIndex + 1;
-
-        const removeServiceButton =
-          bleGenericPeerServiceContainer.querySelector(".remove");
-        removeServiceButton.addEventListener("click", () => {
-          const isLast =
-            bleGenericPeerServiceContainer ==
-            servicesContainer.childNodes[
-              servicesContainer.childNodes.length - 1
-            ];
-          if (isLast) {
-            bleGenericPeerServiceContainer.remove();
-          }
-        });
-        
-        const serviceUuidInput = bleGenericPeerServiceContainer.querySelector(".uuid");
-        
-        const getServiceButton =
-          bleGenericPeerServiceContainer.querySelector(".get");
-        getServiceButton.addEventListener("click", async () => {
-          const uuid = serviceUuidInput.value;
-          await bleGenericPeer.getService(serviceIndex, uuid);
-          getServiceButton.disabled = true;
-          serviceUuidInput.disabled = true;
-          removeServiceButton.disabled = true;
-        });
-
-        const characteristicsContainer =
-          bleGenericPeerServiceContainer.querySelector(".characteristics");
-
-        const addCharacteristicButton =
-          bleGenericPeerServiceContainer.querySelector(".addCharacteristic");
-        addCharacteristicButton.addEventListener("click", () => {
-          //const characteristicIndex = characteristicsContainer.children.length;
-          const characteristicIndex = bleGenericPeer._characteristics.length
-          const bleGenericPeerCharacteristicContainer =
-            bleGenericPeerCharacteristicTemplate.content
-              .cloneNode(true)
-              .querySelector(".bleGenericPeerCharacteristic");
-          bleGenericPeerCharacteristicContainer.querySelector(
-            ".index"
-          ).innerText = characteristicIndex + 1;
-          
-          const characteristicUuidInput = bleGenericPeerCharacteristicContainer.querySelector(".uuid");
-          const characteristicValueInput = bleGenericPeerCharacteristicContainer.querySelector(".value");
-          
-          const characteristicValueDataTypeInput = bleGenericPeerCharacteristicContainer.querySelector(".dataType");
-          let dataType = characteristicValueDataTypeInput.value;
-          characteristicValueDataTypeInput.addEventListener("input", async event => {
-            dataType = characteristicValueDataTypeInput.value;
-            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
-            characteristicValueInput.value = dataViewToInputString(dataView);
-          });
-          const inputStringToDataView = (string) => {
-            let dataView;
-            switch (dataType) {
-              case "uint8":
-                dataView = new DataView(Uint8Array.from(string.split('-')).buffer);
-                break;
-              case "utf-8":
-                dataView = string;
-                break;
-            }
-            return dataView;
-          }
-          const dataViewToInputString = (dataView) => {
-            let string;
-            switch (dataType) {
-              case "uint8":
-                string = Array.from(new Uint8Array(dataView.buffer)).join('-');
-                break;
-              case "utf-8":
-                string = textDecoder.decode(dataView)
-                break;
-            }
-            return string;
-          }
-
-          const getCharacteristicButton =
-            bleGenericPeerCharacteristicContainer.querySelector(".get");
-          getCharacteristicButton.addEventListener("click", async () => {
-            const uuid = characteristicUuidInput.value;
-            await bleGenericPeer.getCharacteristic(serviceIndex, characteristicIndex, uuid);
-            getCharacteristicButton.disabled = true;
-            characteristicUuidInput.disabled = true;
-            removeCharacteristicButton.disabled = true;
-          });
-          bleGenericPeer.addEventListener(`characteristicValue${characteristicIndex}`, async event => {
-            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
-            characteristicValueInput.value = dataViewToInputString(dataView);
-          });
-          const readCharacteristicButton =
-            bleGenericPeerCharacteristicContainer.querySelector(".read");
-          readCharacteristicButton.addEventListener("click", async () => {
-            const dataView = await bleGenericPeer.readCharacteristic(characteristicIndex);
-            characteristicValueInput.value = dataViewToInputString(dataView);
-          });
-          const writeCharacteristicButton =
-            bleGenericPeerCharacteristicContainer.querySelector(".write");
-          writeCharacteristicButton.addEventListener("click", async () => {
-            let inputString = characteristicValueInput.value;
-            let dataView = inputStringToDataView(inputString)
-            console.log(dataView);
-            dataView = await bleGenericPeer.writeCharacteristic(characteristicIndex, dataView);
-            characteristicValueInput.value = dataViewToInputString(dataView);
-          });
-          const subscribeCharacteristicButton =
-            bleGenericPeerCharacteristicContainer.querySelector(".subscribe");
-          subscribeCharacteristicButton.addEventListener("input", async (event) => {
-            const shouldSubscribe = event.target.checked;
-            await bleGenericPeer.setCharacteristicSubscription(characteristicIndex, shouldSubscribe);
-          });
-
-          const removeCharacteristicButton =
-            bleGenericPeerCharacteristicContainer.querySelector(".remove");
-          removeCharacteristicButton.addEventListener("click", () => {
-            const isLast =
-              bleGenericPeerCharacteristicContainer ==
-              characteristicsContainer.childNodes[
-                characteristicsContainer.childNodes.length - 1
-              ];
-            if (isLast) {
-              bleGenericPeerCharacteristicContainer.remove();
-            }
-          });
-
-          characteristicsContainer.appendChild(
-            bleGenericPeerCharacteristicContainer
-          );
-        });
-
-        servicesContainer.appendChild(bleGenericPeerServiceContainer);
-      });
-
-      bleGenericPeersContainer.appendChild(bleGenericPeerContainer);
-    }
-  </script>
+    </script>
 </html>

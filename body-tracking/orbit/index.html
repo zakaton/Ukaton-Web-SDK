@@ -1,228 +1,213 @@
 <html>
-  <head>
-    <title>Orbit | Ukaton</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
+    <head>
+        <title>Orbit | Ukaton</title>
+        <link rel="icon" href="/favicon.png" />
 
-    <script src="/aframe.min.js"></script>
-    <!-- <script src="/body-tracking/OrbitControls.js"></script> -->
-    <!-- <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script> -->
+        <script src="/aframe.min.js"></script>
+        <!-- <script src="/body-tracking/OrbitControls.js"></script> -->
+        <!-- <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script> -->
 
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="/PeerBluetoothMissionDevice.js"></script>
-    <script src="/WebSocketMissionDevice.js"></script>
-    <script src="/body-tracking/hand-tracking-controls-proxy.js"></script>
-    <script src="/body-tracking/follow-shadow.js"></script>
-    <script src="/body-tracking/camera-controls-component.js"></script>
-    <script src="/body-tracking/ready-player-me-pro.js"></script>
-    <script src="/body-tracking/orbit-controls-component.js"></script>
-    <!-- https://github.com/gftruj/aframe-hand-tracking-controls-extras -->
-    <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
-    <!-- https://github.com/tizzle/aframe-orbit-controls-component -->
-    <!-- <script src="https://cdn.rawgit.com/tizzle/aframe-orbit-controls-component/v0.1.14/dist/aframe-orbit-controls-component.min.js></script> -->
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="/PeerBluetoothMissionDevice.js"></script>
+        <script src="/WebSocketMissionDevice.js"></script>
+        <script src="/body-tracking/hand-tracking-controls-proxy.js"></script>
+        <script src="/body-tracking/follow-shadow.js"></script>
+        <script src="/body-tracking/camera-controls-component.js"></script>
+        <script src="/body-tracking/ready-player-me-pro.js"></script>
+        <script src="/body-tracking/orbit-controls-component.js"></script>
+        <!-- https://github.com/gftruj/aframe-hand-tracking-controls-extras -->
+        <script src="https://gftruj.github.io/hand.tracking.controls.extras/dist/aframe-hand-tracking-controls-extras.js"></script>
+        <!-- https://github.com/tizzle/aframe-orbit-controls-component -->
+        <!-- <script src="https://cdn.rawgit.com/tizzle/aframe-orbit-controls-component/v0.1.14/dist/aframe-orbit-controls-component.min.js></script> -->
 
-    <!-- https://github.com/diarmidmackenzie/aframe-multi-camera -->
-    <script src="https://cdn.jsdelivr.net/gh/diarmidmackenzie/aframe-multi-camera@latest/src/multi-camera.min.js"></script>
-  </head>
-  <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #overlay {
-      position: absolute;
-      z-index: 1;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-    #overlay .clickable {
-      pointer-events: all;
-    }
-    #overlay .hidden {
-      display: none;
-    }
-  </style>
-  <body>
-    <div id="overlay">
-      <button class="clickable" onclick="connect()">
-        connect via WebSockets
-      </button>
-      <button class="clickable" onclick="calibrate()">Calibrate</button>
-      <button class="clickable" onclick="addBluetoothDevice()">
-        add bluetooth device
-      </button>
-      <button
-        class="clickable"
-        onclick="navigator.clipboard.writeText('ws://192.168.6.22, ws://192.168.6.17, ws://192.168.6.23, ws://192.168.6.24, ws://192.168.6.21, ws://192.168.6.25, ws://192.168.6.26, ws://192.168.6.27, ws://192.168.6.20, ws://192.168.6.28, ws://192.168.6.19, ws://192.168.6.29')"
-      >
-        copy gateways
-      </button>
-      <button class="clickable" onclick="enableSensors()">
-        enable sensors
-      </button>
-    </div>
+        <!-- https://github.com/diarmidmackenzie/aframe-multi-camera -->
+        <script src="https://cdn.jsdelivr.net/gh/diarmidmackenzie/aframe-multi-camera@latest/src/multi-camera.min.js"></script>
+    </head>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #overlay {
+            position: absolute;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #overlay .clickable {
+            pointer-events: all;
+        }
+        #overlay .hidden {
+            display: none;
+        }
+    </style>
+    <body>
+        <div id="overlay">
+            <button class="clickable" onclick="connect()">connect via WebSockets</button>
+            <button class="clickable" onclick="calibrate()">Calibrate</button>
+            <button class="clickable" onclick="addBluetoothDevice()">add bluetooth device</button>
+            <button
+                class="clickable"
+                onclick="navigator.clipboard.writeText('ws://192.168.6.22, ws://192.168.6.17, ws://192.168.6.23, ws://192.168.6.24, ws://192.168.6.21, ws://192.168.6.25, ws://192.168.6.26, ws://192.168.6.27, ws://192.168.6.20, ws://192.168.6.28, ws://192.168.6.19, ws://192.168.6.29')"
+            >
+                copy gateways
+            </button>
+            <button class="clickable" onclick="enableSensors()">enable sensors</button>
+        </div>
 
-    <!-- https://medium.com/samsung-internet-dev/integrating-augmented-reality-objects-into-the-real-world-with-light-and-shadows-12123e7b1151 -->
-    <a-scene
-      webxr
-      shadow="type: pcfsoft"
-      renderer=" colorManagement:true; toneMapping:ACESFilmic;"
-    >
-      <!-- view-source:https://webxr-networked-handtracking.glitch.me/scene.html -->
+        <!-- https://medium.com/samsung-internet-dev/integrating-augmented-reality-objects-into-the-real-world-with-light-and-shadows-12123e7b1151 -->
+        <a-scene webxr shadow="type: pcfsoft" renderer=" colorManagement:true; toneMapping:ACESFilmic;">
+            <!-- view-source:https://webxr-networked-handtracking.glitch.me/scene.html -->
 
-      <a-assets>
-        <a-asset-item
-          id="apartmentModel"
-          src="https://cdn.glitch.global/076b8a9d-edd5-4b03-aad8-16cddea03d45/apartment.glb?v=1668201345555"
-        ></a-asset-item>
-        <!-- Canvas for rendering secondary camera -->
-        <canvas id="cam2"></canvas>
-      </a-assets>
+            <a-assets>
+                <a-asset-item
+                    id="apartmentModel"
+                    src="https://cdn.glitch.global/076b8a9d-edd5-4b03-aad8-16cddea03d45/apartment.glb?v=1668201345555"
+                ></a-asset-item>
+                <!-- Canvas for rendering secondary camera -->
+                <canvas id="cam2"></canvas>
+            </a-assets>
 
-      <a-entity
-        data-toggle-visibility
-        gltf-model="#apartmentModel"
-        position="1.2 1.53 0.5"
-        scale="1 1 1"
+            <a-entity
+                data-toggle-visibility
+                gltf-model="#apartmentModel"
+                position="1.2 1.53 0.5"
+                scale="1 1 1"
                 rotation="0 90 0"
-        shadow="receive: true; cast: false;"
-        id="apartment"
-      ></a-entity>
+                shadow="receive: true; cast: false;"
+                id="apartment"
+            ></a-entity>
 
-      <a-entity
-        light="color: #FFF; intensity: 0.6; castShadow: true; type: point;"
-        position="-0.567 1.414 -0.085"
-      ></a-entity>
-      <a-entity
-        position="1.679 2.989 -5.157"
-        light="color: #BBB; type: directional; castShadow: true;"
-      ></a-entity>
-      <a-entity light="color: #BBB; type: ambient; intensity: 0.7;"></a-entity>
-
-      <a-entity id="cameraPosition" position="0 0 0"
-        ><a-entity id="cameraRotation" rotation="0 0 0"
-          ><a-entity id="cameraScale" scale="1 1 1"
-            ><a-camera position="0 1.6 0" id="camera" camera="active: true;"
-              ><a-plane
-                id="texture-plane1"
-                position="0 -0.1 -0.5"
-                rotation="0 0 0"
-                width="0.5"
-                height="0.5"
-                src="#test-texture"
-                material="shader: flat;"
-                data-toggle-visibility="invert"
-              ></a-plane
-            ></a-camera>
             <a-entity
-              id="leftHandTrackingControls"
-              hand-tracking-controls="hand: left;"
-              hand-tracking-extras
+                light="color: #FFF; intensity: 0.6; castShadow: true; type: point;"
+                position="-0.567 1.414 -0.085"
             ></a-entity>
             <a-entity
-              id="rightHandTrackingControls"
-              hand-tracking-controls="hand: right;"
-              hand-tracking-extras
+                position="1.679 2.989 -5.157"
+                light="color: #BBB; type: directional; castShadow: true;"
             ></a-entity>
-            <a-entity
-              oculus-touch-controls="hand: left; model: false;"
-              camera-controls="hand: left; orbit: true; camera: #camera1;"
+            <a-entity light="color: #BBB; type: ambient; intensity: 0.7;"></a-entity>
+
+            <a-entity id="cameraPosition" position="0 0 0"
+                ><a-entity id="cameraRotation" rotation="0 0 0"
+                    ><a-entity id="cameraScale" scale="1 1 1"
+                        ><a-camera position="0 1.6 0" id="camera" camera="active: true;"
+                            ><a-plane
+                                id="texture-plane1"
+                                position="0 -0.1 -0.5"
+                                rotation="0 0 0"
+                                width="0.5"
+                                height="0.5"
+                                src="#test-texture"
+                                material="shader: flat;"
+                                data-toggle-visibility="invert"
+                            ></a-plane
+                        ></a-camera>
+                        <a-entity
+                            id="leftHandTrackingControls"
+                            hand-tracking-controls="hand: left;"
+                            hand-tracking-extras
+                        ></a-entity>
+                        <a-entity
+                            id="rightHandTrackingControls"
+                            hand-tracking-controls="hand: right;"
+                            hand-tracking-extras
+                        ></a-entity>
+                        <a-entity
+                            oculus-touch-controls="hand: left; model: false;"
+                            camera-controls="hand: left; orbit: true; camera: #camera1;"
+                        ></a-entity>
+                        <a-entity
+                            oculus-touch-controls="hand: right; model: false;"
+                            camera-controls="hand: right; orbit: true; camera: #camera1"
+                        ></a-entity></a-entity></a-entity
             ></a-entity>
-            <a-entity
-              oculus-touch-controls="hand: right; model: false;"
-              camera-controls="hand: right; orbit: true; camera: #camera1"
-            ></a-entity></a-entity></a-entity
-      ></a-entity>
 
-      <a-entity visible="false">
-        <a-entity
-          id="leftHandControls"
-          hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc"
-        ></a-entity>
-        <a-entity
-          id="rightHandControls"
-          hand-controls="hand: right; handModelStyle: lowPoly; color: #ffcccc"
-        ></a-entity
-      ></a-entity>
+            <a-entity visible="false">
+                <a-entity
+                    id="leftHandControls"
+                    hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc"
+                ></a-entity>
+                <a-entity
+                    id="rightHandControls"
+                    hand-controls="hand: right; handModelStyle: lowPoly; color: #ffcccc"
+                ></a-entity
+            ></a-entity>
 
-      <!--
+            <!--
       <a-entity position="0 0 -2"
         ><a-entity hand-tracking-controls-proxy="hand: left; source: #leftHand"></a-entity>
         <a-entity hand-tracking-controls-proxy="hand: right;  source: #rightHand"></a-entity
       ></a-entity>
       -->
 
-      <a-entity
-        layers="0,6"
-        data-show-rig
-        id="camera1"
-        secondary-camera="quality: high; output:plane; outputElement:#texture-plane1; sequence:before"
-        position="0 1.6 0"
-        rotation="0 0 0"
-      ></a-entity>
+            <a-entity
+                layers="0,6"
+                data-show-rig
+                id="camera1"
+                secondary-camera="quality: high; output:plane; outputElement:#texture-plane1; sequence:before"
+                position="0 1.6 0"
+                rotation="0 0 0"
+            ></a-entity>
 
-      <a-entity
-        id="rig"
-        position="0 0 -1"
-        gltf-model="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/avatar.glb?v=1646356912673"
-        ready-player-me="mask: 6; gateway: 192.168.6.22, 192.168.6.17, 192.168.6.23, 192.168.6.24, 192.168.6.21, 192.168.6.25, 192.168.6.26, 192.168.6.27, 192.168.6.20, 192.168.6.28, 192.168.6.19, 192.168.6.29; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera;"
-        shadow
-      ></a-entity>
-      <a-plane
-        id="shadow-plane"
-        follow-shadow="#rig"
-        material="shader:shadow"
-        shadow="cast:false;"
-        rotation="-90 0 0"
-        width="10"
-        height="10"
-      ></a-plane>
+            <a-entity
+                id="rig"
+                position="0 0 -1"
+                gltf-model="https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/avatar.glb?v=1646356912673"
+                ready-player-me="mask: 6; gateway: 192.168.6.22, 192.168.6.17, 192.168.6.23, 192.168.6.24, 192.168.6.21, 192.168.6.25, 192.168.6.26, 192.168.6.27, 192.168.6.20, 192.168.6.28, 192.168.6.19, 192.168.6.29; leftHandTrackingControls: #leftHandTrackingControls; rightHandTrackingControls: #rightHandTrackingControls; leftHandControls: #leftHandControls; rightHandControls: #rightHandControls; camera: #camera;"
+                shadow
+            ></a-entity>
+            <a-plane
+                id="shadow-plane"
+                follow-shadow="#rig"
+                material="shader:shadow"
+                shadow="cast:false;"
+                rotation="-90 0 0"
+                width="10"
+                height="10"
+            ></a-plane>
 
-      <a-plane
-        visible="false"
-        position="0 0 -4"
-        rotation="-90 0 0"
-        width="4"
-        height="4"
-        color="#7BC8A4"
-      ></a-plane>
-    </a-scene>
-  </body>
-  <script>
-    const rig = document.getElementById("rig");
-    function connect() {
-      rig.emit("connect");
-    }
-    function calibrate() {
-      rig.emit("calibrate", { delay: 0000 });
-    }
-    function addBluetoothDevice() {
-      rig.emit("addbluetoothdevice");
-    }
-    function enableSensors() {
-      rig.emit("enablesensors");
-    }
+            <a-plane
+                visible="false"
+                position="0 0 -4"
+                rotation="-90 0 0"
+                width="4"
+                height="4"
+                color="#7BC8A4"
+            ></a-plane>
+        </a-scene>
+    </body>
+    <script>
+        const rig = document.getElementById("rig");
+        function connect() {
+            rig.emit("connect");
+        }
+        function calibrate() {
+            rig.emit("calibrate", { delay: 0000 });
+        }
+        function addBluetoothDevice() {
+            rig.emit("addbluetoothdevice");
+        }
+        function enableSensors() {
+            rig.emit("enablesensors");
+        }
 
-    const scene = document.querySelector("a-scene");
-    scene.addEventListener("loaded", (event) => {
-      document.querySelectorAll("[data-show-rig]").forEach((entity) => {
-        entity.object3D.layers.enable(6);
-        entity.components[
-          "secondary-camera"
-        ].data.outputElement.object3D.traverse((x) => {
-          x.layers.set(5);
-          x.layers.enable(1);
-          x.layers.enable(2);
+        const scene = document.querySelector("a-scene");
+        scene.addEventListener("loaded", (event) => {
+            document.querySelectorAll("[data-show-rig]").forEach((entity) => {
+                entity.object3D.layers.enable(6);
+                entity.components["secondary-camera"].data.outputElement.object3D.traverse((x) => {
+                    x.layers.set(5);
+                    x.layers.enable(1);
+                    x.layers.enable(2);
+                });
+            });
+            scene.camera.layers.enable(5);
         });
-      });
-      scene.camera.layers.enable(5);
-    });
 
-    const overlay = document.getElementById("overlay");
-  </script>
+        const overlay = document.getElementById("overlay");
+    </script>
 </html>

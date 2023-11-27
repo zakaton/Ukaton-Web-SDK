@@ -1,619 +1,575 @@
 <html>
-  <head>
-    <title>Ukaton Missions | Footsteps</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <head>
+        <title>Ukaton Missions | Footsteps</title>
+        <link rel="icon" href="/favicon.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
-  </head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
+    </head>
 
-  <body>
-    <h1>
-      Ukaton Missions | Footsteps
-    </h1>
+    <body>
+        <h1>Ukaton Missions | Footsteps</h1>
 
-    <button data-side="left">
-      left
-    </button>
-    <button data-side="right">
-      right
-    </button>
+        <button data-side="left">left</button>
+        <button data-side="right">right</button>
 
-    <select oninput="onModeInput(event)">
-      <option>none</option>
-      <option>gravel</option>
-      <option>tap</option>
-      <option>squeaky</option>
-    </select>
+        <select oninput="onModeInput(event)">
+            <option>none</option>
+            <option>gravel</option>
+            <option>tap</option>
+            <option>squeaky</option>
+        </select>
 
-    <h1 id="mode"></h1>
-  </body>
+        <h1 id="mode"></h1>
+    </body>
 
-  <script>
-    const missions = new BluetoothMissions();
+    <script>
+        const missions = new BluetoothMissions();
 
-    // AUDIO CONTEXT
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const audioContext = new AudioContext();
-    audioContext.addEventListener("statechange", event => {
-      if (audioContext.state !== "running") {
-        document.addEventListener(
-          "click",
-          event => {
-            console.log("resumed audio context");
-            audioContext.resume();
-          },
-          { once: true }
-        );
-      }
-    });
-    audioContext.dispatchEvent(new Event("statechange"));
-
-    // RESONANCE AUDIO
-    const resonanceAudioScene = new ResonanceAudio(audioContext);
-    resonanceAudioScene.output.connect(audioContext.destination);
-    resonanceAudioScene.setRoomProperties(
-      {
-        // room dimensions
-      },
-      {
-        // room materials
-      }
-    );
-    const audioDestinationSource = resonanceAudioScene.createSource();
-    audioDestinationSource.setPosition(0, -1, 1); // put on the ground in front of the listener
-
-    // AUDIO SOURCES
-    const audioSources = {
-      squeakDown:
-        "https://cdn.glitch.com/79f09002-ffd6-45ed-9a1f-7e06fad78ce9%2FsqueakDown.mp3?v=1627943836671",
-      squeakUp:
-        "https://cdn.glitch.com/79f09002-ffd6-45ed-9a1f-7e06fad78ce9%2FsqueakUp.mp3?v=1627943836671",
-      tapToe:
-        "https://cdn.glitch.com/79f09002-ffd6-45ed-9a1f-7e06fad78ce9%2FtapToe.mp3?v=1627942889709",
-      tapHeel:
-        "https://cdn.glitch.com/79f09002-ffd6-45ed-9a1f-7e06fad78ce9%2FtapHeel.mp3?v=1627942889543"
-    };
-    const audioBuffers = {};
-    const audioElements = {
-      left: {},
-      right: {}
-    };
-    const audioElementSources = {
-      left: {},
-      right: {}
-    };
-
-    var ua = window.navigator.userAgent;
-    var iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i);
-    var webkit = !!ua.match(/WebKit/i);
-    var iOSSafari = iOS && webkit && !ua.match(/CriOS/i);
-
-    async function loadAudioSource(audioName) {
-      const audioSource = audioSources[audioName];
-      const response = await fetch(audioSource);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      audioBuffers[audioName] = audioBuffer;
-    }
-    function loadAudioElementSource(audioName) {
-      missions.sides.forEach(side => {
-        const audioSource = audioSources[audioName];
-        const audioElement = new Audio(audioSource);
-        audioElement.crossOrigin = "anonymous";
-        audioElements[side][audioName] = audioElement;
-        if (!iOSSafari) {
-          const audioElementSource = audioContext.createMediaElementSource(
-            audioElement
-          );
-          audioElementSources[side][audioName] = audioElementSource;
-          audioElementSource.connect(audioDestinationSource.input);
-        }
-      });
-    }
-
-    for (const audioName in audioSources) {
-      if (audioName.includes("squeak")) {
-        loadAudioSource(audioName);
-      } else if (audioName.includes("tap")) {
-        loadAudioElementSource(audioName);
-      }
-    }
-
-    // GRANULAR SYNTHESIS
-
-    const grainConfiguration = {
-      attack: 0,
-      release: 700 / 1000,
-      spread: 0 / 1000
-    };
-
-    // based on https://github.com/zya/granular
-    function createGrain(audioName, interpolation, amplitude = 1) {
-      if (!(audioName in audioBuffers)) return;
-
-      const bufferSource = audioContext.createBufferSource();
-      const audioBuffer = audioBuffers[audioName];
-      bufferSource.buffer = audioBuffer;
-
-      const gainNode = audioContext.createGain();
-
-      bufferSource.connect(gainNode).connect(audioDestinationSource.input);
-
-      const { attack, release, density, spread } = grainConfiguration;
-
-      let timeOffset = audioBuffer.duration * interpolation;
-      timeOffset += Math.random() * spread;
-
-      bufferSource.start(
-        audioContext.currentTime,
-        timeOffset,
-        attack + release
-      );
-      gainNode.gain.setValueAtTime(0.0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(
-        amplitude,
-        audioContext.currentTime + attack
-      );
-      gainNode.gain.linearRampToValueAtTime(
-        0,
-        audioContext.currentTime + (attack + release)
-      );
-
-      bufferSource.stop(audioContext.currentTime + attack + release + 0.1);
-      setTimeout(() => {
-        gainNode.disconnect();
-      }, (attack + release) * 1000 + 200);
-    }
-
-    // PROCEDURAL AUDIO
-    let t = Date.now();
-    function log() {
-      const now = Date.now();
-      if (now - t > 20) {
-        console.log(...arguments);
-        t = now;
-      }
-    }
-    audioContext.createNoiseNode = function() {
-      if (!this._noiseNode) {
-        const noiseNode = audioContext.createScriptProcessor(4096, 1, 1);
-        noiseNode.addEventListener("audioprocess", event => {
-          const { outputBuffer } = event;
-          const outputData = outputBuffer.getChannelData(0);
-          for (let sample = 0; sample < outputBuffer.length; sample++) {
-            outputData[sample] = Math.random() * 2 - 1;
-          }
-        });
-        this._noiseNode = noiseNode;
-      }
-      return this._noiseNode;
-    };
-
-    let didPrint = false;
-    audioContext.createClippingNode = function(min = 0, max = 1) {
-      const clippingNode = this.createScriptProcessor(4096, 1, 1);
-      clippingNode.addEventListener("audioprocess", event => {
-        const { inputBuffer, outputBuffer } = event;
-
-        const inputData = inputBuffer.getChannelData(0);
-        const outputData = outputBuffer.getChannelData(0);
-
-        for (let sample = 0; sample < inputBuffer.length; sample++) {
-          outputData[sample] = THREE.Math.clamp(inputData[sample], min, max);
-        }
-      });
-      return clippingNode;
-    };
-
-    audioContext.createDivisionNode = function() {
-      const divisionNode = this.createScriptProcessor(4096, 2, 1);
-      divisionNode.addEventListener("audioprocess", event => {
-        const { inputBuffer, outputBuffer } = event;
-
-        const inputData0 = inputBuffer.getChannelData(0);
-        const inputData1 = inputBuffer.getChannelData(1);
-        const outputData = outputBuffer.getChannelData(0);
-
-        for (let sample = 0; sample < inputBuffer.length; sample++) {
-          const numerator = inputData0[sample];
-          const divisor = inputData1[sample];
-          outputData[sample] = numerator / divisor || 0;
-        }
-      });
-      return divisionNode;
-    };
-
-    function createFootStep() {
-      const noiseNode = audioContext.createNoiseNode();
-      const clippingNode1 = audioContext.createClippingNode(-0.9, 0.9);
-      const clippingNode2 = audioContext.createClippingNode(500, 10_000);
-      const divisionNode1 = audioContext.createDivisionNode();
-      const channelMerger1 = audioContext.createChannelMerger(2);
-      const lowPassFilter1 = audioContext.createBiquadFilter();
-      lowPassFilter1.type = "lowpass";
-      lowPassFilter1.frequency.value = 300;
-      const lowPassFilter2 = audioContext.createBiquadFilter();
-      lowPassFilter2.type = "lowpass";
-      lowPassFilter2.frequency.value = 2000;
-      const lowPassFilter3 = audioContext.createBiquadFilter();
-      lowPassFilter3.type = "lowpass";
-      lowPassFilter3.frequency.value = 50;
-      const highPassFilter1 = audioContext.createBiquadFilter();
-      highPassFilter1.type = "highpass";
-      highPassFilter1.frequency.value = 400;
-      const highPassFilter2 = audioContext.createBiquadFilter();
-      highPassFilter2.type = "highpass";
-      highPassFilter2.frequency.value = 200;
-      const gainNode1 = audioContext.createGain();
-      gainNode1.gain.value = 0;
-      const gainNode2 = audioContext.createGain();
-      gainNode2.gain.value = 0.01;
-      const gainNode3 = audioContext.createGain();
-      gainNode3.gain.value = 50_000;
-      const gainNode4 = audioContext.createGain();
-      gainNode4.gain.value = 1_000;
-      const gainNode5 = audioContext.createGain();
-      gainNode5.gain.value = 2;
-      const gainNode6 = audioContext.createGain();
-      gainNode6.gain.value = 0;
-      const constantSourceNode1 = audioContext.createConstantSource();
-      constantSourceNode1.offset.value = 0;
-      constantSourceNode1.start();
-      const constantSourceNode2 = audioContext.createConstantSource();
-      constantSourceNode2.offset.value = 0;
-      constantSourceNode2.start();
-      const bandpassFilter1 = audioContext.createBiquadFilter();
-      bandpassFilter1.Q.value = 3;
-      bandpassFilter1.type = "bandpass";
-
-      noiseNode.connect(lowPassFilter1);
-      noiseNode.connect(lowPassFilter2);
-      lowPassFilter1.connect(channelMerger1, 0, 0);
-      lowPassFilter2.connect(channelMerger1, 0, 1);
-      channelMerger1.connect(divisionNode1);
-      divisionNode1.connect(highPassFilter1);
-      highPassFilter1.connect(gainNode1);
-      highPassFilter1.connect(gainNode1.gain);
-      gainNode1.connect(gainNode2);
-      gainNode2.connect(clippingNode1);
-      clippingNode1.connect(bandpassFilter1);
-      bandpassFilter1.connect(highPassFilter2);
-      highPassFilter2.connect(gainNode5);
-      gainNode5.connect(gainNode6.gain);
-      constantSourceNode1.connect(gainNode6);
-
-      noiseNode.connect(lowPassFilter3);
-      lowPassFilter3.connect(gainNode3);
-      gainNode3.connect(constantSourceNode2.offset);
-      constantSourceNode2.connect(clippingNode2);
-      clippingNode2.connect(bandpassFilter1.frequency);
-
-      constantSourceNode1.connect(gainNode4);
-      gainNode4.connect(constantSourceNode2.offset);
-
-      gainNode6.connect(audioDestinationSource.input);
-
-      return constantSourceNode1;
-    }
-
-    const footStepNodes = {
-      left: createFootStep(),
-      right: createFootStep()
-    };
-
-    // WHOOSH
-    const noiseNode2 = audioContext.createNoiseNode();
-    const bandPassFilter2 = audioContext.createBiquadFilter();
-    bandPassFilter2.type = "lowpass";
-    bandPassFilter2.frequency.value = 800;
-    const bandPassFilter3 = audioContext.createBiquadFilter();
-    bandPassFilter3.type = "bandpass";
-    bandPassFilter3.Q.value = 7;
-    bandPassFilter3.frequency.value = 500;
-    const gainNode7 = audioContext.createGain();
-    gainNode7.gain.value = 0;
-
-    noiseNode2.connect(bandPassFilter2);
-    bandPassFilter2.connect(bandPassFilter3);
-    bandPassFilter3.connect(gainNode7);
-    gainNode7.connect(audioDestinationSource.input);
-
-    // MISSIONS
-    const modes = ["none", "procedural", "tap", "squeaky", "whoosh"];
-    let modeIndex = 0;
-    let mode = modes[modeIndex];
-    document.addEventListener("keypress", event => {
-      if (!isNaN(event.key)) {
-        const index = Number(event.key) - 1;
-        if (modes[index]) {
-          modeIndex = index;
-          mode = modes[modeIndex];
-          console.log(`new mode: ${mode}`);
-          window.dispatchEvent(new Event("modechanged"));
-          document.getElementById("mode").innerText = mode;
-        }
-      }
-    });
-    function onModeInput(event) {
-      const index = event.target.selectedIndex;
-      if (modes[index]) {
-        modeIndex = index;
-        mode = modes[modeIndex];
-        console.log(`new mode: ${mode}`);
-        window.dispatchEvent(new Event("modechanged"));
-        document.getElementById("mode").innerText = mode;
-      }
-    }
-    const massRange = {
-      min: 0,
-      max: 0.7
-    };
-    const massDeltaRange = {
-      min: 0.001,
-      max: 0.1
-    };
-    const proceduralMassDeltaRange = {
-      min: 0.001,
-      max: 0.1
-    };
-    const accelerationRange = {
-      min: 0,
-      max: 1
-    };
-    const frequencyRange = {
-      min: 200,
-      max: 900
-    };
-    const lastMasses = {
-      left: {
-        heel: 0,
-        toe: 0
-      },
-      right: {
-        heel: 0,
-        toe: 0
-      }
-    };
-    const tapMassDeltaThresholds = {
-      toe: 0.01,
-      heel: 0.01
-    };
-    const toeMassDeltaRange = {
-      min: 0,
-      max: 0.2
-    };
-    const heelMassDeltaRange = {
-      min: 0,
-      max: 0.2
-    };
-    const tapMassThresholds = {
-      toe: 0.1,
-      heel: 0.2
-    };
-    const massThreshold = {
-      min: 0.1,
-      max: 1
-    };
-    const proceduralMassThreshold = {
-      min: 0.01
-    };
-
-    missions.sides.forEach(side => {
-      let lastMass = 0;
-      missions[side].addEventListener("mass", event => {
-        const { mass } = event.message;
-
-        const massDelta = mass - lastMass;
-        const massDeltaMagnitude = Math.abs(massDelta);
-        const interpolation = THREE.Math.clamp(
-          THREE.Math.mapLinear(mass, massRange.min, massRange.max, 0, 1),
-          0,
-          1
-        );
-        let amplitude = THREE.Math.clamp(
-          THREE.Math.mapLinear(
-            massDeltaMagnitude,
-            massDeltaRange.min,
-            massDeltaRange.max,
-            0,
-            1
-          ),
-          0,
-          1
-        );
-        lastMass = mass;
-        switch (mode) {
-          case "squeaky":
-            if (mass < massThreshold.min) return;
-            if (amplitude == 0) return;
-            amplitude *= 2;
-            if (massDelta > 0) {
-              createGrain("squeakDown", interpolation, amplitude);
-            } else {
-              createGrain("squeakUp", 1 - interpolation, amplitude);
+        // AUDIO CONTEXT
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioContext = new AudioContext();
+        audioContext.addEventListener("statechange", (event) => {
+            if (audioContext.state !== "running") {
+                document.addEventListener(
+                    "click",
+                    (event) => {
+                        console.log("resumed audio context");
+                        audioContext.resume();
+                    },
+                    { once: true }
+                );
             }
-            break;
-          case "procedural":
-            amplitude *= interpolation;
-            if (mass < proceduralMassThreshold.min) amplitude = 0;
-            footStepNodes[side].offset.value = amplitude;
-            break;
+        });
+        audioContext.dispatchEvent(new Event("statechange"));
+
+        // RESONANCE AUDIO
+        const resonanceAudioScene = new ResonanceAudio(audioContext);
+        resonanceAudioScene.output.connect(audioContext.destination);
+        resonanceAudioScene.setRoomProperties(
+            {
+                // room dimensions
+            },
+            {
+                // room materials
+            }
+        );
+        const audioDestinationSource = resonanceAudioScene.createSource();
+        audioDestinationSource.setPosition(0, -1, 1); // put on the ground in front of the listener
+
+        // AUDIO SOURCES
+        const audioSources = {
+            squeakDown: "https://cdn.glitch.com/79f09002-ffd6-45ed-9a1f-7e06fad78ce9%2FsqueakDown.mp3?v=1627943836671",
+            squeakUp: "https://cdn.glitch.com/79f09002-ffd6-45ed-9a1f-7e06fad78ce9%2FsqueakUp.mp3?v=1627943836671",
+            tapToe: "https://cdn.glitch.com/79f09002-ffd6-45ed-9a1f-7e06fad78ce9%2FtapToe.mp3?v=1627942889709",
+            tapHeel: "https://cdn.glitch.com/79f09002-ffd6-45ed-9a1f-7e06fad78ce9%2FtapHeel.mp3?v=1627942889543",
+        };
+        const audioBuffers = {};
+        const audioElements = {
+            left: {},
+            right: {},
+        };
+        const audioElementSources = {
+            left: {},
+            right: {},
+        };
+
+        var ua = window.navigator.userAgent;
+        var iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i);
+        var webkit = !!ua.match(/WebKit/i);
+        var iOSSafari = iOS && webkit && !ua.match(/CriOS/i);
+
+        async function loadAudioSource(audioName) {
+            const audioSource = audioSources[audioName];
+            const response = await fetch(audioSource);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            audioBuffers[audioName] = audioBuffer;
         }
-      });
-
-      function playTapSound(side, isToe) {}
-
-      missions[side].addEventListener("pressure", event => {
-        const { pressure } = event.message;
-        switch (mode) {
-          case "tap":
-            let heelMass = 0;
-            let toeMass = 0;
-            pressure.forEach(({ value }, index) => {
-              if (index <= 9) {
-                toeMass += value;
-              } else {
-                heelMass += value;
-              }
+        function loadAudioElementSource(audioName) {
+            missions.sides.forEach((side) => {
+                const audioSource = audioSources[audioName];
+                const audioElement = new Audio(audioSource);
+                audioElement.crossOrigin = "anonymous";
+                audioElements[side][audioName] = audioElement;
+                if (!iOSSafari) {
+                    const audioElementSource = audioContext.createMediaElementSource(audioElement);
+                    audioElementSources[side][audioName] = audioElementSource;
+                    audioElementSource.connect(audioDestinationSource.input);
+                }
             });
-
-            toeMass /= 10 * 256;
-            heelMass /= (16 - 10) * 256;
-
-            const toeMassDelta = toeMass - lastMasses[side].toe;
-            const heelMassDelta = heelMass - lastMasses[side].heel;
-
-            const toeMassDeltaMagnitude = Math.abs(toeMassDelta);
-            const heelMassDeltaMagnitude = Math.abs(heelMassDelta);
-
-            const tapped = {
-              toe: lastMasses[side].toe < tapMassThresholds.toe && toeMass > 0,
-              heel:
-                lastMasses[side].heel < tapMassThresholds.heel && heelMass > 0
-            };
-
-            lastMasses[side].toe = toeMass;
-            lastMasses[side].heel = heelMass;
-
-            if (
-              tapped.toe &&
-              toeMass > tapMassThresholds.toe &&
-              toeMassDeltaMagnitude > tapMassDeltaThresholds.toe
-            ) {
-              const toeVolume = THREE.Math.clamp(
-                THREE.Math.mapLinear(
-                  toeMassDeltaMagnitude,
-                  toeMassDeltaRange.min,
-                  toeMassDeltaRange.max,
-                  0,
-                  1
-                ),
-                0,
-                1
-              );
-
-              audioElements[side].tapToe.volume = toeVolume;
-              if (!audioElements[side].tapToe.paused) {
-                audioElements[side].tapToe.currentTime = 0;
-              }
-              audioElements[side].tapToe.play();
-            }
-
-            if (
-              tapped.heel &&
-              heelMass > tapMassThresholds.heel &&
-              heelMassDeltaMagnitude > tapMassDeltaThresholds.heel
-            ) {
-              const heelVolume = THREE.Math.clamp(
-                THREE.Math.mapLinear(
-                  heelMassDeltaMagnitude,
-                  heelMassDeltaRange.min,
-                  heelMassDeltaRange.max,
-                  0,
-                  1
-                ),
-                0,
-                1
-              );
-
-              audioElements[side].tapHeel.volume = heelVolume;
-              if (!audioElements[side].tapHeel.paused) {
-                audioElements[side].tapHeel.currentTime = 0;
-              }
-              audioElements[side].tapHeel.play();
-            }
-            break;
         }
-      });
 
-      missions[side].addEventListener("linearAcceleration", event => {
-        const { linearAcceleration } = event.message;
-
-        switch (mode) {
-          case "whoosh":
-            const magnitude = linearAcceleration.length();
-            const amplitude = THREE.Math.clamp(
-              THREE.Math.mapLinear(
-                magnitude,
-                accelerationRange.min,
-                accelerationRange.max,
-                0,
-                1
-              ),
-              0,
-              1
-            );
-            const frequency = THREE.Math.clamp(
-              THREE.Math.mapLinear(
-                magnitude,
-                accelerationRange.min,
-                accelerationRange.max,
-                0,
-                1
-              ),
-              frequencyRange.min,
-              frequencyRange.max
-            );
-            gainNode7.gain.value = amplitude;
-            bandPassFilter3.frequency.value = frequency;
-            break;
+        for (const audioName in audioSources) {
+            if (audioName.includes("squeak")) {
+                loadAudioSource(audioName);
+            } else if (audioName.includes("tap")) {
+                loadAudioElementSource(audioName);
+            }
         }
-      });
 
-      window.addEventListener("modechanged", async event => {
-        const pressureConfiguration = { pressureDoubleByte: 0, mass: 0 };
-        const motionConfiguration = { linearAcceleration: 0 };
+        // GRANULAR SYNTHESIS
 
-        missions.sides.forEach(side => {
-          footStepNodes[side].offset.value = 0;
-        });
+        const grainConfiguration = {
+            attack: 0,
+            release: 700 / 1000,
+            spread: 0 / 1000,
+        };
 
+        // based on https://github.com/zya/granular
+        function createGrain(audioName, interpolation, amplitude = 1) {
+            if (!(audioName in audioBuffers)) return;
+
+            const bufferSource = audioContext.createBufferSource();
+            const audioBuffer = audioBuffers[audioName];
+            bufferSource.buffer = audioBuffer;
+
+            const gainNode = audioContext.createGain();
+
+            bufferSource.connect(gainNode).connect(audioDestinationSource.input);
+
+            const { attack, release, density, spread } = grainConfiguration;
+
+            let timeOffset = audioBuffer.duration * interpolation;
+            timeOffset += Math.random() * spread;
+
+            bufferSource.start(audioContext.currentTime, timeOffset, attack + release);
+            gainNode.gain.setValueAtTime(0.0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(amplitude, audioContext.currentTime + attack);
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + (attack + release));
+
+            bufferSource.stop(audioContext.currentTime + attack + release + 0.1);
+            setTimeout(() => {
+                gainNode.disconnect();
+            }, (attack + release) * 1000 + 200);
+        }
+
+        // PROCEDURAL AUDIO
+        let t = Date.now();
+        function log() {
+            const now = Date.now();
+            if (now - t > 20) {
+                console.log(...arguments);
+                t = now;
+            }
+        }
+        audioContext.createNoiseNode = function () {
+            if (!this._noiseNode) {
+                const noiseNode = audioContext.createScriptProcessor(4096, 1, 1);
+                noiseNode.addEventListener("audioprocess", (event) => {
+                    const { outputBuffer } = event;
+                    const outputData = outputBuffer.getChannelData(0);
+                    for (let sample = 0; sample < outputBuffer.length; sample++) {
+                        outputData[sample] = Math.random() * 2 - 1;
+                    }
+                });
+                this._noiseNode = noiseNode;
+            }
+            return this._noiseNode;
+        };
+
+        let didPrint = false;
+        audioContext.createClippingNode = function (min = 0, max = 1) {
+            const clippingNode = this.createScriptProcessor(4096, 1, 1);
+            clippingNode.addEventListener("audioprocess", (event) => {
+                const { inputBuffer, outputBuffer } = event;
+
+                const inputData = inputBuffer.getChannelData(0);
+                const outputData = outputBuffer.getChannelData(0);
+
+                for (let sample = 0; sample < inputBuffer.length; sample++) {
+                    outputData[sample] = THREE.Math.clamp(inputData[sample], min, max);
+                }
+            });
+            return clippingNode;
+        };
+
+        audioContext.createDivisionNode = function () {
+            const divisionNode = this.createScriptProcessor(4096, 2, 1);
+            divisionNode.addEventListener("audioprocess", (event) => {
+                const { inputBuffer, outputBuffer } = event;
+
+                const inputData0 = inputBuffer.getChannelData(0);
+                const inputData1 = inputBuffer.getChannelData(1);
+                const outputData = outputBuffer.getChannelData(0);
+
+                for (let sample = 0; sample < inputBuffer.length; sample++) {
+                    const numerator = inputData0[sample];
+                    const divisor = inputData1[sample];
+                    outputData[sample] = numerator / divisor || 0;
+                }
+            });
+            return divisionNode;
+        };
+
+        function createFootStep() {
+            const noiseNode = audioContext.createNoiseNode();
+            const clippingNode1 = audioContext.createClippingNode(-0.9, 0.9);
+            const clippingNode2 = audioContext.createClippingNode(500, 10_000);
+            const divisionNode1 = audioContext.createDivisionNode();
+            const channelMerger1 = audioContext.createChannelMerger(2);
+            const lowPassFilter1 = audioContext.createBiquadFilter();
+            lowPassFilter1.type = "lowpass";
+            lowPassFilter1.frequency.value = 300;
+            const lowPassFilter2 = audioContext.createBiquadFilter();
+            lowPassFilter2.type = "lowpass";
+            lowPassFilter2.frequency.value = 2000;
+            const lowPassFilter3 = audioContext.createBiquadFilter();
+            lowPassFilter3.type = "lowpass";
+            lowPassFilter3.frequency.value = 50;
+            const highPassFilter1 = audioContext.createBiquadFilter();
+            highPassFilter1.type = "highpass";
+            highPassFilter1.frequency.value = 400;
+            const highPassFilter2 = audioContext.createBiquadFilter();
+            highPassFilter2.type = "highpass";
+            highPassFilter2.frequency.value = 200;
+            const gainNode1 = audioContext.createGain();
+            gainNode1.gain.value = 0;
+            const gainNode2 = audioContext.createGain();
+            gainNode2.gain.value = 0.01;
+            const gainNode3 = audioContext.createGain();
+            gainNode3.gain.value = 50_000;
+            const gainNode4 = audioContext.createGain();
+            gainNode4.gain.value = 1_000;
+            const gainNode5 = audioContext.createGain();
+            gainNode5.gain.value = 2;
+            const gainNode6 = audioContext.createGain();
+            gainNode6.gain.value = 0;
+            const constantSourceNode1 = audioContext.createConstantSource();
+            constantSourceNode1.offset.value = 0;
+            constantSourceNode1.start();
+            const constantSourceNode2 = audioContext.createConstantSource();
+            constantSourceNode2.offset.value = 0;
+            constantSourceNode2.start();
+            const bandpassFilter1 = audioContext.createBiquadFilter();
+            bandpassFilter1.Q.value = 3;
+            bandpassFilter1.type = "bandpass";
+
+            noiseNode.connect(lowPassFilter1);
+            noiseNode.connect(lowPassFilter2);
+            lowPassFilter1.connect(channelMerger1, 0, 0);
+            lowPassFilter2.connect(channelMerger1, 0, 1);
+            channelMerger1.connect(divisionNode1);
+            divisionNode1.connect(highPassFilter1);
+            highPassFilter1.connect(gainNode1);
+            highPassFilter1.connect(gainNode1.gain);
+            gainNode1.connect(gainNode2);
+            gainNode2.connect(clippingNode1);
+            clippingNode1.connect(bandpassFilter1);
+            bandpassFilter1.connect(highPassFilter2);
+            highPassFilter2.connect(gainNode5);
+            gainNode5.connect(gainNode6.gain);
+            constantSourceNode1.connect(gainNode6);
+
+            noiseNode.connect(lowPassFilter3);
+            lowPassFilter3.connect(gainNode3);
+            gainNode3.connect(constantSourceNode2.offset);
+            constantSourceNode2.connect(clippingNode2);
+            clippingNode2.connect(bandpassFilter1.frequency);
+
+            constantSourceNode1.connect(gainNode4);
+            gainNode4.connect(constantSourceNode2.offset);
+
+            gainNode6.connect(audioDestinationSource.input);
+
+            return constantSourceNode1;
+        }
+
+        const footStepNodes = {
+            left: createFootStep(),
+            right: createFootStep(),
+        };
+
+        // WHOOSH
+        const noiseNode2 = audioContext.createNoiseNode();
+        const bandPassFilter2 = audioContext.createBiquadFilter();
+        bandPassFilter2.type = "lowpass";
+        bandPassFilter2.frequency.value = 800;
+        const bandPassFilter3 = audioContext.createBiquadFilter();
+        bandPassFilter3.type = "bandpass";
+        bandPassFilter3.Q.value = 7;
+        bandPassFilter3.frequency.value = 500;
+        const gainNode7 = audioContext.createGain();
         gainNode7.gain.value = 0;
-        bandPassFilter3.frequency.value = 0;
 
-        switch (mode) {
-          case "squeaky":
-            Object.assign(pressureConfiguration, { mass: 20 });
-            break;
-          case "tap":
-            Object.assign(pressureConfiguration, { pressureDoubleByte: 20 });
-            break;
-          case "procedural":
-            Object.assign(pressureConfiguration, { mass: 20 });
-            break;
-          case "whoosh":
-            Object.assign(motionConfiguration, {
-              linearAcceleration: 20
-            });
-            break;
-        }
+        noiseNode2.connect(bandPassFilter2);
+        bandPassFilter2.connect(bandPassFilter3);
+        bandPassFilter3.connect(gainNode7);
+        gainNode7.connect(audioDestinationSource.input);
 
-        await missions[side].setSensorDataConfigurations({
-          pressure: pressureConfiguration,
-          motion: motionConfiguration
+        // MISSIONS
+        const modes = ["none", "procedural", "tap", "squeaky", "whoosh"];
+        let modeIndex = 0;
+        let mode = modes[modeIndex];
+        document.addEventListener("keypress", (event) => {
+            if (!isNaN(event.key)) {
+                const index = Number(event.key) - 1;
+                if (modes[index]) {
+                    modeIndex = index;
+                    mode = modes[modeIndex];
+                    console.log(`new mode: ${mode}`);
+                    window.dispatchEvent(new Event("modechanged"));
+                    document.getElementById("mode").innerText = mode;
+                }
+            }
         });
-      });
-    });
+        function onModeInput(event) {
+            const index = event.target.selectedIndex;
+            if (modes[index]) {
+                modeIndex = index;
+                mode = modes[modeIndex];
+                console.log(`new mode: ${mode}`);
+                window.dispatchEvent(new Event("modechanged"));
+                document.getElementById("mode").innerText = mode;
+            }
+        }
+        const massRange = {
+            min: 0,
+            max: 0.7,
+        };
+        const massDeltaRange = {
+            min: 0.001,
+            max: 0.1,
+        };
+        const proceduralMassDeltaRange = {
+            min: 0.001,
+            max: 0.1,
+        };
+        const accelerationRange = {
+            min: 0,
+            max: 1,
+        };
+        const frequencyRange = {
+            min: 200,
+            max: 900,
+        };
+        const lastMasses = {
+            left: {
+                heel: 0,
+                toe: 0,
+            },
+            right: {
+                heel: 0,
+                toe: 0,
+            },
+        };
+        const tapMassDeltaThresholds = {
+            toe: 0.01,
+            heel: 0.01,
+        };
+        const toeMassDeltaRange = {
+            min: 0,
+            max: 0.2,
+        };
+        const heelMassDeltaRange = {
+            min: 0,
+            max: 0.2,
+        };
+        const tapMassThresholds = {
+            toe: 0.1,
+            heel: 0.2,
+        };
+        const massThreshold = {
+            min: 0.1,
+            max: 1,
+        };
+        const proceduralMassThreshold = {
+            min: 0.01,
+        };
 
-    missions.sides.forEach(side => {
-      const button = document.querySelector(`[data-side="${side}"]`);
-      button.addEventListener("click", event => {
-        missions[side].connect();
-      });
-      missions[side].addEventListener(
-        "connected",
-        event => {
-          button.remove();
-        },
-        { once: true }
-      );
-    });
-  </script>
+        missions.sides.forEach((side) => {
+            let lastMass = 0;
+            missions[side].addEventListener("mass", (event) => {
+                const { mass } = event.message;
+
+                const massDelta = mass - lastMass;
+                const massDeltaMagnitude = Math.abs(massDelta);
+                const interpolation = THREE.Math.clamp(
+                    THREE.Math.mapLinear(mass, massRange.min, massRange.max, 0, 1),
+                    0,
+                    1
+                );
+                let amplitude = THREE.Math.clamp(
+                    THREE.Math.mapLinear(massDeltaMagnitude, massDeltaRange.min, massDeltaRange.max, 0, 1),
+                    0,
+                    1
+                );
+                lastMass = mass;
+                switch (mode) {
+                    case "squeaky":
+                        if (mass < massThreshold.min) return;
+                        if (amplitude == 0) return;
+                        amplitude *= 2;
+                        if (massDelta > 0) {
+                            createGrain("squeakDown", interpolation, amplitude);
+                        } else {
+                            createGrain("squeakUp", 1 - interpolation, amplitude);
+                        }
+                        break;
+                    case "procedural":
+                        amplitude *= interpolation;
+                        if (mass < proceduralMassThreshold.min) amplitude = 0;
+                        footStepNodes[side].offset.value = amplitude;
+                        break;
+                }
+            });
+
+            function playTapSound(side, isToe) {}
+
+            missions[side].addEventListener("pressure", (event) => {
+                const { pressure } = event.message;
+                switch (mode) {
+                    case "tap":
+                        let heelMass = 0;
+                        let toeMass = 0;
+                        pressure.forEach(({ value }, index) => {
+                            if (index <= 9) {
+                                toeMass += value;
+                            } else {
+                                heelMass += value;
+                            }
+                        });
+
+                        toeMass /= 10 * 256;
+                        heelMass /= (16 - 10) * 256;
+
+                        const toeMassDelta = toeMass - lastMasses[side].toe;
+                        const heelMassDelta = heelMass - lastMasses[side].heel;
+
+                        const toeMassDeltaMagnitude = Math.abs(toeMassDelta);
+                        const heelMassDeltaMagnitude = Math.abs(heelMassDelta);
+
+                        const tapped = {
+                            toe: lastMasses[side].toe < tapMassThresholds.toe && toeMass > 0,
+                            heel: lastMasses[side].heel < tapMassThresholds.heel && heelMass > 0,
+                        };
+
+                        lastMasses[side].toe = toeMass;
+                        lastMasses[side].heel = heelMass;
+
+                        if (
+                            tapped.toe &&
+                            toeMass > tapMassThresholds.toe &&
+                            toeMassDeltaMagnitude > tapMassDeltaThresholds.toe
+                        ) {
+                            const toeVolume = THREE.Math.clamp(
+                                THREE.Math.mapLinear(
+                                    toeMassDeltaMagnitude,
+                                    toeMassDeltaRange.min,
+                                    toeMassDeltaRange.max,
+                                    0,
+                                    1
+                                ),
+                                0,
+                                1
+                            );
+
+                            audioElements[side].tapToe.volume = toeVolume;
+                            if (!audioElements[side].tapToe.paused) {
+                                audioElements[side].tapToe.currentTime = 0;
+                            }
+                            audioElements[side].tapToe.play();
+                        }
+
+                        if (
+                            tapped.heel &&
+                            heelMass > tapMassThresholds.heel &&
+                            heelMassDeltaMagnitude > tapMassDeltaThresholds.heel
+                        ) {
+                            const heelVolume = THREE.Math.clamp(
+                                THREE.Math.mapLinear(
+                                    heelMassDeltaMagnitude,
+                                    heelMassDeltaRange.min,
+                                    heelMassDeltaRange.max,
+                                    0,
+                                    1
+                                ),
+                                0,
+                                1
+                            );
+
+                            audioElements[side].tapHeel.volume = heelVolume;
+                            if (!audioElements[side].tapHeel.paused) {
+                                audioElements[side].tapHeel.currentTime = 0;
+                            }
+                            audioElements[side].tapHeel.play();
+                        }
+                        break;
+                }
+            });
+
+            missions[side].addEventListener("linearAcceleration", (event) => {
+                const { linearAcceleration } = event.message;
+
+                switch (mode) {
+                    case "whoosh":
+                        const magnitude = linearAcceleration.length();
+                        const amplitude = THREE.Math.clamp(
+                            THREE.Math.mapLinear(magnitude, accelerationRange.min, accelerationRange.max, 0, 1),
+                            0,
+                            1
+                        );
+                        const frequency = THREE.Math.clamp(
+                            THREE.Math.mapLinear(magnitude, accelerationRange.min, accelerationRange.max, 0, 1),
+                            frequencyRange.min,
+                            frequencyRange.max
+                        );
+                        gainNode7.gain.value = amplitude;
+                        bandPassFilter3.frequency.value = frequency;
+                        break;
+                }
+            });
+
+            window.addEventListener("modechanged", async (event) => {
+                const pressureConfiguration = { pressureDoubleByte: 0, mass: 0 };
+                const motionConfiguration = { linearAcceleration: 0 };
+
+                missions.sides.forEach((side) => {
+                    footStepNodes[side].offset.value = 0;
+                });
+
+                gainNode7.gain.value = 0;
+                bandPassFilter3.frequency.value = 0;
+
+                switch (mode) {
+                    case "squeaky":
+                        Object.assign(pressureConfiguration, { mass: 20 });
+                        break;
+                    case "tap":
+                        Object.assign(pressureConfiguration, { pressureDoubleByte: 20 });
+                        break;
+                    case "procedural":
+                        Object.assign(pressureConfiguration, { mass: 20 });
+                        break;
+                    case "whoosh":
+                        Object.assign(motionConfiguration, {
+                            linearAcceleration: 20,
+                        });
+                        break;
+                }
+
+                await missions[side].setSensorDataConfigurations({
+                    pressure: pressureConfiguration,
+                    motion: motionConfiguration,
+                });
+            });
+        });
+
+        missions.sides.forEach((side) => {
+            const button = document.querySelector(`[data-side="${side}"]`);
+            button.addEventListener("click", (event) => {
+                missions[side].connect();
+            });
+            missions[side].addEventListener(
+                "connected",
+                (event) => {
+                    button.remove();
+                },
+                { once: true }
+            );
+        });
+    </script>
 </html>

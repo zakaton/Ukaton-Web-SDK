@@ -1,145 +1,128 @@
 <html>
-  <head>
-    <title>Cybershoes | Ukaton</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
-    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@b78a9f4552e01d2cd933f26b07a223c43007a97c/dist/aframe-master.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
+    <head>
+        <title>Cybershoes | Ukaton</title>
+        <link rel="icon" href="/favicon.png" />
+        <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@b78a9f4552e01d2cd933f26b07a223c43007a97c/dist/aframe-master.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
 
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="/PeerBluetoothMissionDevice.js"></script>
-    <script src="/WebSocketMissionDevice.js"></script>
-    <script src="/body-tracking/ukaton-body-tracking.js"></script>
-    <script src="/body-tracking/aframe-resonance-audio-component.js"></script>
-  </head>
-  <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #overlay {
-      position: absolute;
-      z-index: 1;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-    #overlay .clickable {
-      pointer-events: all;
-    }
-    .hidden {
-      display: none;
-    }
-  </style>
-  <body>
-    <div id="overlay">
-      <button class="clickable" onclick="connect()">
-        connect
-      </button>
-      <button class="clickable" onclick="calibrate()">
-        calibrate
-      </button>
-      <button class="clickable" onclick="addBluetoothDevice()">
-        add device
-      </button>
-      <button
-        class="clickable hidden"
-        onclick="navigator.clipboard.writeText('ws://192.168.5.193,ws://192.168.5.194,ws://192.168.5.241,ws://192.168.5.242,ws://192.168.5.201,ws://192.168.5.200,ws://192.168.5.243,ws://192.168.5.244,ws://192.168.5.240,ws://192.168.5.238,ws://192.168.5.236,ws://192.168.5.202,ws://192.168.5.239,ws://192.168.5.237,ws://192.168.5.204')"
-      >
-        copy gateways
-      </button>
-    </div>
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="/PeerBluetoothMissionDevice.js"></script>
+        <script src="/WebSocketMissionDevice.js"></script>
+        <script src="/body-tracking/ukaton-body-tracking.js"></script>
+        <script src="/body-tracking/aframe-resonance-audio-component.js"></script>
+    </head>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #overlay {
+            position: absolute;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #overlay .clickable {
+            pointer-events: all;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+    <body>
+        <div id="overlay">
+            <button class="clickable" onclick="connect()">connect</button>
+            <button class="clickable" onclick="calibrate()">calibrate</button>
+            <button class="clickable" onclick="addBluetoothDevice()">add device</button>
+            <button
+                class="clickable hidden"
+                onclick="navigator.clipboard.writeText('ws://192.168.5.193,ws://192.168.5.194,ws://192.168.5.241,ws://192.168.5.242,ws://192.168.5.201,ws://192.168.5.200,ws://192.168.5.243,ws://192.168.5.244,ws://192.168.5.240,ws://192.168.5.238,ws://192.168.5.236,ws://192.168.5.202,ws://192.168.5.239,ws://192.168.5.237,ws://192.168.5.204')"
+            >
+                copy gateways
+            </button>
+        </div>
 
-    <a-scene
-      device-orientation-permission-ui="enabled: false"
-      resonance-audio="width: 50; depth: 50; height: 20; "
-    >
-      <a-assets>
-        <canvas id="floorTexture"></canvas>
-      </a-assets>
-      
-      <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
-      <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
-      <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+        <a-scene device-orientation-permission-ui="enabled: false" resonance-audio="width: 50; depth: 50; height: 20; ">
+            <a-assets>
+                <canvas id="floorTexture"></canvas>
+            </a-assets>
 
-      <a-entity id="cameraRig">
-        <a-camera></a-camera>
-      </a-entity>
+            <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
+            <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+            <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
 
-      <a-light type="ambient" light="intensity: 0.6;"></a-light>
-      <a-light
-        type="directional"
-        position="2 2 -2"
-        light="castShadow: true; intensity: 0.6;"
-        target="#rig"
-      ></a-light>
+            <a-entity id="cameraRig">
+                <a-camera></a-camera>
+            </a-entity>
 
-      <a-plane
-        id="floor"
-        shadow="cast: false; receive: true;"
-        material="src: #floorTexture; repeat: 20 20;"
-        position="0 0 0"
-        rotation="-90 0 0"
-        width="10"
-        height="10"
-      ></a-plane>
+            <a-light type="ambient" light="intensity: 0.6;"></a-light>
+            <a-light
+                type="directional"
+                position="2 2 -2"
+                light="castShadow: true; intensity: 0.6;"
+                target="#rig"
+            ></a-light>
 
-      <a-entity
-        id="rig"
-        position="0 0 0"
-        ukaton-body-tracking="cybershoes: true; move-hands: false; hide-entities: upperTorso; hide-primitives: lowerTorso; hide-extremities: true; auto-connect: false; gateway: 238, 236, 202, 239, 237, 204, 240; forearm-radius: 0.030; elbow-radius: 0.030"
-        shadow
-      ></a-entity>
+            <a-plane
+                id="floor"
+                shadow="cast: false; receive: true;"
+                material="src: #floorTexture; repeat: 20 20;"
+                position="0 0 0"
+                rotation="-90 0 0"
+                width="10"
+                height="10"
+            ></a-plane>
 
-      <a-sky color="#ECECEC"></a-sky>
-    </a-scene>
-  </body>
-  <script>
-    {
-      const canvas = document.getElementById("floorTexture");
-      const context = canvas.getContext("2d");
+            <a-entity
+                id="rig"
+                position="0 0 0"
+                ukaton-body-tracking="cybershoes: true; move-hands: false; hide-entities: upperTorso; hide-primitives: lowerTorso; hide-extremities: true; auto-connect: false; gateway: 238, 236, 202, 239, 237, 204, 240; forearm-radius: 0.030; elbow-radius: 0.030"
+                shadow
+            ></a-entity>
 
-      const checkeredColors = ["white", "grey"];
+            <a-sky color="#ECECEC"></a-sky>
+        </a-scene>
+    </body>
+    <script>
+        {
+            const canvas = document.getElementById("floorTexture");
+            const context = canvas.getContext("2d");
 
-      const { width, height } = canvas;
-      const cellWidth = width / 2;
-      const cellHeight = height / 2;
+            const checkeredColors = ["white", "grey"];
 
-      context.clearRect(0, 0, width, height);
+            const { width, height } = canvas;
+            const cellWidth = width / 2;
+            const cellHeight = height / 2;
 
-      checkeredColors.forEach((color, index) => {
-        context.fillStyle = checkeredColors[index];
-        context.fillRect(index * cellWidth, 0, cellWidth, cellHeight);
-        context.fillRect(
-          ((index + 1) * cellWidth) % width,
-          cellHeight,
-          cellWidth,
-          cellHeight
-        );
-      });
-    }
-  </script>
-  <script>
-    const rig = document.getElementById("rig");
-    function connect() {
-      rig.emit("connect");
-    }
-    function calibrate() {
-      rig.emit("calibrate", { delay: 0 });
-    }
-    function addBluetoothDevice() {
-      rig.emit("addbluetoothdevice");
-    }
+            context.clearRect(0, 0, width, height);
 
-    const scene = document.querySelector("a-scene");
-    const overlay = document.getElementById("overlay");
-  </script>
+            checkeredColors.forEach((color, index) => {
+                context.fillStyle = checkeredColors[index];
+                context.fillRect(index * cellWidth, 0, cellWidth, cellHeight);
+                context.fillRect(((index + 1) * cellWidth) % width, cellHeight, cellWidth, cellHeight);
+            });
+        }
+    </script>
+    <script>
+        const rig = document.getElementById("rig");
+        function connect() {
+            rig.emit("connect");
+        }
+        function calibrate() {
+            rig.emit("calibrate", { delay: 0 });
+        }
+        function addBluetoothDevice() {
+            rig.emit("addbluetoothdevice");
+        }
 
-  <script>
-    const cameraRig = document.getElementById("cameraRig");
-  </script>
+        const scene = document.querySelector("a-scene");
+        const overlay = document.getElementById("overlay");
+    </script>
+
+    <script>
+        const cameraRig = document.getElementById("cameraRig");
+    </script>
 </html>

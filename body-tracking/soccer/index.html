@@ -1,213 +1,202 @@
 <html>
-  <head>
-    <title>Soccer | Ukaton</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
-    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@b78a9f4552e01d2cd933f26b07a223c43007a97c/dist/aframe-master.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
+    <head>
+        <title>Soccer | Ukaton</title>
+        <link rel="icon" href="/favicon.png" />
+        <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@b78a9f4552e01d2cd933f26b07a223c43007a97c/dist/aframe-master.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
 
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="/PeerBluetoothMissionDevice.js"></script>
-    <script src="/WebSocketMissionDevice.js"></script>
-    <script src="/body-tracking/ukaton-body-tracking.js"></script>
-    <script src="/body-tracking/aframe-webcam-component.js"></script>
-    <!-- https://glitch.com/edit/#!/aframe-threejs-reflector?path=aframe-mirror.js%3A258%3A32 -->
-    <!-- https://github.com/aframevr/aframe/issues/4806#issuecomment-861114767 -->
-    <script src="/body-tracking/aframe-resonance-audio-component.js"></script>
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="/PeerBluetoothMissionDevice.js"></script>
+        <script src="/WebSocketMissionDevice.js"></script>
+        <script src="/body-tracking/ukaton-body-tracking.js"></script>
+        <script src="/body-tracking/aframe-webcam-component.js"></script>
+        <!-- https://glitch.com/edit/#!/aframe-threejs-reflector?path=aframe-mirror.js%3A258%3A32 -->
+        <!-- https://github.com/aframevr/aframe/issues/4806#issuecomment-861114767 -->
+        <script src="/body-tracking/aframe-resonance-audio-component.js"></script>
 
-    <!-- https://github.com/pmndrs/cannon-es -->
-    <script src="https://unpkg.com/cannon@0.6.2/build/cannon.js"></script>
-    <script src="/body-tracking/aframe-physics-component.js"></script>
-  </head>
-  <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #overlay {
-      position: absolute;
-      z-index: 1;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-    #overlay .clickable {
-      pointer-events: all;
-    }
-    .hidden {
-      display: none;
-    }
-  </style>
-  <body>
-    <div id="overlay">
-      <button class="clickable" onclick="connect()">
-        connect
-      </button>
-      <button class="clickable" onclick="calibrate()">
-        calibrate
-      </button>
-      <button class="clickable" onclick="addBluetoothDevice()">
-        add device
-      </button>
-      <button class="clickable" onclick="resetBall()">
-        reset
-      </button>
-      <button
-        class="clickable hidden"
-        onclick="navigator.clipboard.writeText('ws://192.168.5.193,ws://192.168.5.194,ws://192.168.5.241,ws://192.168.5.242,ws://192.168.5.201,ws://192.168.5.200,ws://192.168.5.243,ws://192.168.5.244,ws://192.168.5.240,ws://192.168.5.238,ws://192.168.5.236,ws://192.168.5.202,ws://192.168.5.239,ws://192.168.5.237,ws://192.168.6.11,ws://192.168.6.12')"
-      >
-        copy gateways
-      </button>
-    </div>
-
-    <a-scene
-      device-orientation-permission-ui="enabled: false"
-      resonance-audio="width: 50; depth: 50; height: 20; left-wall: transparent; right-wall: transparent; front-wall: transparent; back-wall: transparent; up-wall: transparent; down-wall: grass; "
-      renderer="colorManagement: true; antialias: false; logarithmicDepthBuffer:true"
-      physics="gravity: -10;"
-    >
-      <a-assets>
-        <a-asset-item
-          id="soccerBallModel"
-          src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2FsoccerBall.glb?v=1638300189856"
-        ></a-asset-item>
-        <a-asset-item
-          id="soccerGoalModel"
-          src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2FsoccerGoal.glb?v=1638301382765"
-        ></a-asset-item>
-        <audio
-          src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fkick.mp3?v=1638405167300"
-          id="kickSound"
-        ></audio>
-      </a-assets>
-
-      <a-camera></a-camera>
-
-      <a-entity
-        id="soccerBall"
-        scale="0.15 0.15 0.15"
-        position="0 2 -0.5"
-        gltf-model="#soccerBallModel"
-        shadow="cast: true; receive: false;"
-        physics="mass: 10; shape: sphere; restitution: -0.5; radius: 0.15; name: ball;"
-        resonance-audio="src: #kickSound;"
-      ></a-entity>
-
-      <a-entity
-        id="soccerGoal"
-        scale="0.03 0.03 0.03"
-        position="0 0 -5.6"
-        rotation="0 -45 0"
-        gltf-model="#soccerGoalModel"
-        shadow="cast: true; receive: false;"
-      ></a-entity>
-
-      <a-box
-        visible="false"
-        scale="0.2 2.7 2"
-        position="-3.316 1.341 -6.474"
-        physics="mass: 0; shape: box; scale: 0.2, 2.7, 2; name: netLeft;"
-      ></a-box>
-      <a-box
-        visible="false"
-        scale="0.2 2.7 2"
-        position="3.316 1.341 -6.474"
-        physics="mass: 0; shape: box; scale: 0.2, 2.7, 2; name: netRight;"
-      ></a-box>
-      <a-box
-        visible="false"
-        scale="7 2.7 0.2"
-        position="0 1.341 -7.356"
-        physics="mass: 0; shape: box; scale: 7, 2.7, 0.2; name: netBack;"
-      ></a-box>
-      <a-box
-        visible="false"
-        scale="7 0.2 2"
-        position="0 2.587 -6.479"
-        physics="mass: 0; shape: box; scale: 7, 0.2, 2 name: netTop;"
-      ></a-box>
-
-      <a-light type="ambient" light="intensity: 0.6;"></a-light>
-      <a-light
-        type="directional"
-        position="2 2 2"
-        light="castShadow: true; intensity: 0.6; shadow-camera-right: 10; shadow-camera-top: 10;"
-        target="#rig"
-      ></a-light>
-
-      <a-entity
-        id="jumbotron"
-        webcam="width: 600; height: 300; position: 1.6, 1.8, 3.5; rotation: -15, 10, 0; fov: 40;"
-        position="0 4 -5"
-        rotation="10 0 0"
-        scale="-5 2.5 1"
-      ></a-entity>
-
-      <a-plane
-        id="floor"
-        shadow="cast: false; receive: true;"
-        position="0 0 0"
-        rotation="-90 0 0"
-        color="limegreen"
-        material="roughness: 1;"
-        width="20"
-        height="20"
-        physics="shape: plane; mass: 0; friction: 1; name: floor;"
-      ></a-plane>
-
-      <a-entity
-        id="rig"
-        position="0 0 0"
-        ukaton-body-tracking="physics: true; move-hands: false; hide-extremities: true; hide-pressure: true; hide-entities: upperTorso; hide-primitives: lowerTorso; pressure-anchoring-enabled: false; anchor-to-camera: true; hide-extremities: true; auto-connect: false; gateway: 238, 236, 239, 237, 240, 6.11, 6.12; forearm-radius: 0.030; elbow-radius: 0.030"
-        shadow
-      ></a-entity>
-
-      <a-sky color="powderblue"></a-sky>
-    </a-scene>
-  </body>
-  <script>
-    const rig = document.getElementById("rig");
-    function connect() {
-      rig.emit("connect");
-    }
-    function calibrate() {
-      rig.emit("calibrate", { delay: 2000 });
-    }
-    function addBluetoothDevice() {
-      rig.emit("addbluetoothdevice");
-    }
-
-    const scene = document.querySelector("a-scene");
-    const overlay = document.getElementById("overlay");
-  </script>
-
-  <script>
-    function resetBall() {
-      soccerBall.components.physics.body.sleep();
-      soccerBall.components.physics.body.position.set(0, 2, -0.5);
-      soccerBall.components.physics.body.wakeUp();
-    }
-    soccerBall.addEventListener("collide", event => {
-      const { name } = event.detail.body;
-      if (name != "floor") {
-        //console.log(`hit ${name}`);
-        if (name.includes("Shoe")) {
-          soccerBall.emit("playaudio");
+        <!-- https://github.com/pmndrs/cannon-es -->
+        <script src="https://unpkg.com/cannon@0.6.2/build/cannon.js"></script>
+        <script src="/body-tracking/aframe-physics-component.js"></script>
+    </head>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
         }
-      }
-    });
+        #overlay {
+            position: absolute;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #overlay .clickable {
+            pointer-events: all;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+    <body>
+        <div id="overlay">
+            <button class="clickable" onclick="connect()">connect</button>
+            <button class="clickable" onclick="calibrate()">calibrate</button>
+            <button class="clickable" onclick="addBluetoothDevice()">add device</button>
+            <button class="clickable" onclick="resetBall()">reset</button>
+            <button
+                class="clickable hidden"
+                onclick="navigator.clipboard.writeText('ws://192.168.5.193,ws://192.168.5.194,ws://192.168.5.241,ws://192.168.5.242,ws://192.168.5.201,ws://192.168.5.200,ws://192.168.5.243,ws://192.168.5.244,ws://192.168.5.240,ws://192.168.5.238,ws://192.168.5.236,ws://192.168.5.202,ws://192.168.5.239,ws://192.168.5.237,ws://192.168.6.11,ws://192.168.6.12')"
+            >
+                copy gateways
+            </button>
+        </div>
 
-    rig.addEventListener("leftdoublepinch", event => {
-      resetBall();
-    });
-  </script>
+        <a-scene
+            device-orientation-permission-ui="enabled: false"
+            resonance-audio="width: 50; depth: 50; height: 20; left-wall: transparent; right-wall: transparent; front-wall: transparent; back-wall: transparent; up-wall: transparent; down-wall: grass; "
+            renderer="colorManagement: true; antialias: false; logarithmicDepthBuffer:true"
+            physics="gravity: -10;"
+        >
+            <a-assets>
+                <a-asset-item
+                    id="soccerBallModel"
+                    src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2FsoccerBall.glb?v=1638300189856"
+                ></a-asset-item>
+                <a-asset-item
+                    id="soccerGoalModel"
+                    src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2FsoccerGoal.glb?v=1638301382765"
+                ></a-asset-item>
+                <audio
+                    src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fkick.mp3?v=1638405167300"
+                    id="kickSound"
+                ></audio>
+            </a-assets>
 
-  <script>
-    /*
+            <a-camera></a-camera>
+
+            <a-entity
+                id="soccerBall"
+                scale="0.15 0.15 0.15"
+                position="0 2 -0.5"
+                gltf-model="#soccerBallModel"
+                shadow="cast: true; receive: false;"
+                physics="mass: 10; shape: sphere; restitution: -0.5; radius: 0.15; name: ball;"
+                resonance-audio="src: #kickSound;"
+            ></a-entity>
+
+            <a-entity
+                id="soccerGoal"
+                scale="0.03 0.03 0.03"
+                position="0 0 -5.6"
+                rotation="0 -45 0"
+                gltf-model="#soccerGoalModel"
+                shadow="cast: true; receive: false;"
+            ></a-entity>
+
+            <a-box
+                visible="false"
+                scale="0.2 2.7 2"
+                position="-3.316 1.341 -6.474"
+                physics="mass: 0; shape: box; scale: 0.2, 2.7, 2; name: netLeft;"
+            ></a-box>
+            <a-box
+                visible="false"
+                scale="0.2 2.7 2"
+                position="3.316 1.341 -6.474"
+                physics="mass: 0; shape: box; scale: 0.2, 2.7, 2; name: netRight;"
+            ></a-box>
+            <a-box
+                visible="false"
+                scale="7 2.7 0.2"
+                position="0 1.341 -7.356"
+                physics="mass: 0; shape: box; scale: 7, 2.7, 0.2; name: netBack;"
+            ></a-box>
+            <a-box
+                visible="false"
+                scale="7 0.2 2"
+                position="0 2.587 -6.479"
+                physics="mass: 0; shape: box; scale: 7, 0.2, 2 name: netTop;"
+            ></a-box>
+
+            <a-light type="ambient" light="intensity: 0.6;"></a-light>
+            <a-light
+                type="directional"
+                position="2 2 2"
+                light="castShadow: true; intensity: 0.6; shadow-camera-right: 10; shadow-camera-top: 10;"
+                target="#rig"
+            ></a-light>
+
+            <a-entity
+                id="jumbotron"
+                webcam="width: 600; height: 300; position: 1.6, 1.8, 3.5; rotation: -15, 10, 0; fov: 40;"
+                position="0 4 -5"
+                rotation="10 0 0"
+                scale="-5 2.5 1"
+            ></a-entity>
+
+            <a-plane
+                id="floor"
+                shadow="cast: false; receive: true;"
+                position="0 0 0"
+                rotation="-90 0 0"
+                color="limegreen"
+                material="roughness: 1;"
+                width="20"
+                height="20"
+                physics="shape: plane; mass: 0; friction: 1; name: floor;"
+            ></a-plane>
+
+            <a-entity
+                id="rig"
+                position="0 0 0"
+                ukaton-body-tracking="physics: true; move-hands: false; hide-extremities: true; hide-pressure: true; hide-entities: upperTorso; hide-primitives: lowerTorso; pressure-anchoring-enabled: false; anchor-to-camera: true; hide-extremities: true; auto-connect: false; gateway: 238, 236, 239, 237, 240, 6.11, 6.12; forearm-radius: 0.030; elbow-radius: 0.030"
+                shadow
+            ></a-entity>
+
+            <a-sky color="powderblue"></a-sky>
+        </a-scene>
+    </body>
+    <script>
+        const rig = document.getElementById("rig");
+        function connect() {
+            rig.emit("connect");
+        }
+        function calibrate() {
+            rig.emit("calibrate", { delay: 2000 });
+        }
+        function addBluetoothDevice() {
+            rig.emit("addbluetoothdevice");
+        }
+
+        const scene = document.querySelector("a-scene");
+        const overlay = document.getElementById("overlay");
+    </script>
+
+    <script>
+        function resetBall() {
+            soccerBall.components.physics.body.sleep();
+            soccerBall.components.physics.body.position.set(0, 2, -0.5);
+            soccerBall.components.physics.body.wakeUp();
+        }
+        soccerBall.addEventListener("collide", (event) => {
+            const { name } = event.detail.body;
+            if (name != "floor") {
+                //console.log(`hit ${name}`);
+                if (name.includes("Shoe")) {
+                    soccerBall.emit("playaudio");
+                }
+            }
+        });
+
+        rig.addEventListener("leftdoublepinch", (event) => {
+            resetBall();
+        });
+    </script>
+
+    <script>
+        /*
     // physics
     const { world } = scene.systems.physics;
 
@@ -253,5 +242,5 @@
       testSphere.object3D.position.set(...shapeBody1.position.toArray());
     });
     */
-  </script>
+    </script>
 </html>

@@ -1,289 +1,274 @@
 <html>
-  <head>
-    <title>Ukaton Mission</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.rawgit.com/tizzle/aframe-orbit-controls-component/v0.1.14/dist/aframe-orbit-controls-component.min.js"></script>
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="/PeerBluetoothMissionDevice.js"></script>
-    <script src="/WebSocketMissionDevice.js"></script>
-  </head>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #container {
-      display: grid;
-      width: 100%;
-      height: 100%;
+    <head>
+        <title>Ukaton Mission</title>
+        <link rel="icon" href="/favicon.png" />
+        <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+        <script src="https://cdn.rawgit.com/tizzle/aframe-orbit-controls-component/v0.1.14/dist/aframe-orbit-controls-component.min.js"></script>
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="/PeerBluetoothMissionDevice.js"></script>
+        <script src="/WebSocketMissionDevice.js"></script>
+    </head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #container {
+            display: grid;
+            width: 100%;
+            height: 100%;
 
-      grid-template-rows: repeat(3, 1fr);
-      grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
 
-      grid-template-areas:
-        "connection scene quaternion euler"
-        "acceleration linearAcceleration gravity rotationRate"
-        "mass heelAndToe heelToToe magnetometer";
-    }
+            grid-template-areas:
+                "connection scene quaternion euler"
+                "acceleration linearAcceleration gravity rotationRate"
+                "mass heelAndToe heelToToe magnetometer";
+        }
 
-    .unstyledList {
-      list-style: none;
-      padding-left: 0;
-    }
+        .unstyledList {
+            list-style: none;
+            padding-left: 0;
+        }
 
-    @media only screen and (max-width: 800px) {
-      #container {
-        grid-template-areas:
-          "connection"
-          "scene"
-          "euler"
-          "linearAcceleration"
-          "heelAndToe"
-          "heelToToe"
-          "mass"
-          "gravity"
-          "acceleration"
-          "rotationRate"
-          "magnetometer"
-          "quaternion";
+        @media only screen and (max-width: 800px) {
+            #container {
+                grid-template-areas:
+                    "connection"
+                    "scene"
+                    "euler"
+                    "linearAcceleration"
+                    "heelAndToe"
+                    "heelToToe"
+                    "mass"
+                    "gravity"
+                    "acceleration"
+                    "rotationRate"
+                    "magnetometer"
+                    "quaternion";
 
-        grid-template-rows: repeat(12, 300px);
-        grid-template-columns: repeat(1, 1fr);
-      }
-    }
+                grid-template-rows: repeat(12, 300px);
+                grid-template-columns: repeat(1, 1fr);
+            }
+        }
 
-    #container > div {
-      width: 100%;
-      height: 100%;
-      box-sizing: border-box;
-      border: solid black 1px;
-      margin: 0;
-      padding: 0;
-      position: relative;
-      background-color: white;
-    }
-    canvas {
-      width: 100%;
-      height: 100%;
-    }
-    #connection {
-      padding-left: 1em !important;
-      grid-area: connection;
-      overflow: scroll;
-    }
-    #acceleration {
-      grid-area: acceleration;
-    }
-    #gravity {
-      grid-area: gravity;
-    }
-    #linearAcceleration {
-      grid-area: linearAcceleration;
-    }
-    #rotationRate {
-      grid-area: rotationRate;
-    }
-    #magnetometer {
-      grid-area: magnetometer;
-    }
-    #quaternion {
-      grid-area: quaternion;
-    }
-    #euler {
-      grid-area: euler;
-    }
-    #mass {
-      grid-area: mass;
-    }
-    #heelAndToe {
-      grid-area: heelAndToe;
-    }
-    #heelToToe {
-      grid-area: heelToToe;
-    }
-    #scene {
-      grid-area: scene;
-    }
-  </style>
-  <body>
-    <div id="container">
-      <div id="connection">
-        <h1 style="margin: 0">Ukaton Mission</h1>
+        #container > div {
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            border: solid black 1px;
+            margin: 0;
+            padding: 0;
+            position: relative;
+            background-color: white;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        #connection {
+            padding-left: 1em !important;
+            grid-area: connection;
+            overflow: scroll;
+        }
+        #acceleration {
+            grid-area: acceleration;
+        }
+        #gravity {
+            grid-area: gravity;
+        }
+        #linearAcceleration {
+            grid-area: linearAcceleration;
+        }
+        #rotationRate {
+            grid-area: rotationRate;
+        }
+        #magnetometer {
+            grid-area: magnetometer;
+        }
+        #quaternion {
+            grid-area: quaternion;
+        }
+        #euler {
+            grid-area: euler;
+        }
+        #mass {
+            grid-area: mass;
+        }
+        #heelAndToe {
+            grid-area: heelAndToe;
+        }
+        #heelToToe {
+            grid-area: heelToToe;
+        }
+        #scene {
+            grid-area: scene;
+        }
+    </style>
+    <body>
+        <div id="container">
+            <div id="connection">
+                <h1 style="margin: 0">Ukaton Mission</h1>
 
-        <label class="connectionType">
-          connection type:
-          <select id="setDeviceType">
-            <option>bluetooth</option>
-            <option>websocket</option>
-          </select>
-        </label>
+                <label class="connectionType">
+                    connection type:
+                    <select id="setDeviceType">
+                        <option>bluetooth</option>
+                        <option>websocket</option>
+                    </select>
+                </label>
 
-        <br />
-        <label class="gateway"> gateway: <input /> </label>
-        <br />
+                <br />
+                <label class="gateway"> gateway: <input /> </label>
+                <br />
 
-        <button id="connect">connect</button>
+                <button id="connect">connect</button>
 
-        <span class="batteryLevel">battery: <span>0</span>%</span>
-        <br />
+                <span class="batteryLevel">battery: <span>0</span>%</span>
+                <br />
 
-        <span class="motionCalibration">
-          calibration:
-          <span data-motion-calibration="system">
-            system (<span>0</span>),
-          </span>
-          <span data-motion-calibration="gyroscope">
-            gyroscope(<span>0</span>),</span
-          >
-          <span data-motion-calibration="accelerometer">
-            accelerometer(<span>0</span>),
-          </span>
-          <span data-motion-calibration="magnetometer">
-            magnetometer(<span>0</span>),
-          </span>
-          <span data-motion-calibration="quaternion">
-            quaternion(<span>0</span>),
-          </span>
-          <span data-motion-calibration="isFullyCalibrated">
-            fully? (<span>false</span>)
-          </span>
-        </span>
-        <br />
-        <br />
+                <span class="motionCalibration">
+                    calibration:
+                    <span data-motion-calibration="system"> system (<span>0</span>), </span>
+                    <span data-motion-calibration="gyroscope"> gyroscope(<span>0</span>),</span>
+                    <span data-motion-calibration="accelerometer"> accelerometer(<span>0</span>), </span>
+                    <span data-motion-calibration="magnetometer"> magnetometer(<span>0</span>), </span>
+                    <span data-motion-calibration="quaternion"> quaternion(<span>0</span>), </span>
+                    <span data-motion-calibration="isFullyCalibrated"> fully? (<span>false</span>) </span>
+                </span>
+                <br />
+                <br />
 
-        <label class="type">
-          type
-          <select>
-            <option value="0">motion module</option>
-            <option value="1">left insole</option>
-            <option value="2">right insole</option>
-          </select>
-        </label>
-        <br />
+                <label class="type">
+                    type
+                    <select>
+                        <option value="0">motion module</option>
+                        <option value="1">left insole</option>
+                        <option value="2">right insole</option>
+                    </select>
+                </label>
+                <br />
 
-        <label class="name">
-          name <input type="text" size="30" maxlength="30" />
-          <button>change name</button>
-        </label>
-        <br />
+                <label class="name">
+                    name <input type="text" size="30" maxlength="30" />
+                    <button>change name</button>
+                </label>
+                <br />
 
-        <ul class="unstyledList">
-          <li>
-            <label data-motion-sensor-data-type="acceleration">
-              Acceleration (ms)
-              <input value="0" type="number" min="0" max="65535" step="10" />
-            </label>
-          </li>
-          <li>
-            <label data-motion-sensor-data-type="gravity">
-              Gravity (ms)
-              <input value="0" type="number" min="0" max="65535" step="10" />
-            </label>
-          </li>
-          <li>
-            <label data-motion-sensor-data-type="linearAcceleration">
-              Linear Acceration (ms)
-              <input value="0" type="number" min="0" max="65535" step="10" />
-            </label>
-          </li>
-          <li>
-            <label data-motion-sensor-data-type="rotationRate">
-              Rotation Rate (ms)
-              <input value="0" type="number" min="0" max="65535" step="10" />
-            </label>
-          </li>
-          <li>
-            <label data-motion-sensor-data-type="magnetometer">
-              Magnetometer (ms)
-              <input value="0" type="number" min="0" max="65535" step="10" />
-            </label>
-          </li>
-          <li>
-            <label data-motion-sensor-data-type="quaternion">
-              Quaternion (ms)
-              <input value="0" type="number" min="0" max="65535" step="10" />
-            </label>
-          </li>
-          <li>
-            <label data-pressure-sensor-data-type="mass">
-              Mass (ms)
-              <input value="0" type="number" min="0" max="65535" step="10" />
-            </label>
-          </li>
-          <li>
-            <label data-pressure-sensor-data-type="pressureSingleByte">
-              Pressure (ms)
-              <input value="0" type="number" min="0" max="65535" step="10" />
-            </label>
-          </li>
-        </ul>
-      </div>
+                <ul class="unstyledList">
+                    <li>
+                        <label data-motion-sensor-data-type="acceleration">
+                            Acceleration (ms)
+                            <input value="0" type="number" min="0" max="65535" step="10" />
+                        </label>
+                    </li>
+                    <li>
+                        <label data-motion-sensor-data-type="gravity">
+                            Gravity (ms)
+                            <input value="0" type="number" min="0" max="65535" step="10" />
+                        </label>
+                    </li>
+                    <li>
+                        <label data-motion-sensor-data-type="linearAcceleration">
+                            Linear Acceration (ms)
+                            <input value="0" type="number" min="0" max="65535" step="10" />
+                        </label>
+                    </li>
+                    <li>
+                        <label data-motion-sensor-data-type="rotationRate">
+                            Rotation Rate (ms)
+                            <input value="0" type="number" min="0" max="65535" step="10" />
+                        </label>
+                    </li>
+                    <li>
+                        <label data-motion-sensor-data-type="magnetometer">
+                            Magnetometer (ms)
+                            <input value="0" type="number" min="0" max="65535" step="10" />
+                        </label>
+                    </li>
+                    <li>
+                        <label data-motion-sensor-data-type="quaternion">
+                            Quaternion (ms)
+                            <input value="0" type="number" min="0" max="65535" step="10" />
+                        </label>
+                    </li>
+                    <li>
+                        <label data-pressure-sensor-data-type="mass">
+                            Mass (ms)
+                            <input value="0" type="number" min="0" max="65535" step="10" />
+                        </label>
+                    </li>
+                    <li>
+                        <label data-pressure-sensor-data-type="pressureSingleByte">
+                            Pressure (ms)
+                            <input value="0" type="number" min="0" max="65535" step="10" />
+                        </label>
+                    </li>
+                </ul>
+            </div>
 
-      <div id="acceleration">
-        <canvas></canvas>
-      </div>
-      <div id="gravity">
-        <canvas></canvas>
-      </div>
-      <div id="linearAcceleration">
-        <canvas></canvas>
-      </div>
-      <div id="rotationRate">
-        <canvas></canvas>
-      </div>
-      <div id="magnetometer">
-        <canvas></canvas>
-      </div>
-      <div id="quaternion">
-        <canvas></canvas>
-      </div>
-      <div id="euler">
-        <canvas></canvas>
-      </div>
-      <div id="mass">
-        <canvas></canvas>
-      </div>
-      <div id="heelAndToe">
-        <canvas></canvas>
-      </div>
-      <div id="heelToToe">
-        <canvas></canvas>
-      </div>
-      <div id="scene">
-        <a-scene
-          embedded
-          vr-mode-ui="enabled: false"
-          device-orientation-permission-ui="enabled: false"
-          renderer="colorManagement: true;"
-        >
-          <a-assets>
-            <a-asset-item
-              id="caseAsset"
-              src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission.obj?v=1621228628422"
-            ></a-asset-item>
-            <a-asset-item
-              id="lidAsset"
-              src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission%20lid.obj?v=1621228763857"
-            ></a-asset-item>
-            <img
-              id="logoAsset"
-              src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fname_logo.PNG?v=1621230110826"
-            />
-            <a-asset-item
-              id="shoeAsset"
-              src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fshoe%20model.glb?v=1635624986582"
-            ></a-asset-item>
-          </a-assets>
-          <a-camera
-            id="camera"
-            camera="fov: 50; zoom: 2;"
-            position="0 2 5"
-            orbit-controls="
+            <div id="acceleration">
+                <canvas></canvas>
+            </div>
+            <div id="gravity">
+                <canvas></canvas>
+            </div>
+            <div id="linearAcceleration">
+                <canvas></canvas>
+            </div>
+            <div id="rotationRate">
+                <canvas></canvas>
+            </div>
+            <div id="magnetometer">
+                <canvas></canvas>
+            </div>
+            <div id="quaternion">
+                <canvas></canvas>
+            </div>
+            <div id="euler">
+                <canvas></canvas>
+            </div>
+            <div id="mass">
+                <canvas></canvas>
+            </div>
+            <div id="heelAndToe">
+                <canvas></canvas>
+            </div>
+            <div id="heelToToe">
+                <canvas></canvas>
+            </div>
+            <div id="scene">
+                <a-scene
+                    embedded
+                    vr-mode-ui="enabled: false"
+                    device-orientation-permission-ui="enabled: false"
+                    renderer="colorManagement: true;"
+                >
+                    <a-assets>
+                        <a-asset-item
+                            id="caseAsset"
+                            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission.obj?v=1621228628422"
+                        ></a-asset-item>
+                        <a-asset-item
+                            id="lidAsset"
+                            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission%20lid.obj?v=1621228763857"
+                        ></a-asset-item>
+                        <img
+                            id="logoAsset"
+                            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fname_logo.PNG?v=1621230110826"
+                        />
+                        <a-asset-item
+                            id="shoeAsset"
+                            src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fshoe%20model.glb?v=1635624986582"
+                        ></a-asset-item>
+                    </a-assets>
+                    <a-camera
+                        id="camera"
+                        camera="fov: 50; zoom: 2;"
+                        position="0 2 5"
+                        orbit-controls="
               autoRotate: false;
               target: #target;
               enableDamping: true;
@@ -292,441 +277,423 @@
               minDistance:3;
               maxDistance:100;
               "
-          ></a-camera>
-          <a-entity id="target"
-            ><a-entity id="leftShoe" visible="false">
-              <a-entity scale="10 10 10">
-                <a-entity rotation="-7.000 -92.07 11.210">
-                  <a-entity position="-0.009 0.010 0.116">
-                    <a-entity gltf-model="#shoeAsset"></a-entity>
-                  </a-entity>
-                </a-entity>
-              </a-entity>
-            </a-entity>
-            <a-entity id="rightShoe" visible="false" scale="-1 1 1">
-              <a-entity scale="10 10 10">
-                <a-entity rotation="-7.000 -92.07 11.210">
-                  <a-entity position="-0.009 0.010 0.116">
-                    <a-entity gltf-model="#shoeAsset"></a-entity>
-                  </a-entity>
-                </a-entity>
-              </a-entity>
-            </a-entity>
-            <a-entity
-              id="motionModule"
-              position="0 0 0"
-              rotation="0 0 0"
-              visible="false"
-              scale="0.9 0.9 0.9"
-            >
-              <a-image
-                scale="1.8 1.8 1.8"
-                rotation="-90 0 0"
-                position="0 0.455 0"
-                id="logo"
-                src="#logoAsset"
-              ></a-image>
-              <a-entity scale="0.05 0.05 0.05" rotation="-90 90 0">
-                <a-entity position="-20 -17.5 -10">
-                  <a-entity id="case" obj-model="obj: #caseAsset;"></a-entity>
-                  <a-entity id="lid" obj-model="obj: #lidAsset;"></a-entity>
-                </a-entity>
-              </a-entity> </a-entity
-          ></a-entity>
-          <a-sky color="darkgrey"></a-sky>
-        </a-scene>
-      </div>
-    </div>
-  </body>
+                    ></a-camera>
+                    <a-entity id="target"
+                        ><a-entity id="leftShoe" visible="false">
+                            <a-entity scale="10 10 10">
+                                <a-entity rotation="-7.000 -92.07 11.210">
+                                    <a-entity position="-0.009 0.010 0.116">
+                                        <a-entity gltf-model="#shoeAsset"></a-entity>
+                                    </a-entity>
+                                </a-entity>
+                            </a-entity>
+                        </a-entity>
+                        <a-entity id="rightShoe" visible="false" scale="-1 1 1">
+                            <a-entity scale="10 10 10">
+                                <a-entity rotation="-7.000 -92.07 11.210">
+                                    <a-entity position="-0.009 0.010 0.116">
+                                        <a-entity gltf-model="#shoeAsset"></a-entity>
+                                    </a-entity>
+                                </a-entity>
+                            </a-entity>
+                        </a-entity>
+                        <a-entity
+                            id="motionModule"
+                            position="0 0 0"
+                            rotation="0 0 0"
+                            visible="false"
+                            scale="0.9 0.9 0.9"
+                        >
+                            <a-image
+                                scale="1.8 1.8 1.8"
+                                rotation="-90 0 0"
+                                position="0 0.455 0"
+                                id="logo"
+                                src="#logoAsset"
+                            ></a-image>
+                            <a-entity scale="0.05 0.05 0.05" rotation="-90 90 0">
+                                <a-entity position="-20 -17.5 -10">
+                                    <a-entity id="case" obj-model="obj: #caseAsset;"></a-entity>
+                                    <a-entity id="lid" obj-model="obj: #lidAsset;"></a-entity>
+                                </a-entity>
+                            </a-entity> </a-entity
+                    ></a-entity>
+                    <a-sky color="darkgrey"></a-sky>
+                </a-scene>
+            </div>
+        </div>
+    </body>
 
-  <script>
-    // to remove that stupid THREE.js warning
-    THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
+    <script>
+        // to remove that stupid THREE.js warning
+        THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 
-    const url = new URL(location);
+        const url = new URL(location);
 
-    // our device
-    let connectionType = url.searchParams.get("connectionType") || "bluetooth";
-    const missionDevice =
-      connectionType == "bluetooth"
-        ? new BluetoothMissionDevice()
-        : new WebSocketMissionDevice();
-    window.missionDevice = missionDevice;
+        // our device
+        let connectionType = url.searchParams.get("connectionType") || "bluetooth";
+        const missionDevice =
+            connectionType == "bluetooth" ? new BluetoothMissionDevice() : new WebSocketMissionDevice();
+        window.missionDevice = missionDevice;
 
-    const connectionTypeSelect = document.querySelector("#connection select");
-    connectionTypeSelect.addEventListener("input", (event) => {
-      connectionType = event.target.value;
-      console.log("connection type", connectionType);
-      url.searchParams.set("connectionType", connectionType);
-      location = url.href;
-    });
-    connectionTypeSelect.value = connectionType;
-
-    function insertUrlParam(key, value) {
-      if (history.pushState) {
-        let searchParams = new URLSearchParams(window.location.search);
-        searchParams.set(key, value);
-        let newurl =
-          window.location.protocol +
-          "//" +
-          window.location.host +
-          window.location.pathname +
-          "?" +
-          searchParams.toString();
-        window.history.pushState({ path: newurl }, "", newurl);
-      }
-    }
-
-    let gateway = url.searchParams.get("gateway") || "0.0.0.0";
-    console.log("gateway", gateway);
-    const gatewayInput = document.querySelector("#connection input");
-    gatewayInput.addEventListener("input", (event) => {
-      gateway = event.target.value;
-      console.log("new gateway", gateway);
-      url.searchParams.set("gateway", gateway);
-      insertUrlParam("gateway", gateway);
-    });
-    gatewayInput.value = gateway;
-    if (connectionType != "websocket") {
-      gatewayInput.closest("label").setAttribute("hidden", "");
-    } else {
-      gatewayInput.closest("label").removeAttribute("hidden");
-    }
-
-    // interface
-    const connectButton = document.querySelector("#connection button");
-    connectButton.addEventListener("click", (event) => {
-      if (connectionType == "bluetooth") {
-        missionDevice.connect();
-      } else {
-        missionDevice.connect(gateway);
-      }
-    });
-    missionDevice.addEventListener("connected", (event) => {
-      connectButton.remove();
-    });
-
-    const batteryLevelSpan = document.querySelector(
-      "#connection .batteryLevel span"
-    );
-    missionDevice.addEventListener("batterylevel", (event) => {
-      const { batteryLevel } = event.message;
-      batteryLevelSpan.innerText = batteryLevel;
-    });
-
-    const motionCalibrationContainer = document.querySelector(
-      "#connection .motionCalibration"
-    );
-    missionDevice.addEventListener("motioncalibration", (event) => {
-      const { motionCalibration } = event.message;
-      for (const key in motionCalibration) {
-        motionCalibrationContainer.querySelector(
-          `[data-motion-calibration="${key}"] span`
-        ).innerText = motionCalibration[key];
-      }
-    });
-
-    const typeSelect = document.querySelector("#connection .type select");
-    missionDevice.addEventListener("connected", async (event) => {
-      const type = await missionDevice.getType();
-      typeSelect.value = type;
-    });
-    typeSelect.addEventListener("input", async (event) => {
-      await missionDevice.setType(Number(event.target.value));
-    });
-
-    const nameInput = document.querySelector("#connection .name input");
-    const nameButton = document.querySelector("#connection .name button");
-    missionDevice.addEventListener("name", async (event) => {
-      const name = await missionDevice.getName();
-      nameInput.value = name;
-    });
-    nameButton.addEventListener("click", async (event) => {
-      await missionDevice.setName(nameInput.value);
-    });
-
-    // A-Frame swap entity
-    const scene = document.querySelector("a-scene");
-    const entities = {
-      LEFT_INSOLE: scene.querySelector("#leftShoe"),
-      RIGHT_INSOLE: scene.querySelector("#rightShoe"),
-      MOTION_MODULE: scene.querySelector("#motionModule"),
-    };
-    const targetEntity = scene.querySelector("#target");
-    scene.addEventListener("loaded", (event) => {
-      missionDevice.addEventListener("type", async (event) => {
-        const type = await missionDevice.getType();
-        for (const typeString in entities) {
-          const entity = entities[typeString];
-          const visible = missionDevice.TypeStrings[type] == typeString;
-          entity.setAttribute("visible", visible);
-        }
-      });
-    });
-    missionDevice.addEventListener("quaternion", (event) => {
-      const { quaternion } = event.message;
-      targetEntity.object3D.quaternion.copy(quaternion);
-    });
-
-    // Sensor Data configuration
-    for (const sensorType in missionDevice.SensorTypes) {
-      for (const sensorDataType in missionDevice.SensorDataTypes[sensorType]) {
-        const input = document.querySelector(
-          `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"]`
-        );
-        if (input) {
-          input.addEventListener("input", async (event) => {
-            const rate = Number(event.target.value);
-            await missionDevice.setSensorDataConfigurations({
-              [sensorType.toLowerCase()]: {
-                [sensorDataType]: rate,
-              },
-            });
-          });
-        }
-      }
-    }
-
-    missionDevice.addEventListener("sensordataconfigurations", (event) => {
-      const { sensorDataConfigurations } = event.message;
-      for (const sensorType in sensorDataConfigurations) {
-        for (const sensorDataType in sensorDataConfigurations[sensorType]) {
-          const input = document.querySelector(
-            `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"] input`
-          );
-          if (input) {
-            input.value =
-              sensorDataConfigurations[sensorType.toLowerCase()][
-                sensorDataType
-              ];
-          }
-        }
-      }
-    });
-
-    // canvas stuff
-    const dataComponents = {
-      default: ["x", "y", "z"],
-      quaternion: ["x", "y", "z", "w"],
-      heelToToe: ["heelToToe"],
-      mass: ["mass"],
-      heelAndToe: ["heel", "toe"],
-    };
-
-    const canvases = {};
-    const contexts = {};
-
-    const samples = {};
-    const numberOfSamples = 100;
-    const dataVisualizations = [
-      "euler",
-      "acceleration",
-      "quaternion",
-      "magnetometer",
-      "gravity",
-      "heelAndToe",
-      "linearAcceleration",
-      "rotationRate",
-      "mass",
-      "heelToToe",
-    ];
-    dataVisualizations.forEach((type) => {
-      const canvas = document.querySelector(`#${type} canvas`);
-      canvases[type] = canvas;
-      contexts[type] = canvases[type].getContext("2d");
-
-      const components = dataComponents[type] || dataComponents.default;
-
-      samples[type] = {};
-      components.forEach(
-        (component) =>
-          (samples[type][component] = new Array(numberOfSamples).fill(0))
-      );
-
-      missionDevice.addEventListener(type, (event) => {
-        const { message } = event;
-        const { timestamp } = message;
-        components.forEach((component) => {
-          const value =
-            typeof message[type] == "number"
-              ? message[type]
-              : message[type][component];
-          samples[type][component].unshift(value);
-          samples[type][component].pop();
+        const connectionTypeSelect = document.querySelector("#connection select");
+        connectionTypeSelect.addEventListener("input", (event) => {
+            connectionType = event.target.value;
+            console.log("connection type", connectionType);
+            url.searchParams.set("connectionType", connectionType);
+            location = url.href;
         });
+        connectionTypeSelect.value = connectionType;
 
-        draw(type);
-      });
-
-      if (type == "heelAndToe") {
-        missionDevice.addEventListener("pressure", (event) => {
-          const { message } = event;
-          const { timestamp } = message;
-
-          const { pressure } = message;
-          let heel = 0;
-          let toe = 0;
-          pressure.forEach(({ value }, index) => {
-            if (index <= 9) {
-              toe += value;
-            } else {
-              heel += value;
+        function insertUrlParam(key, value) {
+            if (history.pushState) {
+                let searchParams = new URLSearchParams(window.location.search);
+                searchParams.set(key, value);
+                let newurl =
+                    window.location.protocol +
+                    "//" +
+                    window.location.host +
+                    window.location.pathname +
+                    "?" +
+                    searchParams.toString();
+                window.history.pushState({ path: newurl }, "", newurl);
             }
-          });
+        }
 
-          toe /= 10;
-          heel /= 16 - 10;
-
-          samples.heelAndToe.heel.unshift(heel);
-          samples.heelAndToe.heel.pop();
-
-          samples.heelAndToe.toe.unshift(toe);
-          samples.heelAndToe.toe.pop();
-
-          draw(type);
+        let gateway = url.searchParams.get("gateway") || "0.0.0.0";
+        console.log("gateway", gateway);
+        const gatewayInput = document.querySelector("#connection input");
+        gatewayInput.addEventListener("input", (event) => {
+            gateway = event.target.value;
+            console.log("new gateway", gateway);
+            url.searchParams.set("gateway", gateway);
+            insertUrlParam("gateway", gateway);
         });
-      }
-    });
+        gatewayInput.value = gateway;
+        if (connectionType != "websocket") {
+            gatewayInput.closest("label").setAttribute("hidden", "");
+        } else {
+            gatewayInput.closest("label").removeAttribute("hidden");
+        }
 
-    const ranges = {
-      default: {
-        min: -20,
-        max: 20,
-      },
-      magnetometer: {
-        min: -70,
-        max: 70,
-      },
-      rotationRate: {
-        min: -2 * Math.PI,
-        max: 2 * Math.PI,
-      },
-      quaternion: {
-        min: -1,
-        max: 1,
-      },
-      euler: {
-        min: -Math.PI,
-        max: Math.PI,
-      },
-      mass: {
-        min: 0,
-        max: 0.5,
-      },
-      heelToToe: {
-        min: 0.2,
-        max: 0.7,
-      },
-      heelAndToe: {
-        min: 0,
-        max: 256,
-      },
-    };
-
-    const titles = {
-      acceleration: "Acceleration",
-      gravity: "Gravity",
-      linearAcceleration: "Linear Acceleration",
-      rotationRate: "Rotation Rate",
-      magnetometer: "Magnetometer",
-      quaternion: "Quaternion",
-      euler: "Euler Angles",
-      heelAndToe: "Heel and Toe",
-      heelToToe: "Heel to Toe",
-      mass: "Mass",
-    };
-
-    const legends = {
-      euler: ["pitch", "yaw", "roll"],
-      rotationRate: ["pitch", "yaw", "roll"],
-      mass: ["mass", "", ""],
-      heelToToe: ["heel to toe", "", ""],
-    };
-
-    const colors = {
-      x: "red",
-      y: "green",
-      z: "blue",
-      w: "purple",
-      mass: "red",
-      heel: "red",
-      toe: "blue",
-      heelToToe: "green",
-    };
-
-    function draw(type) {
-      const canvas = canvases[type];
-      if (!canvas) {
-        return;
-      }
-      const context = contexts[type];
-      context.clearRect(0, 0, canvas.width, canvas.height);
-
-      const title = titles[type] || type;
-      context.font = "26px serif";
-      context.textAlign = "right";
-      context.textBaseline = "top";
-      context.fillStyle = "black";
-      context.fillText(title, canvas.width - 10, 10);
-
-      context.font = "26px serif";
-      context.textAlign = "left";
-      context.textBaseline = "bottom";
-      const legend = dataComponents[type] || dataComponents.default;
-      const texts = legend.map((key, index) => legends[type]?.[index] || key);
-      const legendMeasurement = context.measureText(texts.join(" "));
-      let legendOffset = 0;
-      legend.forEach((component, index) => {
-        context.fillStyle = colors[component];
-        const text = texts[index];
-        const componentMeasurement = context.measureText(text + " ");
-        let x = canvas.width - 10;
-        x -= legendMeasurement.width;
-        x += legendOffset;
-        context.fillText(text, x, canvas.height - 10);
-        legendOffset += componentMeasurement.width;
-      });
-
-      for (const component in samples[type]) {
-        const range = ranges[type] || ranges.default;
-
-        const componentSamples = samples[type][component];
-        context.strokeStyle = colors[component];
-        context.beginPath();
-        context.lineWidth = 1;
-        const width = canvas.width / componentSamples.length;
-        componentSamples.forEach((value, index) => {
-          const x = width * index;
-          value = Math.min(Math.max(range.min, value), range.max);
-          const y =
-            canvas.height * (1 - (value - range.min) / (range.max - range.min));
-          if (index === 0) {
-            context.moveTo(x, y);
-          } else {
-            context.lineTo(x, y);
-          }
-          context.stroke();
+        // interface
+        const connectButton = document.querySelector("#connection button");
+        connectButton.addEventListener("click", (event) => {
+            if (connectionType == "bluetooth") {
+                missionDevice.connect();
+            } else {
+                missionDevice.connect(gateway);
+            }
         });
-      }
-    }
+        missionDevice.addEventListener("connected", (event) => {
+            connectButton.remove();
+        });
 
-    function drawAll() {
-      dataVisualizations.forEach((type) => draw(type));
-    }
+        const batteryLevelSpan = document.querySelector("#connection .batteryLevel span");
+        missionDevice.addEventListener("batterylevel", (event) => {
+            const { batteryLevel } = event.message;
+            batteryLevelSpan.innerText = batteryLevel;
+        });
 
-    window.addEventListener("resize", (event) => {
-      for (const type in canvases) {
-        const canvas = canvases[type];
-        const { clientWidth, clientHeight } = document.body;
-        const isNarrow = document.body.clientWidth < 800;
-        canvas.width = isNarrow ? document.body.clientWidth : clientWidth / 3;
-        canvas.height = isNarrow ? 200 : clientHeight / 3;
-      }
-      drawAll();
-    });
-    window.dispatchEvent(new Event("resize"));
+        const motionCalibrationContainer = document.querySelector("#connection .motionCalibration");
+        missionDevice.addEventListener("motioncalibration", (event) => {
+            const { motionCalibration } = event.message;
+            for (const key in motionCalibration) {
+                motionCalibrationContainer.querySelector(`[data-motion-calibration="${key}"] span`).innerText =
+                    motionCalibration[key];
+            }
+        });
 
-    drawAll();
-  </script>
+        const typeSelect = document.querySelector("#connection .type select");
+        missionDevice.addEventListener("connected", async (event) => {
+            const type = await missionDevice.getType();
+            typeSelect.value = type;
+        });
+        typeSelect.addEventListener("input", async (event) => {
+            await missionDevice.setType(Number(event.target.value));
+        });
 
+        const nameInput = document.querySelector("#connection .name input");
+        const nameButton = document.querySelector("#connection .name button");
+        missionDevice.addEventListener("name", async (event) => {
+            const name = await missionDevice.getName();
+            nameInput.value = name;
+        });
+        nameButton.addEventListener("click", async (event) => {
+            await missionDevice.setName(nameInput.value);
+        });
+
+        // A-Frame swap entity
+        const scene = document.querySelector("a-scene");
+        const entities = {
+            LEFT_INSOLE: scene.querySelector("#leftShoe"),
+            RIGHT_INSOLE: scene.querySelector("#rightShoe"),
+            MOTION_MODULE: scene.querySelector("#motionModule"),
+        };
+        const targetEntity = scene.querySelector("#target");
+        scene.addEventListener("loaded", (event) => {
+            missionDevice.addEventListener("type", async (event) => {
+                const type = await missionDevice.getType();
+                for (const typeString in entities) {
+                    const entity = entities[typeString];
+                    const visible = missionDevice.TypeStrings[type] == typeString;
+                    entity.setAttribute("visible", visible);
+                }
+            });
+        });
+        missionDevice.addEventListener("quaternion", (event) => {
+            const { quaternion } = event.message;
+            targetEntity.object3D.quaternion.copy(quaternion);
+        });
+
+        // Sensor Data configuration
+        for (const sensorType in missionDevice.SensorTypes) {
+            for (const sensorDataType in missionDevice.SensorDataTypes[sensorType]) {
+                const input = document.querySelector(
+                    `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"]`
+                );
+                if (input) {
+                    input.addEventListener("input", async (event) => {
+                        const rate = Number(event.target.value);
+                        await missionDevice.setSensorDataConfigurations({
+                            [sensorType.toLowerCase()]: {
+                                [sensorDataType]: rate,
+                            },
+                        });
+                    });
+                }
+            }
+        }
+
+        missionDevice.addEventListener("sensordataconfigurations", (event) => {
+            const { sensorDataConfigurations } = event.message;
+            for (const sensorType in sensorDataConfigurations) {
+                for (const sensorDataType in sensorDataConfigurations[sensorType]) {
+                    const input = document.querySelector(
+                        `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"] input`
+                    );
+                    if (input) {
+                        input.value = sensorDataConfigurations[sensorType.toLowerCase()][sensorDataType];
+                    }
+                }
+            }
+        });
+
+        // canvas stuff
+        const dataComponents = {
+            default: ["x", "y", "z"],
+            quaternion: ["x", "y", "z", "w"],
+            heelToToe: ["heelToToe"],
+            mass: ["mass"],
+            heelAndToe: ["heel", "toe"],
+        };
+
+        const canvases = {};
+        const contexts = {};
+
+        const samples = {};
+        const numberOfSamples = 100;
+        const dataVisualizations = [
+            "euler",
+            "acceleration",
+            "quaternion",
+            "magnetometer",
+            "gravity",
+            "heelAndToe",
+            "linearAcceleration",
+            "rotationRate",
+            "mass",
+            "heelToToe",
+        ];
+        dataVisualizations.forEach((type) => {
+            const canvas = document.querySelector(`#${type} canvas`);
+            canvases[type] = canvas;
+            contexts[type] = canvases[type].getContext("2d");
+
+            const components = dataComponents[type] || dataComponents.default;
+
+            samples[type] = {};
+            components.forEach((component) => (samples[type][component] = new Array(numberOfSamples).fill(0)));
+
+            missionDevice.addEventListener(type, (event) => {
+                const { message } = event;
+                const { timestamp } = message;
+                components.forEach((component) => {
+                    const value = typeof message[type] == "number" ? message[type] : message[type][component];
+                    samples[type][component].unshift(value);
+                    samples[type][component].pop();
+                });
+
+                draw(type);
+            });
+
+            if (type == "heelAndToe") {
+                missionDevice.addEventListener("pressure", (event) => {
+                    const { message } = event;
+                    const { timestamp } = message;
+
+                    const { pressure } = message;
+                    let heel = 0;
+                    let toe = 0;
+                    pressure.forEach(({ value }, index) => {
+                        if (index <= 9) {
+                            toe += value;
+                        } else {
+                            heel += value;
+                        }
+                    });
+
+                    toe /= 10;
+                    heel /= 16 - 10;
+
+                    samples.heelAndToe.heel.unshift(heel);
+                    samples.heelAndToe.heel.pop();
+
+                    samples.heelAndToe.toe.unshift(toe);
+                    samples.heelAndToe.toe.pop();
+
+                    draw(type);
+                });
+            }
+        });
+
+        const ranges = {
+            default: {
+                min: -20,
+                max: 20,
+            },
+            magnetometer: {
+                min: -70,
+                max: 70,
+            },
+            rotationRate: {
+                min: -2 * Math.PI,
+                max: 2 * Math.PI,
+            },
+            quaternion: {
+                min: -1,
+                max: 1,
+            },
+            euler: {
+                min: -Math.PI,
+                max: Math.PI,
+            },
+            mass: {
+                min: 0,
+                max: 0.5,
+            },
+            heelToToe: {
+                min: 0.2,
+                max: 0.7,
+            },
+            heelAndToe: {
+                min: 0,
+                max: 256,
+            },
+        };
+
+        const titles = {
+            acceleration: "Acceleration",
+            gravity: "Gravity",
+            linearAcceleration: "Linear Acceleration",
+            rotationRate: "Rotation Rate",
+            magnetometer: "Magnetometer",
+            quaternion: "Quaternion",
+            euler: "Euler Angles",
+            heelAndToe: "Heel and Toe",
+            heelToToe: "Heel to Toe",
+            mass: "Mass",
+        };
+
+        const legends = {
+            euler: ["pitch", "yaw", "roll"],
+            rotationRate: ["pitch", "yaw", "roll"],
+            mass: ["mass", "", ""],
+            heelToToe: ["heel to toe", "", ""],
+        };
+
+        const colors = {
+            x: "red",
+            y: "green",
+            z: "blue",
+            w: "purple",
+            mass: "red",
+            heel: "red",
+            toe: "blue",
+            heelToToe: "green",
+        };
+
+        function draw(type) {
+            const canvas = canvases[type];
+            if (!canvas) {
+                return;
+            }
+            const context = contexts[type];
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            const title = titles[type] || type;
+            context.font = "26px serif";
+            context.textAlign = "right";
+            context.textBaseline = "top";
+            context.fillStyle = "black";
+            context.fillText(title, canvas.width - 10, 10);
+
+            context.font = "26px serif";
+            context.textAlign = "left";
+            context.textBaseline = "bottom";
+            const legend = dataComponents[type] || dataComponents.default;
+            const texts = legend.map((key, index) => legends[type]?.[index] || key);
+            const legendMeasurement = context.measureText(texts.join(" "));
+            let legendOffset = 0;
+            legend.forEach((component, index) => {
+                context.fillStyle = colors[component];
+                const text = texts[index];
+                const componentMeasurement = context.measureText(text + " ");
+                let x = canvas.width - 10;
+                x -= legendMeasurement.width;
+                x += legendOffset;
+                context.fillText(text, x, canvas.height - 10);
+                legendOffset += componentMeasurement.width;
+            });
+
+            for (const component in samples[type]) {
+                const range = ranges[type] || ranges.default;
+
+                const componentSamples = samples[type][component];
+                context.strokeStyle = colors[component];
+                context.beginPath();
+                context.lineWidth = 1;
+                const width = canvas.width / componentSamples.length;
+                componentSamples.forEach((value, index) => {
+                    const x = width * index;
+                    value = Math.min(Math.max(range.min, value), range.max);
+                    const y = canvas.height * (1 - (value - range.min) / (range.max - range.min));
+                    if (index === 0) {
+                        context.moveTo(x, y);
+                    } else {
+                        context.lineTo(x, y);
+                    }
+                    context.stroke();
+                });
+            }
+        }
+
+        function drawAll() {
+            dataVisualizations.forEach((type) => draw(type));
+        }
+
+        window.addEventListener("resize", (event) => {
+            for (const type in canvases) {
+                const canvas = canvases[type];
+                const { clientWidth, clientHeight } = document.body;
+                const isNarrow = document.body.clientWidth < 800;
+                canvas.width = isNarrow ? document.body.clientWidth : clientWidth / 3;
+                canvas.height = isNarrow ? 200 : clientHeight / 3;
+            }
+            drawAll();
+        });
+        window.dispatchEvent(new Event("resize"));
+
+        drawAll();
+    </script>
 </html>

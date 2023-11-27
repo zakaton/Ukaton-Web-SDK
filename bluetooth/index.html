@@ -1,1134 +1,981 @@
 <html>
-  <head>
-    <title>Bluetooth Mission Device | Ukaton Missions</title>
-    <link
-      rel="icon"
-      href="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Fukaton_no_text_low.png?v=1595095184886"
-    />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="/PeerBluetoothMissionDevice.js"></script>
-  </head>
+    <head>
+        <title>Bluetooth Mission Device | Ukaton Missions</title>
+        <link rel="icon" href="/favicon.png" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="/PeerBluetoothMissionDevice.js"></script>
+    </head>
 
-  <style>
-    .device:not(.pressure) .pressure {
-      display: none;
-    }
-    .device:not(.motion) .motion {
-      display: none;
-    }
-    .calibration label,
-    .configuration label {
-      display: block;
-    }
-
-    .device {
-      margin-bottom: 20px;
-    }
-  </style>
-
-  <body>
-    <h1>Bluetooth Mission Device | Ukaton Missions</h1>
-
-    <div id="connection">
-      <button class="connect">connect</button>
-    </div>
-
-    <br /><br />
-
-    <div id="device">
-      <div class="name">
-        <label><b>name:</b> <input size="30" /> </label>
-        <button>change name</button>
-      </div>
-
-      <div class="type">
-        <label>
-          type
-          <select>
-            <option value="0">motion module</option>
-            <option value="1">left insole</option>
-            <option value="2">right insole</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="wifi ssid">
-        <label><b>wifi ssid:</b> <input /> </label>
-        <button>change wifi ssid</button>
-      </div>
-
-      <div class="wifi password">
-        <label><b>wifi password:</b> <input type="password" /> </label>
-        <button
-          onclick="const input = document.querySelector('.wifi.password input'); input.type = input.type == 'password'? 'text':'password'"
-        >
-          toggle visibility
-        </button>
-        <button class="submit">change wifi password</button>
-      </div>
-
-      <div class="wifi connect">
-        <label><b>connect to wifi:</b> <input type="checkbox" /> </label>
-      </div>
-
-      <div>
-        <label class="wifi connected"
-          ><b>is wifi connected:</b> <span></span
-        ></label>
-      </div>
-
-      <div class="wifi ip">
-        <label><b>wifi IP address:</b> <span></span></label>
-        <button onclick="copyWifiIpToClipboard()">copy</button>
-        <input hidden />
-      </div>
-
-      <div>
-        <label class="wifi mac"><b>wifi MAC address:</b> <span></span></label>
-      </div>
-
-      <div class="batteryLevel">
-        <label><b>battery level:</b> <span></span></label>
-      </div>
-
-      <div class="motion calibration">
-        <b>motion calibration</b>
-        <label data-calibration="system"> system: <span>0</span></label>
-        <label data-calibration="gyroscope"> gyroscope: <span>0</span></label>
-        <label data-calibration="accelerometer">
-          accelerometer: <span>0</span></label
-        >
-        <label data-calibration="magnetometer">
-          magnetometer: <span>0</span></label
-        >
-        <label data-calibration="quaternion"> quaternion: <span>0</span></label>
-        <label data-calibration="isFullyCalibrated">
-          fully calibrated: <span>0</span></label
-        >
-      </div>
-
-      <div class="motion configuration">
-        <b>motion configuration</b>
-        <label data-configuration="acceleration"
-          >acceleration:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="gravity"
-          >gravity: <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="linearAcceleration"
-          >linear acceleration:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="rotationRate"
-          >rotation rate:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="magnetometer"
-          >magnetometer:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="quaternion"
-          >quaternion:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-      </div>
-      <div class="motion data">
-        <b>motion data</b>
-        <div data-type="acceleration">acceleration: <span></span></div>
-        <div data-type="gravity">gravity: <span></span></div>
-        <div data-type="linearAcceleration">
-          linear acceleration: <span></span>
-        </div>
-        <div data-type="rotationRate">rotation rate: <span></span></div>
-        <div data-type="magnetometer">magnetometer: <span></span></div>
-        <div data-type="quaternion">quaternion: <span></span></div>
-        <div data-type="euler">euler: <span></span></div>
-      </div>
-
-      <div class="pressure configuration">
-        <b>pressure configuration</b>
-        <label data-configuration="pressureSingleByte"
-          >pressure (single byte):
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="pressureDoubleByte"
-          >pressure (double byte):
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="centerOfMass"
-          >center of mass:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="mass"
-          >mass: <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-        <label data-configuration="heelToToe"
-          >heel to toe:
-          <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-      </div>
-      <div class="pressure data">
-        <b>pressure data</b>
-        <div data-type="pressureSingleByte">
-          pressure (single byte): <span></span>
-        </div>
-        <div data-type="pressureDoubleByte">
-          pressure (double byte): <span></span>
-        </div>
-        <div data-type="centerOfMass">center of mass: <span></span></div>
-        <div data-type="mass">mass: <span></span></div>
-        <div data-type="heelToToe">heel to toe: <span></span></div>
-      </div>
-
-      <div class="weight delay configuration">
-        <b>weight delay</b>
-        <label data-configuration="weight"
-          >weight: <input type="number" value="0" step="20" min="0" max="1000"
-        /></label>
-      </div>
-      <div class="weight data">
-        <b>weight data</b>
-        <div data-type="weight">weight (kg): <span></span></div>
-      </div>
-    </div>
-
-    <hr />
-
-    <div id="firmware">
-      <h2>Firmware</h2>
-
-      <div class="firmware version">
-        <label> version: <input type="string" readonly /></label>
-      </div>
-
-      <div class="firmware update">
-        <button onclick="updateFirmware()">update firmware</button>
-        <progress value="0"></progress>
-      </div>
-    </div>
-
-    <hr />
-
-    <div id="fileTransfer">
-      <h2>File Transfer</h2>
-
-      <label>sending file? <input type="checkbox" checked /></label>
-      <br />
-      <input type="file" />
-      <br />
-      <label>filePath: <input type="text" /></label>
-      <br />
-      <button class="transfer" disabled>transfer file</button>
-
-      <progress value="0"></progress>
-
-      <br />
-      <button class="remove">remove file</button>
-
-      <button class="format">format filesystem</button>
-    </div>
-
-    <hr />
-
-    <div id="stepData">
-      <h2>Step Data</h2>
-      <label>enabled? <input class="enabled" type="checkbox" /></label>
-      <br />
-      <label
-        >mass threshold:
-        <input
-          class="massThreshold"
-          type="number"
-          min="0"
-          max="1"
-          step="0.01"
-          value="0"
-      /></label>
-      <br />
-      <label
-        >number of steps:
-        <input
-          class="steps"
-          type="number"
-          readonly
-          value="0"
-          step="1"
-          min="0"
-          max="1000"
-      /></label>
-      <br />
-      <button class="reset">reset steps</button>
-    </div>
-
-    <hr />
-
-    <div id="haptics">
-      <h2>Haptics</h2>
-
-      <label
-        >vibrate on change? <input type="checkbox" class="vibrateOnChange"
-      /></label>
-      <br />
-      <br />
-
-      <label
-        >number of waveform slots:
-        <input
-          class="numberOfWaveformSlots"
-          type="number"
-          min="1"
-          max="8"
-          value="1"
-          step="1"
-      /></label>
-      <div class="waveform">
-        <input type="number" min="1" max="127" value="1" />
-        <input type="number" min="1" max="127" value="1" />
-        <input type="number" min="1" max="127" value="1" />
-        <input type="number" min="1" max="127" value="1" />
-        <input type="number" min="1" max="127" value="1" />
-        <input type="number" min="1" max="127" value="1" />
-        <input type="number" min="1" max="127" value="1" />
-        <input type="number" min="1" max="127" value="1" />
-      </div>
-      <br />
-      <button class="triggerWaveform">trigger waveform</button>
-
-      <br />
-
-      <label
-        >number of sequence segments:
-        <input
-          class="numberOfSequenceSegments"
-          type="number"
-          min="1"
-          max="10"
-          value="1"
-          step="1"
-      /></label>
-      <style>
-        .sequence :nth-child(even) {
-          margin-right: 10px;
+    <style>
+        .device:not(.pressure) .pressure {
+            display: none;
         }
-      </style>
-      <div class="sequence">
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-        <input type="number" min="0" max="127" value="40" />
-        <input type="number" min="0" max="1000" value="100" step="10" />
-      </div>
-      <br />
-      <button class="triggerSequence">trigger sequence</button>
-    </div>
+        .device:not(.motion) .motion {
+            display: none;
+        }
+        .calibration label,
+        .configuration label {
+            display: block;
+        }
 
-    <hr />
-    <div id="peers">
-      <h2>Peers</h2>
+        .device {
+            margin-bottom: 20px;
+        }
+    </style>
 
-      <template id="peerTemplate"
-        ><div class="peer">
-          <h3>Peer #<span class="peerIndex">0</span></h3>
+    <body>
+        <h1>Bluetooth Mission Device | Ukaton Missions</h1>
 
-          <div class="name">
-            <label><b>name:</b> <input size="30" /> </label>
-            <button>change name</button>
-          </div>
+        <div id="connection">
+            <button class="connect">connect</button>
+        </div>
 
-          <div class="connect">
-            <label><b>connect:</b> <input type="checkbox" /> </label>
+        <br /><br />
+
+        <div id="device">
+            <div class="name">
+                <label><b>name:</b> <input size="30" /> </label>
+                <button>change name</button>
+            </div>
+
+            <div class="type">
+                <label>
+                    type
+                    <select>
+                        <option value="0">motion module</option>
+                        <option value="1">left insole</option>
+                        <option value="2">right insole</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="wifi ssid">
+                <label><b>wifi ssid:</b> <input /> </label>
+                <button>change wifi ssid</button>
+            </div>
+
+            <div class="wifi password">
+                <label><b>wifi password:</b> <input type="password" /> </label>
+                <button
+                    onclick="const input = document.querySelector('.wifi.password input'); input.type = input.type == 'password'? 'text':'password'"
+                >
+                    toggle visibility
+                </button>
+                <button class="submit">change wifi password</button>
+            </div>
+
+            <div class="wifi connect">
+                <label><b>connect to wifi:</b> <input type="checkbox" /> </label>
+            </div>
+
+            <div>
+                <label class="wifi connected"><b>is wifi connected:</b> <span></span></label>
+            </div>
+
+            <div class="wifi ip">
+                <label><b>wifi IP address:</b> <span></span></label>
+                <button onclick="copyWifiIpToClipboard()">copy</button>
+                <input hidden />
+            </div>
+
+            <div>
+                <label class="wifi mac"><b>wifi MAC address:</b> <span></span></label>
+            </div>
+
+            <div class="batteryLevel">
+                <label><b>battery level:</b> <span></span></label>
+            </div>
+
+            <div class="motion calibration">
+                <b>motion calibration</b>
+                <label data-calibration="system"> system: <span>0</span></label>
+                <label data-calibration="gyroscope"> gyroscope: <span>0</span></label>
+                <label data-calibration="accelerometer"> accelerometer: <span>0</span></label>
+                <label data-calibration="magnetometer"> magnetometer: <span>0</span></label>
+                <label data-calibration="quaternion"> quaternion: <span>0</span></label>
+                <label data-calibration="isFullyCalibrated"> fully calibrated: <span>0</span></label>
+            </div>
+
+            <div class="motion configuration">
+                <b>motion configuration</b>
+                <label data-configuration="acceleration"
+                    >acceleration: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="gravity"
+                    >gravity: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="linearAcceleration"
+                    >linear acceleration: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="rotationRate"
+                    >rotation rate: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="magnetometer"
+                    >magnetometer: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="quaternion"
+                    >quaternion: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+            </div>
+            <div class="motion data">
+                <b>motion data</b>
+                <div data-type="acceleration">acceleration: <span></span></div>
+                <div data-type="gravity">gravity: <span></span></div>
+                <div data-type="linearAcceleration">linear acceleration: <span></span></div>
+                <div data-type="rotationRate">rotation rate: <span></span></div>
+                <div data-type="magnetometer">magnetometer: <span></span></div>
+                <div data-type="quaternion">quaternion: <span></span></div>
+                <div data-type="euler">euler: <span></span></div>
+            </div>
+
+            <div class="pressure configuration">
+                <b>pressure configuration</b>
+                <label data-configuration="pressureSingleByte"
+                    >pressure (single byte): <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="pressureDoubleByte"
+                    >pressure (double byte): <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="centerOfMass"
+                    >center of mass: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="mass"
+                    >mass: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+                <label data-configuration="heelToToe"
+                    >heel to toe: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+            </div>
+            <div class="pressure data">
+                <b>pressure data</b>
+                <div data-type="pressureSingleByte">pressure (single byte): <span></span></div>
+                <div data-type="pressureDoubleByte">pressure (double byte): <span></span></div>
+                <div data-type="centerOfMass">center of mass: <span></span></div>
+                <div data-type="mass">mass: <span></span></div>
+                <div data-type="heelToToe">heel to toe: <span></span></div>
+            </div>
+
+            <div class="weight delay configuration">
+                <b>weight delay</b>
+                <label data-configuration="weight"
+                    >weight: <input type="number" value="0" step="20" min="0" max="1000"
+                /></label>
+            </div>
+            <div class="weight data">
+                <b>weight data</b>
+                <div data-type="weight">weight (kg): <span></span></div>
+            </div>
+        </div>
+
+        <hr />
+
+        <div id="firmware">
+            <h2>Firmware</h2>
+
+            <div class="firmware version">
+                <label> version: <input type="string" readonly /></label>
+            </div>
+
+            <div class="firmware update">
+                <button onclick="updateFirmware()">update firmware</button>
+                <progress value="0"></progress>
+            </div>
+        </div>
+
+        <hr />
+
+        <div id="fileTransfer">
+            <h2>File Transfer</h2>
+
+            <label>sending file? <input type="checkbox" checked /></label>
             <br />
-            <label><b>is connected:</b> <span>no</span></label>
-          </div>
+            <input type="file" />
+            <br />
+            <label>filePath: <input type="text" /></label>
+            <br />
+            <button class="transfer" disabled>transfer file</button>
 
-          <div class="type">
-            <label>
-              type
-              <select>
-                <option value="0">motion module</option>
-                <option value="1">left insole</option>
-                <option value="2">right insole</option>
-              </select>
-            </label>
-          </div>
+            <progress value="0"></progress>
 
-          <div class="motion configuration">
-            <b>motion configuration</b>
-            <label data-configuration="acceleration"
-              >acceleration:
-              <input type="number" value="0" step="20" min="0" max="1000"
+            <br />
+            <button class="remove">remove file</button>
+
+            <button class="format">format filesystem</button>
+        </div>
+
+        <hr />
+
+        <div id="stepData">
+            <h2>Step Data</h2>
+            <label>enabled? <input class="enabled" type="checkbox" /></label>
+            <br />
+            <label
+                >mass threshold: <input class="massThreshold" type="number" min="0" max="1" step="0.01" value="0"
             /></label>
-            <label data-configuration="gravity"
-              >gravity:
-              <input type="number" value="0" step="20" min="0" max="1000"
+            <br />
+            <label
+                >number of steps: <input class="steps" type="number" readonly value="0" step="1" min="0" max="1000"
             /></label>
-            <label data-configuration="linearAcceleration"
-              >linear acceleration:
-              <input type="number" value="0" step="20" min="0" max="1000"
+            <br />
+            <button class="reset">reset steps</button>
+        </div>
+
+        <hr />
+
+        <div id="haptics">
+            <h2>Haptics</h2>
+
+            <label>vibrate on change? <input type="checkbox" class="vibrateOnChange" /></label>
+            <br />
+            <br />
+
+            <label
+                >number of waveform slots:
+                <input class="numberOfWaveformSlots" type="number" min="1" max="8" value="1" step="1"
             /></label>
-            <label data-configuration="rotationRate"
-              >rotation rate:
-              <input type="number" value="0" step="20" min="0" max="1000"
-            /></label>
-            <label data-configuration="magnetometer"
-              >magnetometer:
-              <input type="number" value="0" step="20" min="0" max="1000"
-            /></label>
-            <label data-configuration="quaternion"
-              >quaternion:
-              <input type="number" value="0" step="20" min="0" max="1000"
-            /></label>
-          </div>
-          <div class="motion data">
-            <b>motion data</b>
-            <div data-type="acceleration">acceleration: <span></span></div>
-            <div data-type="gravity">gravity: <span></span></div>
-            <div data-type="linearAcceleration">
-              linear acceleration: <span></span>
+            <div class="waveform">
+                <input type="number" min="1" max="127" value="1" />
+                <input type="number" min="1" max="127" value="1" />
+                <input type="number" min="1" max="127" value="1" />
+                <input type="number" min="1" max="127" value="1" />
+                <input type="number" min="1" max="127" value="1" />
+                <input type="number" min="1" max="127" value="1" />
+                <input type="number" min="1" max="127" value="1" />
+                <input type="number" min="1" max="127" value="1" />
             </div>
-            <div data-type="rotationRate">rotation rate: <span></span></div>
-            <div data-type="magnetometer">magnetometer: <span></span></div>
-            <div data-type="quaternion">quaternion: <span></span></div>
-            <div data-type="euler">euler: <span></span></div>
-          </div>
+            <br />
+            <button class="triggerWaveform">trigger waveform</button>
 
-          <div class="pressure configuration">
-            <b>pressure configuration</b>
-            <label data-configuration="pressureSingleByte"
-              >pressure (single byte):
-              <input type="number" value="0" step="20" min="0" max="1000"
+            <br />
+
+            <label
+                >number of sequence segments:
+                <input class="numberOfSequenceSegments" type="number" min="1" max="10" value="1" step="1"
             /></label>
-            <label data-configuration="pressureDoubleByte"
-              >pressure (double byte):
-              <input type="number" value="0" step="20" min="0" max="1000"
-            /></label>
-            <label data-configuration="centerOfMass"
-              >center of mass:
-              <input type="number" value="0" step="20" min="0" max="1000"
-            /></label>
-            <label data-configuration="mass"
-              >mass:
-              <input type="number" value="0" step="20" min="0" max="1000"
-            /></label>
-            <label data-configuration="heelToToe"
-              >heel to toe:
-              <input type="number" value="0" step="20" min="0" max="1000"
-            /></label>
-          </div>
-          <div class="pressure data">
-            <b>pressure data</b>
-            <div data-type="pressureSingleByte">
-              pressure (single byte): <span></span>
-            </div>
-            <div data-type="pressureDoubleByte">
-              pressure (double byte): <span></span>
-            </div>
-            <div data-type="centerOfMass">center of mass: <span></span></div>
-            <div data-type="mass">mass: <span></span></div>
-            <div data-type="heelToToe">heel to toe: <span></span></div>
-          </div></div
-      ></template>
-    </div>
-  </body>
-
-  <script>
-    const missionDevice = new BluetoothMissionDevice();
-    const deviceContainer = document.getElementById("device");
-
-    missionDevice.addEventListener("connected", (event) => {
-      document.getElementById("connection").remove();
-      deviceContainer.removeAttribute("hidden");
-    });
-    document
-      .querySelector("#connection .connect")
-      .addEventListener("click", (event) => {
-        connect();
-      });
-    async function connect() {
-      await missionDevice.connect();
-    }
-
-    missionDevice.addEventListener("batteryLevel", (event) => {
-      const { batteryLevel } = event.message;
-      deviceContainer.querySelector(".batteryLevel span").innerText =
-        batteryLevel;
-    });
-
-    missionDevice.addEventListener("name", (event) => {
-      const { name } = event.message;
-      deviceContainer.querySelector(".name input").value = name;
-    });
-    deviceContainer
-      .querySelector(".name button")
-      .addEventListener("click", (event) => {
-        const name = deviceContainer.querySelector(".name input").value;
-        missionDevice.setName(name);
-      });
-
-    missionDevice.addEventListener("type", (event) => {
-      const { type } = event.message;
-      if (type == missionDevice.Types.MOTION_MODULE) {
-        deviceContainer.classList.add("motion");
-      }
-      if (type != missionDevice.Types.MOTION_MODULE) {
-        deviceContainer.classList.add("pressure", "motion");
-      }
-      deviceContainer.querySelector(".type select").value = type;
-    });
-    deviceContainer
-      .querySelector(".type select")
-      .addEventListener("input", (event) => {
-        const type = event.target.value;
-        missionDevice.setType(type);
-      });
-
-    // WIFI stuff
-    missionDevice.addEventListener("wifissid", (event) => {
-      const { wifiSSID } = event.message;
-      deviceContainer.querySelector(".wifi.ssid input").value = wifiSSID;
-    });
-    deviceContainer
-      .querySelector(".wifi.ssid button")
-      .addEventListener("click", (event) => {
-        const ssid = document.querySelector(".wifi.ssid input").value;
-        missionDevice.setWifiSSID(ssid);
-      });
-
-    missionDevice.addEventListener("wifipassword", (event) => {
-      const { wifiPassword } = event.message;
-      deviceContainer.querySelector(".wifi.password input").value =
-        wifiPassword;
-    });
-    deviceContainer
-      .querySelector(".wifi.password button.submit")
-      .addEventListener("click", (event) => {
-        const password = document.querySelector(".wifi.password input").value;
-        missionDevice.setWifiPassword(password);
-      });
-
-    missionDevice.addEventListener("wificonnect", (event) => {
-      const { wifiConnect } = event.message;
-      deviceContainer.querySelector(".wifi.connect input").checked =
-        wifiConnect;
-    });
-    deviceContainer
-      .querySelector(".wifi.connect input")
-      .addEventListener("input", (event) => {
-        const connect = event.target.checked;
-        if (connect) {
-          missionDevice.connectToWifi();
-        } else {
-          missionDevice.disconnectFromWifi();
-        }
-      });
-
-    missionDevice.addEventListener("iswificonnected", (event) => {
-      const { isWifiConnected } = event.message;
-      deviceContainer.querySelector(".wifi.connected span").innerText =
-        isWifiConnected;
-    });
-
-    missionDevice.addEventListener("wifiipaddress", (event) => {
-      const { wifiIPAddress } = event.message;
-      deviceContainer.querySelector(".wifi.ip span").innerText = wifiIPAddress;
-    });
-    missionDevice.addEventListener("wifimacaddress", (event) => {
-      const { wifiMACAddress } = event.message;
-      deviceContainer.querySelector(".wifi.mac span").innerText =
-        wifiMACAddress;
-    });
-
-    async function copyWifiIpToClipboard() {
-      const ipAddress = await missionDevice.getWifiIPAddress();
-      navigator.clipboard.writeText(ipAddress);
-    }
-
-    missionDevice.addEventListener("motioncalibration", (event) => {
-      const { motionCalibration } = event.message;
-      for (const type in motionCalibration) {
-        deviceContainer.querySelector(
-          `[data-calibration="${type}"] span`
-        ).innerText = motionCalibration[type];
-      }
-    });
-
-    missionDevice.addEventListener("sensordataconfigurations", (event) => {
-      const { sensorDataConfigurations } = event.message;
-      for (const sensorType in sensorDataConfigurations) {
-        for (const sensorDataType in sensorDataConfigurations[sensorType]) {
-          deviceContainer.querySelector(
-            `.${sensorType}.configuration [data-configuration="${sensorDataType}"] input`
-          ).value = sensorDataConfigurations[sensorType][sensorDataType];
-        }
-      }
-    });
-
-    missionDevice.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
-      missionDevice.SensorDataTypeStrings[sensorTypeString].forEach(
-        (sensorDataTypeString) => {
-          const configurationContainer = document.querySelector(
-            `.${sensorTypeString.toLowerCase()}.configuration [data-configuration="${sensorDataTypeString}"]`
-          );
-          const input = configurationContainer.querySelector("input");
-          input.addEventListener("input", (event) => {
-            const rate = Number(event.target.value);
-            missionDevice.setSensorDataConfigurations({
-              [sensorTypeString.toLowerCase()]: {
-                [sensorDataTypeString]: rate,
-              },
-            });
-          });
-
-          const dataContainer = document.querySelector(
-            `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
-          );
-          const span = dataContainer.querySelector("span");
-          missionDevice.addEventListener(sensorDataTypeString, (event) => {
-            const value = event.message[sensorDataTypeString];
-
-            const { timestamp } = event.message;
-            let string = `[${timestamp}] `;
-
-            switch (sensorType) {
-              case missionDevice.SensorTypes.MOTION:
-                string += value
-                  .toArray()
-                  .map((x) => (x.toFixed ? x.toFixed(2) : x))
-                  .toString();
-                break;
-              case missionDevice.SensorTypes.PRESSURE:
-                switch (sensorDataTypeString) {
-                  case "pressureSingleByte":
-                  case "pressureDoubleByte":
-                    string += value.map((sensor) => sensor.value).toString();
-                    break;
-                  case "mass":
-                  case "heelToToe":
-                    string += value.toFixed(2);
-                    break;
-                  case "centerOfMass":
-                    string += [
-                      value.x.toFixed(2),
-                      value.y.toFixed(2),
-                    ].toString();
-                    break;
+            <style>
+                .sequence :nth-child(even) {
+                    margin-right: 10px;
                 }
-                break;
+            </style>
+            <div class="sequence">
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+                <input type="number" min="0" max="127" value="40" />
+                <input type="number" min="0" max="1000" value="100" step="10" />
+            </div>
+            <br />
+            <button class="triggerSequence">trigger sequence</button>
+        </div>
+
+        <hr />
+        <div id="peers">
+            <h2>Peers</h2>
+
+            <template id="peerTemplate"
+                ><div class="peer">
+                    <h3>Peer #<span class="peerIndex">0</span></h3>
+
+                    <div class="name">
+                        <label><b>name:</b> <input size="30" /> </label>
+                        <button>change name</button>
+                    </div>
+
+                    <div class="connect">
+                        <label><b>connect:</b> <input type="checkbox" /> </label>
+                        <br />
+                        <label><b>is connected:</b> <span>no</span></label>
+                    </div>
+
+                    <div class="type">
+                        <label>
+                            type
+                            <select>
+                                <option value="0">motion module</option>
+                                <option value="1">left insole</option>
+                                <option value="2">right insole</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="motion configuration">
+                        <b>motion configuration</b>
+                        <label data-configuration="acceleration"
+                            >acceleration: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="gravity"
+                            >gravity: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="linearAcceleration"
+                            >linear acceleration: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="rotationRate"
+                            >rotation rate: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="magnetometer"
+                            >magnetometer: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="quaternion"
+                            >quaternion: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                    </div>
+                    <div class="motion data">
+                        <b>motion data</b>
+                        <div data-type="acceleration">acceleration: <span></span></div>
+                        <div data-type="gravity">gravity: <span></span></div>
+                        <div data-type="linearAcceleration">linear acceleration: <span></span></div>
+                        <div data-type="rotationRate">rotation rate: <span></span></div>
+                        <div data-type="magnetometer">magnetometer: <span></span></div>
+                        <div data-type="quaternion">quaternion: <span></span></div>
+                        <div data-type="euler">euler: <span></span></div>
+                    </div>
+
+                    <div class="pressure configuration">
+                        <b>pressure configuration</b>
+                        <label data-configuration="pressureSingleByte"
+                            >pressure (single byte): <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="pressureDoubleByte"
+                            >pressure (double byte): <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="centerOfMass"
+                            >center of mass: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="mass"
+                            >mass: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                        <label data-configuration="heelToToe"
+                            >heel to toe: <input type="number" value="0" step="20" min="0" max="1000"
+                        /></label>
+                    </div>
+                    <div class="pressure data">
+                        <b>pressure data</b>
+                        <div data-type="pressureSingleByte">pressure (single byte): <span></span></div>
+                        <div data-type="pressureDoubleByte">pressure (double byte): <span></span></div>
+                        <div data-type="centerOfMass">center of mass: <span></span></div>
+                        <div data-type="mass">mass: <span></span></div>
+                        <div data-type="heelToToe">heel to toe: <span></span></div>
+                    </div></div
+            ></template>
+        </div>
+    </body>
+
+    <script>
+        const missionDevice = new BluetoothMissionDevice();
+        const deviceContainer = document.getElementById("device");
+
+        missionDevice.addEventListener("connected", (event) => {
+            document.getElementById("connection").remove();
+            deviceContainer.removeAttribute("hidden");
+        });
+        document.querySelector("#connection .connect").addEventListener("click", (event) => {
+            connect();
+        });
+        async function connect() {
+            await missionDevice.connect();
+        }
+
+        missionDevice.addEventListener("batteryLevel", (event) => {
+            const { batteryLevel } = event.message;
+            deviceContainer.querySelector(".batteryLevel span").innerText = batteryLevel;
+        });
+
+        missionDevice.addEventListener("name", (event) => {
+            const { name } = event.message;
+            deviceContainer.querySelector(".name input").value = name;
+        });
+        deviceContainer.querySelector(".name button").addEventListener("click", (event) => {
+            const name = deviceContainer.querySelector(".name input").value;
+            missionDevice.setName(name);
+        });
+
+        missionDevice.addEventListener("type", (event) => {
+            const { type } = event.message;
+            if (type == missionDevice.Types.MOTION_MODULE) {
+                deviceContainer.classList.add("motion");
             }
-
-            span.innerText = string;
-          });
-
-          if (sensorDataTypeString == "quaternion") {
-            const sensorDataTypeString = "euler";
-            const dataContainer = document.querySelector(
-              `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
-            );
-            const span = dataContainer.querySelector("span");
-            missionDevice.addEventListener(sensorDataTypeString, (event) => {
-              const value = event.message[sensorDataTypeString];
-
-              const { timestamp } = event.message;
-              let string = `[${timestamp}] `;
-
-              switch (sensorType) {
-                case missionDevice.SensorTypes.MOTION:
-                  string += value
-                    .toArray()
-                    .map((x) => (x.toFixed ? x.toFixed(2) : x))
-                    .toString();
-                  break;
-                case missionDevice.SensorTypes.PRESSURE:
-                  switch (sensorDataTypeString) {
-                    case "pressureSingleByte":
-                    case "pressureDoubleByte":
-                      string += value.map((sensor) => sensor.value).toString();
-                      break;
-                    case "mass":
-                    case "heelToToe":
-                      string += value.toFixed(2);
-                      break;
-                    case "centerOfMass":
-                      string += [
-                        value.x.toFixed(2),
-                        value.y.toFixed(2),
-                      ].toString();
-                      break;
-                  }
-                  break;
-              }
-
-              span.innerText = string;
-            });
-          }
-        }
-      );
-    });
-
-    // Weight stuff
-    deviceContainer
-      .querySelector(".weight.delay input")
-      .addEventListener("input", (event) => {
-        const delay = Number(event.target.value);
-        missionDevice.setWeightDataDelay(delay);
-      });
-    missionDevice.addEventListener("weight", (event) => {
-      const { weight } = event.message;
-      deviceContainer.querySelector(
-        ".weight.data [data-type='weight'] span"
-      ).innerText = weight;
-    });
-
-    // Firmware update
-    const firmwareContainer = document.getElementById("firmware");
-
-    const firmwareVersionInput =
-      firmwareContainer.querySelector(".version input");
-    missionDevice.addEventListener("connected", async (event) => {
-      const version = await missionDevice.getFirmwareVersion();
-      firmwareVersionInput.value = version;
-    });
-
-    const updateFirmwareButton =
-      firmwareContainer.querySelector(".update button");
-    const updateFirmwareProgress =
-      firmwareContainer.querySelector(".update progress");
-    missionDevice.addEventListener("firmwareupdateprogress", (event) => {
-      const { progress } = event.message;
-      console.log("progress", progress);
-      updateFirmwareProgress.value = progress;
-    });
-
-    function updateFirmware() {
-      if (!missionDevice.isConnected) {
-        return;
-      }
-
-      updateFirmwareButton.disabled = true;
-      updateFirmwareProgress.value = 0;
-
-      missionDevice.updateFirmware(
-        "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/firmware.bin?v=1647219503819"
-      );
-    }
-
-    // File Transfer
-    const fileTransferContainer = document.querySelector("#fileTransfer");
-    const fileTransferCheckbox = fileTransferContainer.querySelector(
-      "input[type='checkbox']"
-    );
-    const fileTransferInput =
-      fileTransferContainer.querySelector("input[type='file']");
-    const fileTransferFilePathInput =
-      fileTransferContainer.querySelector("input[type='text']");
-    const fileTransferButton =
-      fileTransferContainer.querySelector("button.transfer");
-    const fileTransferProgress =
-      fileTransferContainer.querySelector("progress");
-    const removeFileButton =
-      fileTransferContainer.querySelector("button.remove");
-    const formatFilesystemButton =
-      fileTransferContainer.querySelector("button.format");
-
-    function getIsSendingFile() {
-      return fileTransferCheckbox.checked;
-    }
-    function getIsValidInput() {
-      var isValidInput = true;
-      isValidInput &&= fileTransferFilePathInput.value.length > 0;
-      if (getIsSendingFile()) {
-        isValidInput &&= fileTransferInput.files.length > 0;
-      }
-      return isValidInput;
-    }
-    function updateFileTransferButton() {
-      fileTransferButton.disabled = !getIsValidInput();
-      fileTransferButton.innerText = getIsSendingFile()
-        ? "send file"
-        : "receive file";
-    }
-    fileTransferCheckbox.addEventListener("input", (event) => {
-      const isSendingFile = getIsSendingFile();
-      fileTransferInput.disabled = !isSendingFile;
-      updateFileTransferButton();
-    });
-    fileTransferInput.addEventListener("input", (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        fileTransferFilePathInput.value = "/" + file.name;
-      }
-      updateFileTransferButton();
-    });
-    missionDevice.addEventListener("connected", async (event) => {
-      const maxFileTransferFilePathLength =
-        await missionDevice.getMaxFileTransferFilePathLength();
-      fileTransferFilePathInput.maxLength = maxFileTransferFilePathLength;
-      fileTransferFilePathInput.size = maxFileTransferFilePathLength;
-    });
-    fileTransferFilePathInput.addEventListener("input", (event) => {
-      updateFileTransferButton();
-    });
-    fileTransferButton.addEventListener("click", async (event) => {
-      const fileTransferFilePath = fileTransferFilePathInput.value;
-      if (getIsSendingFile()) {
-        var file = fileTransferInput.files[0];
-        fileTransferInput.value = "";
-        await missionDevice.sendFile(file, fileTransferFilePath);
-      } else {
-        const file = await missionDevice.receiveFile(fileTransferFilePath);
-        console.log("file received", file);
-      }
-    });
-
-    removeFileButton.addEventListener("click", async (event) => {
-      event.target.disabled = true;
-      const fileTransferFilePath = fileTransferFilePathInput.value;
-      await missionDevice.removeFile(fileTransferFilePath);
-      event.target.disabled = false;
-    });
-    formatFilesystemButton.addEventListener("click", (event) => {
-      missionDevice.formatFilesystem();
-    });
-
-    missionDevice.addEventListener("filetransferprogress", (event) => {
-      const { progress } = event.message;
-      fileTransferProgress.value = progress;
-    });
-    missionDevice.addEventListener("filetransfercomplete", async (event) => {
-      if (event.message.type == "receive") {
-        const { file } = event.message;
-        const link = document.createElement("a");
-        link.download = file.name;
-        link.href = URL.createObjectURL(file);
-        link.click();
-      }
-    });
-
-    function sendArrayBuffer(length = 100, filePath = "/test.txt") {
-      const array = [];
-      while (array.length < length) {
-        array.push(array.length);
-      }
-      const arrayBuffer = Uint8Array.from(array).buffer;
-      missionDevice.sendFile(arrayBuffer, filePath);
-    }
-
-    // Steps
-    const stepDataContainer = document.querySelector("#stepData");
-    const enableStepDataInput =
-      stepDataContainer.querySelector("input.enabled");
-    const stepDataMassThresholdInput = stepDataContainer.querySelector(
-      "input.massThreshold"
-    );
-    const numberOfStepsInput = stepDataContainer.querySelector("input.steps");
-    const resetStepsThresholdButton =
-      stepDataContainer.querySelector("button.reset");
-
-    missionDevice.addEventListener("connected", async (event) => {
-      enableStepDataInput.checked = await missionDevice.isStepTrackingEnabled();
-    });
-    enableStepDataInput.addEventListener("input", async (event) => {
-      await missionDevice.setStepTrackingEnabled(event.target.checked);
-    });
-
-    missionDevice.addEventListener("connected", async (event) => {
-      stepDataMassThresholdInput.value =
-        await missionDevice.getStepTrackingMassThreshold();
-    });
-    stepDataMassThresholdInput.addEventListener("input", async (event) => {
-      await missionDevice.setStepTrackingMassThreshold(
-        Number(event.target.value)
-      );
-    });
-
-    missionDevice.addEventListener("connected", async (event) => {
-      const steps = await missionDevice.getSteps();
-      numberOfStepsInput.value = steps;
-    });
-    missionDevice.addEventListener("steps", (event) => {
-      numberOfStepsInput.value = event.message.steps;
-    });
-
-    resetStepsThresholdButton.addEventListener("click", async (event) => {
-      numberOfStepsInput.value = await missionDevice.setSteps(0);
-    });
-
-    // HAPTICS
-    const hapticsContainer = document.querySelector("#haptics");
-    const vibrateOnChangeInput = hapticsContainer.querySelector(
-      "input.vibrateOnChange"
-    );
-    const triggerWaveformButton = hapticsContainer.querySelector(
-      "button.triggerWaveform"
-    );
-    const numberOfWaveformSlotsInput = hapticsContainer.querySelector(
-      "input.numberOfWaveformSlots"
-    );
-    const waveformContainer = hapticsContainer.querySelector("div.waveform");
-    const triggerSequenceButton = hapticsContainer.querySelector(
-      "button.triggerSequence"
-    );
-    const numberOfSequenceSegmentsInput = hapticsContainer.querySelector(
-      "input.numberOfSequenceSegments"
-    );
-    const sequenceContainer = hapticsContainer.querySelector("div.sequence");
-
-    let vibrateOnChange = vibrateOnChangeInput.checked;
-    vibrateOnChangeInput.addEventListener("input", (event) => {
-      vibrateOnChange = vibrateOnChangeInput.checked;
-    });
-    waveformContainer.querySelectorAll("input").forEach((input, index) => {
-      input.addEventListener("input", (event) => {
-        if (vibrateOnChange) {
-          triggerWaveformButton.click();
-        }
-      });
-    });
-    sequenceContainer.querySelectorAll("input").forEach((input, index) => {
-      input.addEventListener("input", (event) => {
-        if (vibrateOnChange) {
-          triggerSequenceButton.click();
-        }
-      });
-    });
-
-    triggerWaveformButton.addEventListener("click", (event) => {
-      const waveform = [];
-      waveformContainer.querySelectorAll("input").forEach((input, index) => {
-        if (index < numberOfWaveformSlots) {
-          waveform.push(Number(input.value));
-        }
-      });
-      missionDevice.vibrateWaveform(waveform);
-    });
-    let numberOfWaveformSlots = 1;
-    numberOfWaveformSlotsInput.addEventListener("input", (event) => {
-      numberOfWaveformSlots = Number(event.target.value);
-      waveformContainer.querySelectorAll("input").forEach((input, index) => {
-        input.style.display = index < numberOfWaveformSlots ? "" : "none";
-      });
-    });
-    numberOfWaveformSlotsInput.dispatchEvent(new Event("input"));
-
-    triggerSequenceButton.addEventListener("click", (event) => {
-      const sequence = [];
-      sequenceContainer.querySelectorAll("input").forEach((input, index) => {
-        const _index = (index % 2 ? index - 1 : index) / 2;
-        if (_index < numberOfSequenceSegments) {
-          sequence.push(Number(input.value));
-        }
-      });
-      missionDevice.vibrateSequence(sequence);
-    });
-    let numberOfSequenceSegments = 1;
-    numberOfSequenceSegmentsInput.addEventListener("input", (event) => {
-      numberOfSequenceSegments = Number(event.target.value);
-      sequenceContainer.querySelectorAll("input").forEach((input, index) => {
-        const _index = index % 2 ? index - 1 : index;
-        input.style.display =
-          _index / 2 < numberOfSequenceSegments ? "" : "none";
-      });
-    });
-    numberOfSequenceSegmentsInput.dispatchEvent(new Event("input"));
-
-    // Peers
-    const peersContainer = document.querySelector("#peers");
-    const peerTemplate = document.querySelector("template#peerTemplate");
-    missionDevice.addEventListener(
-      "connected",
-      async (event) => {
-        missionDevice.peers.forEach(async (peer, peerIndex) => {
-          const peerContainer = peerTemplate.content
-            .cloneNode(true)
-            .querySelector(".peer");
-          peerContainer
-            .querySelectorAll("span.peerIndex")
-            .forEach((span) => (span.innerText = peerIndex));
-
-          const nameContainer = peerContainer.querySelector(".name");
-          const nameInput = nameContainer.querySelector("input");
-          const nameButton = nameContainer.querySelector("button");
-          nameButton.addEventListener("click", async (event) => {
-            let newName = nameInput.value;
-            const currentName = await peer.getName();
-            if (newName.length > 0 && newName != currentName) {
-              const updatedName = await peer.setName(newName);
-              nameInput.value = updatedName;
+            if (type != missionDevice.Types.MOTION_MODULE) {
+                deviceContainer.classList.add("pressure", "motion");
             }
-          });
-          const name = await peer.getName();
-          nameInput.value = name;
+            deviceContainer.querySelector(".type select").value = type;
+        });
+        deviceContainer.querySelector(".type select").addEventListener("input", (event) => {
+            const type = event.target.value;
+            missionDevice.setType(type);
+        });
 
-          // connect get/set
-          const connectContainer = peerContainer.querySelector(".connect");
-          const connectionToggle = connectContainer.querySelector("input");
-          connectionToggle.addEventListener("input", (event) => {
-            const shouldConnect = event.target.checked;
-            if (shouldConnect) {
-              peer.connect();
+        // WIFI stuff
+        missionDevice.addEventListener("wifissid", (event) => {
+            const { wifiSSID } = event.message;
+            deviceContainer.querySelector(".wifi.ssid input").value = wifiSSID;
+        });
+        deviceContainer.querySelector(".wifi.ssid button").addEventListener("click", (event) => {
+            const ssid = document.querySelector(".wifi.ssid input").value;
+            missionDevice.setWifiSSID(ssid);
+        });
+
+        missionDevice.addEventListener("wifipassword", (event) => {
+            const { wifiPassword } = event.message;
+            deviceContainer.querySelector(".wifi.password input").value = wifiPassword;
+        });
+        deviceContainer.querySelector(".wifi.password button.submit").addEventListener("click", (event) => {
+            const password = document.querySelector(".wifi.password input").value;
+            missionDevice.setWifiPassword(password);
+        });
+
+        missionDevice.addEventListener("wificonnect", (event) => {
+            const { wifiConnect } = event.message;
+            deviceContainer.querySelector(".wifi.connect input").checked = wifiConnect;
+        });
+        deviceContainer.querySelector(".wifi.connect input").addEventListener("input", (event) => {
+            const connect = event.target.checked;
+            if (connect) {
+                missionDevice.connectToWifi();
             } else {
-              peer.disconnect();
+                missionDevice.disconnectFromWifi();
             }
-          });
-          let autoConnect = await peer._getConnect();
-          connectionToggle.checked = autoConnect;
-          const connectionSpan = connectContainer.querySelector("span");
-          peer.addEventListener("isConnected", (event) => {
-            const { isConnected } = event.message;
-            connectionSpan.innerText = isConnected ? "yes" : "no";
-          });
-          let isConnected = await peer._isConnected();
-          connectionSpan.innerText = isConnected ? "yes" : "no";
+        });
 
-          const typeContainer = peerContainer.querySelector(".type");
-          const typeSelect = typeContainer.querySelector("select");
-          typeSelect.addEventListener("input", async (event) => {
-            const newType = event.target.value;
-            const updatedType = await peer.setType(newType);
-            event.target.value = updatedType;
-          });
+        missionDevice.addEventListener("iswificonnected", (event) => {
+            const { isWifiConnected } = event.message;
+            deviceContainer.querySelector(".wifi.connected span").innerText = isWifiConnected;
+        });
 
-          peer.addEventListener("sensordataconfigurations", (event) => {
+        missionDevice.addEventListener("wifiipaddress", (event) => {
+            const { wifiIPAddress } = event.message;
+            deviceContainer.querySelector(".wifi.ip span").innerText = wifiIPAddress;
+        });
+        missionDevice.addEventListener("wifimacaddress", (event) => {
+            const { wifiMACAddress } = event.message;
+            deviceContainer.querySelector(".wifi.mac span").innerText = wifiMACAddress;
+        });
+
+        async function copyWifiIpToClipboard() {
+            const ipAddress = await missionDevice.getWifiIPAddress();
+            navigator.clipboard.writeText(ipAddress);
+        }
+
+        missionDevice.addEventListener("motioncalibration", (event) => {
+            const { motionCalibration } = event.message;
+            for (const type in motionCalibration) {
+                deviceContainer.querySelector(`[data-calibration="${type}"] span`).innerText = motionCalibration[type];
+            }
+        });
+
+        missionDevice.addEventListener("sensordataconfigurations", (event) => {
             const { sensorDataConfigurations } = event.message;
             for (const sensorType in sensorDataConfigurations) {
-              for (const sensorDataType in sensorDataConfigurations[
-                sensorType
-              ]) {
-                peerContainer.querySelector(
-                  `.${sensorType}.configuration [data-configuration="${sensorDataType}"] input`
-                ).value = sensorDataConfigurations[sensorType][sensorDataType];
-              }
+                for (const sensorDataType in sensorDataConfigurations[sensorType]) {
+                    deviceContainer.querySelector(
+                        `.${sensorType}.configuration [data-configuration="${sensorDataType}"] input`
+                    ).value = sensorDataConfigurations[sensorType][sensorDataType];
+                }
             }
-          });
+        });
 
-          peer.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
-            peer.SensorDataTypeStrings[sensorTypeString].forEach(
-              (sensorDataTypeString) => {
-                const configurationContainer = peerContainer.querySelector(
-                  `.${sensorTypeString.toLowerCase()}.configuration [data-configuration="${sensorDataTypeString}"]`
+        missionDevice.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
+            missionDevice.SensorDataTypeStrings[sensorTypeString].forEach((sensorDataTypeString) => {
+                const configurationContainer = document.querySelector(
+                    `.${sensorTypeString.toLowerCase()}.configuration [data-configuration="${sensorDataTypeString}"]`
                 );
                 const input = configurationContainer.querySelector("input");
                 input.addEventListener("input", (event) => {
-                  const rate = Number(event.target.value);
-                  peer.setSensorDataConfigurations({
-                    [sensorTypeString.toLowerCase()]: {
-                      [sensorDataTypeString]: rate,
-                    },
-                  });
+                    const rate = Number(event.target.value);
+                    missionDevice.setSensorDataConfigurations({
+                        [sensorTypeString.toLowerCase()]: {
+                            [sensorDataTypeString]: rate,
+                        },
+                    });
                 });
 
-                const dataContainer = peerContainer.querySelector(
-                  `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
+                const dataContainer = document.querySelector(
+                    `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
                 );
                 const span = dataContainer.querySelector("span");
-                peer.addEventListener(sensorDataTypeString, (event) => {
-                  const value = event.message[sensorDataTypeString];
-
-                  const { timestamp } = event.message;
-                  let string = `[${timestamp}] `;
-
-                  switch (sensorType) {
-                    case peer.SensorTypes.MOTION:
-                      string += value
-                        .toArray()
-                        .map((x) => (x.toFixed ? x.toFixed(2) : x))
-                        .toString();
-                      break;
-                    case peer.SensorTypes.PRESSURE:
-                      switch (sensorDataTypeString) {
-                        case "pressureSingleByte":
-                        case "pressureDoubleByte":
-                          string += value
-                            .map((sensor) => sensor.value)
-                            .toString();
-                          break;
-                        case "mass":
-                        case "heelToToe":
-                          string += value.toFixed(2);
-                          break;
-                        case "centerOfMass":
-                          string += [
-                            value.x.toFixed(2),
-                            value.y.toFixed(2),
-                          ].toString();
-                          break;
-                      }
-                      break;
-                  }
-
-                  span.innerText = string;
-                });
-
-                if (sensorDataTypeString == "quaternion") {
-                  const sensorDataTypeString = "euler";
-                  const dataContainer = peerContainer.querySelector(
-                    `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
-                  );
-                  const span = dataContainer.querySelector("span");
-                  peer.addEventListener(sensorDataTypeString, (event) => {
+                missionDevice.addEventListener(sensorDataTypeString, (event) => {
                     const value = event.message[sensorDataTypeString];
 
                     const { timestamp } = event.message;
                     let string = `[${timestamp}] `;
 
                     switch (sensorType) {
-                      case peer.SensorTypes.MOTION:
-                        string += value
-                          .toArray()
-                          .map((x) => (x.toFixed ? x.toFixed(2) : x))
-                          .toString();
-                        break;
-                      case peer.SensorTypes.PRESSURE:
-                        switch (sensorDataTypeString) {
-                          case "pressureSingleByte":
-                          case "pressureDoubleByte":
+                        case missionDevice.SensorTypes.MOTION:
                             string += value
-                              .map((sensor) => sensor.value)
-                              .toString();
+                                .toArray()
+                                .map((x) => (x.toFixed ? x.toFixed(2) : x))
+                                .toString();
                             break;
-                          case "mass":
-                          case "heelToToe":
-                            string += value.toFixed(2);
+                        case missionDevice.SensorTypes.PRESSURE:
+                            switch (sensorDataTypeString) {
+                                case "pressureSingleByte":
+                                case "pressureDoubleByte":
+                                    string += value.map((sensor) => sensor.value).toString();
+                                    break;
+                                case "mass":
+                                case "heelToToe":
+                                    string += value.toFixed(2);
+                                    break;
+                                case "centerOfMass":
+                                    string += [value.x.toFixed(2), value.y.toFixed(2)].toString();
+                                    break;
+                            }
                             break;
-                          case "centerOfMass":
-                            string += [
-                              value.x.toFixed(2),
-                              value.y.toFixed(2),
-                            ].toString();
-                            break;
-                        }
-                        break;
                     }
 
                     span.innerText = string;
-                  });
-                }
-              }
-            );
-          });
+                });
 
-          peersContainer.appendChild(peerContainer);
+                if (sensorDataTypeString == "quaternion") {
+                    const sensorDataTypeString = "euler";
+                    const dataContainer = document.querySelector(
+                        `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
+                    );
+                    const span = dataContainer.querySelector("span");
+                    missionDevice.addEventListener(sensorDataTypeString, (event) => {
+                        const value = event.message[sensorDataTypeString];
+
+                        const { timestamp } = event.message;
+                        let string = `[${timestamp}] `;
+
+                        switch (sensorType) {
+                            case missionDevice.SensorTypes.MOTION:
+                                string += value
+                                    .toArray()
+                                    .map((x) => (x.toFixed ? x.toFixed(2) : x))
+                                    .toString();
+                                break;
+                            case missionDevice.SensorTypes.PRESSURE:
+                                switch (sensorDataTypeString) {
+                                    case "pressureSingleByte":
+                                    case "pressureDoubleByte":
+                                        string += value.map((sensor) => sensor.value).toString();
+                                        break;
+                                    case "mass":
+                                    case "heelToToe":
+                                        string += value.toFixed(2);
+                                        break;
+                                    case "centerOfMass":
+                                        string += [value.x.toFixed(2), value.y.toFixed(2)].toString();
+                                        break;
+                                }
+                                break;
+                        }
+
+                        span.innerText = string;
+                    });
+                }
+            });
         });
-      },
-      { once: true }
-    );
-  </script>
+
+        // Weight stuff
+        deviceContainer.querySelector(".weight.delay input").addEventListener("input", (event) => {
+            const delay = Number(event.target.value);
+            missionDevice.setWeightDataDelay(delay);
+        });
+        missionDevice.addEventListener("weight", (event) => {
+            const { weight } = event.message;
+            deviceContainer.querySelector(".weight.data [data-type='weight'] span").innerText = weight;
+        });
+
+        // Firmware update
+        const firmwareContainer = document.getElementById("firmware");
+
+        const firmwareVersionInput = firmwareContainer.querySelector(".version input");
+        missionDevice.addEventListener("connected", async (event) => {
+            const version = await missionDevice.getFirmwareVersion();
+            firmwareVersionInput.value = version;
+        });
+
+        const updateFirmwareButton = firmwareContainer.querySelector(".update button");
+        const updateFirmwareProgress = firmwareContainer.querySelector(".update progress");
+        missionDevice.addEventListener("firmwareupdateprogress", (event) => {
+            const { progress } = event.message;
+            console.log("progress", progress);
+            updateFirmwareProgress.value = progress;
+        });
+
+        function updateFirmware() {
+            if (!missionDevice.isConnected) {
+                return;
+            }
+
+            updateFirmwareButton.disabled = true;
+            updateFirmwareProgress.value = 0;
+
+            missionDevice.updateFirmware(
+                "https://cdn.glitch.global/6c283599-191e-4c4a-b236-e1e1f0d90e7a/firmware.bin?v=1647219503819"
+            );
+        }
+
+        // File Transfer
+        const fileTransferContainer = document.querySelector("#fileTransfer");
+        const fileTransferCheckbox = fileTransferContainer.querySelector("input[type='checkbox']");
+        const fileTransferInput = fileTransferContainer.querySelector("input[type='file']");
+        const fileTransferFilePathInput = fileTransferContainer.querySelector("input[type='text']");
+        const fileTransferButton = fileTransferContainer.querySelector("button.transfer");
+        const fileTransferProgress = fileTransferContainer.querySelector("progress");
+        const removeFileButton = fileTransferContainer.querySelector("button.remove");
+        const formatFilesystemButton = fileTransferContainer.querySelector("button.format");
+
+        function getIsSendingFile() {
+            return fileTransferCheckbox.checked;
+        }
+        function getIsValidInput() {
+            var isValidInput = true;
+            isValidInput &&= fileTransferFilePathInput.value.length > 0;
+            if (getIsSendingFile()) {
+                isValidInput &&= fileTransferInput.files.length > 0;
+            }
+            return isValidInput;
+        }
+        function updateFileTransferButton() {
+            fileTransferButton.disabled = !getIsValidInput();
+            fileTransferButton.innerText = getIsSendingFile() ? "send file" : "receive file";
+        }
+        fileTransferCheckbox.addEventListener("input", (event) => {
+            const isSendingFile = getIsSendingFile();
+            fileTransferInput.disabled = !isSendingFile;
+            updateFileTransferButton();
+        });
+        fileTransferInput.addEventListener("input", (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileTransferFilePathInput.value = "/" + file.name;
+            }
+            updateFileTransferButton();
+        });
+        missionDevice.addEventListener("connected", async (event) => {
+            const maxFileTransferFilePathLength = await missionDevice.getMaxFileTransferFilePathLength();
+            fileTransferFilePathInput.maxLength = maxFileTransferFilePathLength;
+            fileTransferFilePathInput.size = maxFileTransferFilePathLength;
+        });
+        fileTransferFilePathInput.addEventListener("input", (event) => {
+            updateFileTransferButton();
+        });
+        fileTransferButton.addEventListener("click", async (event) => {
+            const fileTransferFilePath = fileTransferFilePathInput.value;
+            if (getIsSendingFile()) {
+                var file = fileTransferInput.files[0];
+                fileTransferInput.value = "";
+                await missionDevice.sendFile(file, fileTransferFilePath);
+            } else {
+                const file = await missionDevice.receiveFile(fileTransferFilePath);
+                console.log("file received", file);
+            }
+        });
+
+        removeFileButton.addEventListener("click", async (event) => {
+            event.target.disabled = true;
+            const fileTransferFilePath = fileTransferFilePathInput.value;
+            await missionDevice.removeFile(fileTransferFilePath);
+            event.target.disabled = false;
+        });
+        formatFilesystemButton.addEventListener("click", (event) => {
+            missionDevice.formatFilesystem();
+        });
+
+        missionDevice.addEventListener("filetransferprogress", (event) => {
+            const { progress } = event.message;
+            fileTransferProgress.value = progress;
+        });
+        missionDevice.addEventListener("filetransfercomplete", async (event) => {
+            if (event.message.type == "receive") {
+                const { file } = event.message;
+                const link = document.createElement("a");
+                link.download = file.name;
+                link.href = URL.createObjectURL(file);
+                link.click();
+            }
+        });
+
+        function sendArrayBuffer(length = 100, filePath = "/test.txt") {
+            const array = [];
+            while (array.length < length) {
+                array.push(array.length);
+            }
+            const arrayBuffer = Uint8Array.from(array).buffer;
+            missionDevice.sendFile(arrayBuffer, filePath);
+        }
+
+        // Steps
+        const stepDataContainer = document.querySelector("#stepData");
+        const enableStepDataInput = stepDataContainer.querySelector("input.enabled");
+        const stepDataMassThresholdInput = stepDataContainer.querySelector("input.massThreshold");
+        const numberOfStepsInput = stepDataContainer.querySelector("input.steps");
+        const resetStepsThresholdButton = stepDataContainer.querySelector("button.reset");
+
+        missionDevice.addEventListener("connected", async (event) => {
+            enableStepDataInput.checked = await missionDevice.isStepTrackingEnabled();
+        });
+        enableStepDataInput.addEventListener("input", async (event) => {
+            await missionDevice.setStepTrackingEnabled(event.target.checked);
+        });
+
+        missionDevice.addEventListener("connected", async (event) => {
+            stepDataMassThresholdInput.value = await missionDevice.getStepTrackingMassThreshold();
+        });
+        stepDataMassThresholdInput.addEventListener("input", async (event) => {
+            await missionDevice.setStepTrackingMassThreshold(Number(event.target.value));
+        });
+
+        missionDevice.addEventListener("connected", async (event) => {
+            const steps = await missionDevice.getSteps();
+            numberOfStepsInput.value = steps;
+        });
+        missionDevice.addEventListener("steps", (event) => {
+            numberOfStepsInput.value = event.message.steps;
+        });
+
+        resetStepsThresholdButton.addEventListener("click", async (event) => {
+            numberOfStepsInput.value = await missionDevice.setSteps(0);
+        });
+
+        // HAPTICS
+        const hapticsContainer = document.querySelector("#haptics");
+        const vibrateOnChangeInput = hapticsContainer.querySelector("input.vibrateOnChange");
+        const triggerWaveformButton = hapticsContainer.querySelector("button.triggerWaveform");
+        const numberOfWaveformSlotsInput = hapticsContainer.querySelector("input.numberOfWaveformSlots");
+        const waveformContainer = hapticsContainer.querySelector("div.waveform");
+        const triggerSequenceButton = hapticsContainer.querySelector("button.triggerSequence");
+        const numberOfSequenceSegmentsInput = hapticsContainer.querySelector("input.numberOfSequenceSegments");
+        const sequenceContainer = hapticsContainer.querySelector("div.sequence");
+
+        let vibrateOnChange = vibrateOnChangeInput.checked;
+        vibrateOnChangeInput.addEventListener("input", (event) => {
+            vibrateOnChange = vibrateOnChangeInput.checked;
+        });
+        waveformContainer.querySelectorAll("input").forEach((input, index) => {
+            input.addEventListener("input", (event) => {
+                if (vibrateOnChange) {
+                    triggerWaveformButton.click();
+                }
+            });
+        });
+        sequenceContainer.querySelectorAll("input").forEach((input, index) => {
+            input.addEventListener("input", (event) => {
+                if (vibrateOnChange) {
+                    triggerSequenceButton.click();
+                }
+            });
+        });
+
+        triggerWaveformButton.addEventListener("click", (event) => {
+            const waveform = [];
+            waveformContainer.querySelectorAll("input").forEach((input, index) => {
+                if (index < numberOfWaveformSlots) {
+                    waveform.push(Number(input.value));
+                }
+            });
+            missionDevice.vibrateWaveform(waveform);
+        });
+        let numberOfWaveformSlots = 1;
+        numberOfWaveformSlotsInput.addEventListener("input", (event) => {
+            numberOfWaveformSlots = Number(event.target.value);
+            waveformContainer.querySelectorAll("input").forEach((input, index) => {
+                input.style.display = index < numberOfWaveformSlots ? "" : "none";
+            });
+        });
+        numberOfWaveformSlotsInput.dispatchEvent(new Event("input"));
+
+        triggerSequenceButton.addEventListener("click", (event) => {
+            const sequence = [];
+            sequenceContainer.querySelectorAll("input").forEach((input, index) => {
+                const _index = (index % 2 ? index - 1 : index) / 2;
+                if (_index < numberOfSequenceSegments) {
+                    sequence.push(Number(input.value));
+                }
+            });
+            missionDevice.vibrateSequence(sequence);
+        });
+        let numberOfSequenceSegments = 1;
+        numberOfSequenceSegmentsInput.addEventListener("input", (event) => {
+            numberOfSequenceSegments = Number(event.target.value);
+            sequenceContainer.querySelectorAll("input").forEach((input, index) => {
+                const _index = index % 2 ? index - 1 : index;
+                input.style.display = _index / 2 < numberOfSequenceSegments ? "" : "none";
+            });
+        });
+        numberOfSequenceSegmentsInput.dispatchEvent(new Event("input"));
+
+        // Peers
+        const peersContainer = document.querySelector("#peers");
+        const peerTemplate = document.querySelector("template#peerTemplate");
+        missionDevice.addEventListener(
+            "connected",
+            async (event) => {
+                missionDevice.peers.forEach(async (peer, peerIndex) => {
+                    const peerContainer = peerTemplate.content.cloneNode(true).querySelector(".peer");
+                    peerContainer.querySelectorAll("span.peerIndex").forEach((span) => (span.innerText = peerIndex));
+
+                    const nameContainer = peerContainer.querySelector(".name");
+                    const nameInput = nameContainer.querySelector("input");
+                    const nameButton = nameContainer.querySelector("button");
+                    nameButton.addEventListener("click", async (event) => {
+                        let newName = nameInput.value;
+                        const currentName = await peer.getName();
+                        if (newName.length > 0 && newName != currentName) {
+                            const updatedName = await peer.setName(newName);
+                            nameInput.value = updatedName;
+                        }
+                    });
+                    const name = await peer.getName();
+                    nameInput.value = name;
+
+                    // connect get/set
+                    const connectContainer = peerContainer.querySelector(".connect");
+                    const connectionToggle = connectContainer.querySelector("input");
+                    connectionToggle.addEventListener("input", (event) => {
+                        const shouldConnect = event.target.checked;
+                        if (shouldConnect) {
+                            peer.connect();
+                        } else {
+                            peer.disconnect();
+                        }
+                    });
+                    let autoConnect = await peer._getConnect();
+                    connectionToggle.checked = autoConnect;
+                    const connectionSpan = connectContainer.querySelector("span");
+                    peer.addEventListener("isConnected", (event) => {
+                        const { isConnected } = event.message;
+                        connectionSpan.innerText = isConnected ? "yes" : "no";
+                    });
+                    let isConnected = await peer._isConnected();
+                    connectionSpan.innerText = isConnected ? "yes" : "no";
+
+                    const typeContainer = peerContainer.querySelector(".type");
+                    const typeSelect = typeContainer.querySelector("select");
+                    typeSelect.addEventListener("input", async (event) => {
+                        const newType = event.target.value;
+                        const updatedType = await peer.setType(newType);
+                        event.target.value = updatedType;
+                    });
+
+                    peer.addEventListener("sensordataconfigurations", (event) => {
+                        const { sensorDataConfigurations } = event.message;
+                        for (const sensorType in sensorDataConfigurations) {
+                            for (const sensorDataType in sensorDataConfigurations[sensorType]) {
+                                peerContainer.querySelector(
+                                    `.${sensorType}.configuration [data-configuration="${sensorDataType}"] input`
+                                ).value = sensorDataConfigurations[sensorType][sensorDataType];
+                            }
+                        }
+                    });
+
+                    peer.SensorTypeStrings.forEach((sensorTypeString, sensorType) => {
+                        peer.SensorDataTypeStrings[sensorTypeString].forEach((sensorDataTypeString) => {
+                            const configurationContainer = peerContainer.querySelector(
+                                `.${sensorTypeString.toLowerCase()}.configuration [data-configuration="${sensorDataTypeString}"]`
+                            );
+                            const input = configurationContainer.querySelector("input");
+                            input.addEventListener("input", (event) => {
+                                const rate = Number(event.target.value);
+                                peer.setSensorDataConfigurations({
+                                    [sensorTypeString.toLowerCase()]: {
+                                        [sensorDataTypeString]: rate,
+                                    },
+                                });
+                            });
+
+                            const dataContainer = peerContainer.querySelector(
+                                `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
+                            );
+                            const span = dataContainer.querySelector("span");
+                            peer.addEventListener(sensorDataTypeString, (event) => {
+                                const value = event.message[sensorDataTypeString];
+
+                                const { timestamp } = event.message;
+                                let string = `[${timestamp}] `;
+
+                                switch (sensorType) {
+                                    case peer.SensorTypes.MOTION:
+                                        string += value
+                                            .toArray()
+                                            .map((x) => (x.toFixed ? x.toFixed(2) : x))
+                                            .toString();
+                                        break;
+                                    case peer.SensorTypes.PRESSURE:
+                                        switch (sensorDataTypeString) {
+                                            case "pressureSingleByte":
+                                            case "pressureDoubleByte":
+                                                string += value.map((sensor) => sensor.value).toString();
+                                                break;
+                                            case "mass":
+                                            case "heelToToe":
+                                                string += value.toFixed(2);
+                                                break;
+                                            case "centerOfMass":
+                                                string += [value.x.toFixed(2), value.y.toFixed(2)].toString();
+                                                break;
+                                        }
+                                        break;
+                                }
+
+                                span.innerText = string;
+                            });
+
+                            if (sensorDataTypeString == "quaternion") {
+                                const sensorDataTypeString = "euler";
+                                const dataContainer = peerContainer.querySelector(
+                                    `.${sensorTypeString.toLowerCase()}.data [data-type="${sensorDataTypeString}"]`
+                                );
+                                const span = dataContainer.querySelector("span");
+                                peer.addEventListener(sensorDataTypeString, (event) => {
+                                    const value = event.message[sensorDataTypeString];
+
+                                    const { timestamp } = event.message;
+                                    let string = `[${timestamp}] `;
+
+                                    switch (sensorType) {
+                                        case peer.SensorTypes.MOTION:
+                                            string += value
+                                                .toArray()
+                                                .map((x) => (x.toFixed ? x.toFixed(2) : x))
+                                                .toString();
+                                            break;
+                                        case peer.SensorTypes.PRESSURE:
+                                            switch (sensorDataTypeString) {
+                                                case "pressureSingleByte":
+                                                case "pressureDoubleByte":
+                                                    string += value.map((sensor) => sensor.value).toString();
+                                                    break;
+                                                case "mass":
+                                                case "heelToToe":
+                                                    string += value.toFixed(2);
+                                                    break;
+                                                case "centerOfMass":
+                                                    string += [value.x.toFixed(2), value.y.toFixed(2)].toString();
+                                                    break;
+                                            }
+                                            break;
+                                    }
+
+                                    span.innerText = string;
+                                });
+                            }
+                        });
+                    });
+
+                    peersContainer.appendChild(peerContainer);
+                });
+            },
+            { once: true }
+        );
+    </script>
 </html>
