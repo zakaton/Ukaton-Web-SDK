@@ -132,6 +132,7 @@ function addBackgroundListener(callback) {
             callback(event.detail);
         };
         backgroundListeners.set(callback, windowListener);
+        window.addEventListener("ukatonkit-backgroundListener", windowListener);
     }
 }
 const backgroundListeners = new Map();
@@ -149,4 +150,37 @@ function removeBackgroundListener(callback) {
     }
 }
 
-export { Poll, Logger, is_iOS, sendBackgroundMessage, addBackgroundListener, removeBackgroundListener };
+/**
+ * made by chatgpt
+ * @param {string} inputString
+ * @returns {string}
+ */
+function camelCaseToSpaces(inputString) {
+    return inputString
+        .replace(/([A-Z])/g, " $1")
+        .toLowerCase()
+        .trim();
+}
+
+/**
+ * made by chatgpt
+ * @param {string} inputString
+ * @returns {string}
+ */
+function spacesToCamelCase(inputString) {
+    // Use a regular expression to remove spaces and convert the following letter to uppercase
+    return inputString.replace(/\s(\w)/g, function (match, group1) {
+        return group1.toUpperCase();
+    });
+}
+
+export {
+    Poll,
+    Logger,
+    is_iOS,
+    sendBackgroundMessage,
+    addBackgroundListener,
+    removeBackgroundListener,
+    camelCaseToSpaces,
+    spacesToCamelCase,
+};

@@ -3,7 +3,7 @@ import { Poll, Logger, sendBackgroundMessage, addBackgroundListener } from "./ut
 import UKDiscoveredDevice from "./UKDiscoveredDevice.js";
 
 class UKBluetoothManager {
-    logger = new Logger(true, this);
+    logger = new Logger(false, this);
     eventDispatcher = new EventDispatcher();
 
     static #shared = new UKBluetoothManager();
@@ -92,7 +92,12 @@ class UKBluetoothManager {
      * @param {[UKDiscoveredDeviceInfo]} discoveredDevicesInfo
      */
     #updateDiscoveredDevices(discoveredDevicesInfo) {
-        const idsToDelete = new Set(Object.keys(this.#discoveredDevices));
+        const idsToDelete = new Set();
+        for (const id in this.#discoveredDevices) {
+            if (!this.#discoveredDevices[id].isConnected) {
+                idsToDelete.add(id);
+            }
+        }
         discoveredDevicesInfo.forEach((discoveredDeviceInfo) => {
             const { id } = discoveredDeviceInfo;
 

@@ -1,0 +1,16 @@
+UKMission.js
+    SensorDataConfig
+        camelcase <=> spaces
+        listen for sensorDataConfig update
+        poll for sensorDataConfig update
+    SensorData
+        poll for sensorData (smallest sensorDataConfig delta)
+    Haptics
+        waveformEffects
+        waveforms
+basic webpage
+    list devices
+    connect/disconnect
+    config sensorData
+    haptics
+work with data-viz

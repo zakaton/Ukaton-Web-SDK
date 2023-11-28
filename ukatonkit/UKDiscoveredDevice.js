@@ -137,8 +137,8 @@ export default class UKDiscoveredDevice {
             if (newValue == "connected") {
                 this.#mission = new UKMission(this);
             } else if (newValue == "not connected" && this.#mission) {
-                this.#mission.destroy();
-                this.#mission = undefined;
+                //this.#mission.destroy();
+                //this.#mission = undefined;
             }
 
             this.#update("connectionStatus", newValue);
@@ -244,6 +244,15 @@ export default class UKDiscoveredDevice {
 
         this.logger.log(`received background message of type ${message.type}`, message);
         switch (message.type) {
+            case "name":
+                this.#updateName(message.name);
+                break;
+            case "deviceType":
+                this.#updateDeviceType(message.deviceType);
+                break;
+            case "ipAddress":
+                this.#updateIpAddress(message.ipAddress);
+                break;
             case "connectionStatus":
                 this.#updateConnectionStatus(message.connectionStatus);
                 this.#updateConnectionType(message.connectionType);

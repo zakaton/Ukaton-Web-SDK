@@ -1,0 +1,2 @@
+send first message to test if extension is installed
+how to manage UKDiscoveredDevice and UKMission (redundant code like connect/disconnect)

@@ -1,6 +1,6 @@
 // https://github.com/mrdoob/eventdispatcher.js/
 export default class EventDispatcher {
-    addEventListener(type, listener) {
+    addEventListener(type, listener, options) {
         if (this._listeners === undefined) this._listeners = {};
 
         const listeners = this._listeners;

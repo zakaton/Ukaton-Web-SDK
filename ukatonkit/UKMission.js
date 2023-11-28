@@ -1,12 +1,5 @@
 import EventDispatcher from "./EventDispatcher.js";
-import {
-    is_iOS,
-    Logger,
-    Poll,
-    sendBackgroundMessage,
-    addBackgroundListener,
-    removeBackgroundListener,
-} from "./utils.js";
+import { Logger, Poll, sendBackgroundMessage, addBackgroundListener, removeBackgroundListener } from "./utils.js";
 import UKDiscoveredDevice from "./UKDiscoveredDevice.js";
 import { missionsManager } from "./UkatonKit.js";
 
@@ -15,7 +8,7 @@ import { missionsManager } from "./UkatonKit.js";
 /** @typedef {import("./UKDiscoveredDevice.js").UKConnectionStatus} UKConnectionStatus */
 
 /**
- * @typedef UKSensorDataConfiguration
+ * @typedef UKSensorDataConfigurations
  * @type {object}
  *
  * @property {object} motion
@@ -34,15 +27,25 @@ import { missionsManager } from "./UkatonKit.js";
  * @property {number} pressure.heelToToe
  */
 
+/**
+ * @typedef UKVibrationWaveform
+ * @type {object}
+ * @property {number} intensity
+ * @property {number} delay
+ */
+
 /** @typedef {"waveform" | "sequence"} UKVibrationType */
 
 export default class UKMission {
+    /** @type {Logger} */
     logger;
+    /** @type {UKDiscoveredDevice} */
+    #discoveredDevice;
 
     /** @type {EventDispatcher} */
     #eventDispatcher;
-    addEventListener(type, listener) {
-        this.#eventDispatcher.addEventListener(type, listener);
+    addEventListener(type, listener, options) {
+        this.#eventDispatcher.addEventListener(type, listener, options);
     }
     hasEventListener(type, listener) {
         this.#eventDispatcher.hasEventListener(type, listener);
@@ -54,42 +57,19 @@ export default class UKMission {
         this.#eventDispatcher.dispatchEvent(event);
     }
 
-    /** @type {UKDiscoveredDevice} */
-    #discoveredDevice;
-    /**
-     * @param {UKDiscoveredDevice} discoveredDevice
-     */
-    #updateDiscoveredDevice(discoveredDevice) {
-        this.logger = new Logger(true, this, discoveredDevice.id);
-
-        this.#eventDispatcher = discoveredDevice.eventDispatcher;
-
-        this.#id = discoveredDevice.id;
-
-        this.#discoveredDevice = discoveredDevice;
-
-        this.#name = discoveredDevice.name;
-        this.#deviceType = discoveredDevice.deviceType;
-
-        this.#connectionStatus = discoveredDevice.connectionStatus;
-        this.#connectionType = discoveredDevice.connectionType;
-
-        this.#ipAddress = discoveredDevice.ipAddress;
-
-        this.#boundOnBackgroundMessage = this.#onBackgroundMessage.bind(this);
-        addBackgroundListener(this.#boundOnBackgroundMessage);
-    }
-
     /**
      * @param {UKDiscoveredDevice} discoveredDevice
      */
     constructor(discoveredDevice) {
-        super();
-
-        this.#updateDiscoveredDevice(discoveredDevice);
+        this.logger = new Logger(true, this, discoveredDevice.id);
+        this.#discoveredDevice = discoveredDevice;
+        this.#eventDispatcher = discoveredDevice.eventDispatcher;
 
         this.logger.log("adding self");
         missionsManager.add(this);
+
+        this.#boundOnBackgroundMessage = this.#onBackgroundMessage.bind(this);
+        addBackgroundListener(this.#boundOnBackgroundMessage);
     }
 
     /**
@@ -113,6 +93,12 @@ export default class UKMission {
 
         this.logger.log(`received background message of type ${message.type}`, message);
         switch (message.type) {
+            case "sensorDataConfigurations":
+                this.#updateSensorDataConfigurations(message.sensorDataConfigurations);
+                break;
+            case "sensorData":
+                // FILL
+                break;
             default:
                 this.logger.log(`uncaught message type ${message.type}`);
                 break;
@@ -132,75 +118,102 @@ export default class UKMission {
     }
 
     /** @type {string} */
-    #id;
     get id() {
-        return this.id;
+        return this.#discoveredDevice.id;
     }
 
     /** @type {string} */
-    #name;
     get name() {
-        return this.#name;
+        return this.#discoveredDevice.name;
     }
     /** @param {string} newName */
     async setName(newName) {
-        if (newName != this.#name) {
+        if (newName != this.name) {
             // FILL
         }
     }
 
     /** @type {UKDeviceType} */
-    #deviceType;
     get deviceType() {
-        return this.#deviceType;
+        return this.#discoveredDevice.deviceType;
     }
     /** @param {UKDeviceType} newDeviceType */
     async setDeviceType(newDeviceType) {
-        if (newDeviceType != this.#deviceType) {
+        if (newDeviceType != this.deviceType) {
             // FILL
         }
     }
 
     /** @type {UKConnectionStatus} */
-    #connectionStatus;
     get connectionStatus() {
-        return this.#connectionStatus;
+        return this.#discoveredDevice.connectionStatus;
     }
     get isConnected() {
-        return this.#connectionStatus == "connected";
+        return this.connectionStatus == "connected";
     }
 
     /** @type {UKConnectionType} */
-    #connectionType;
     get connectionType() {
-        return this.#connectionType;
+        return this.#discoveredDevice.connectionType;
     }
 
     /** @type {string|undefined} */
-    #ipAddress;
     get ipAddress() {
-        return this.#ipAddress;
+        return this.#discoveredDevice.ipAddress;
+    }
+
+    /** @type {UKSensorDataConfigurations} */
+    #sensorDataConfigurations;
+    /** @param {UKSensorDataConfigurations} newValue */
+    #updateSensorDataConfigurations(newValue) {
+        this.#sensorDataConfigurations = newValue;
+        this.dispatchEvent({ type: "sensorDataConfigurations", message: { sensorDataConfigurations: newValue } });
     }
 
     async getSensorDataConfigurations() {
-        // FILL
+        if (this.#sensorDataConfigurations) {
+            return this.#sensorDataConfigurations;
+        }
+        const promise = this.#waitForSensorDataConfigurations();
+        this.#sendBackgroundMessage({ type: "getSensorDataConfigurations" });
+        return promise;
     }
-    /** @param {UKSensorDataConfiguration} configurations */
-    async setSensorDataConfigurations(configurations = {}) {
-        // FILL
+    /** @param {UKSensorDataConfigurations} sensorDataConfigurations */
+    async setSensorDataConfigurations(sensorDataConfigurations = {}) {
+        const promise = this.#waitForSensorDataConfigurations();
+        this.#sendBackgroundMessage({ type: "setSensorDataConfigurations", sensorDataConfigurations });
+        return promise;
+    }
+    async #waitForSensorDataConfigurations() {
+        return Promise.resolve(() => {
+            this.addEventListener(
+                "sensorDataConfigurations",
+                (event) => {
+                    resolve(event.message.sensorDataConfigurations);
+                },
+                { once: true }
+            );
+        });
     }
 
     // FILL - SensorData
 
-    async vibrateWaveform(waveform) {
-        // FILL
+    /**
+     * @param {[number]} waveformEffects
+     */
+    async vibrateWaveformEffects(waveformEffects) {
+        await this.#sendBackgroundMessage({ type: "vibrateWaveformEffects", waveformEffects });
     }
-    async vibrateSequence(sequence) {
-        // FILL
+    /**
+     * @param {[UKVibrationWaveform]} waveforms
+     */
+    async vibrateWaveforms(waveforms) {
+        await this.#sendBackgroundMessage({ type: "vibrateWaveforms", waveforms });
     }
 
     destroy() {
         this.logger.log("destroying self");
+        removeBackgroundListener(this.#boundOnBackgroundMessage);
         missionsManager.remove(this);
     }
 }
