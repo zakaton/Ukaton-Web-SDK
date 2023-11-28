@@ -14,7 +14,7 @@ import UKMission from "./UKMission.js";
 /** @typedef {"not connected" | "connecting" | "connected" | "disconnecting"} UKConnectionStatus */
 
 /**
- * @typedef DiscoveredDeviceInfo
+ * @typedef UKDiscoveredDeviceInfo
  * @type {object}
  * @property {string} id
  * @property {string} name
@@ -162,7 +162,7 @@ export default class UKDiscoveredDevice {
     }
 
     /**
-     * @param {DiscoveredDeviceInfo} discoveredDeviceInfo
+     * @param {UKDiscoveredDeviceInfo} discoveredDeviceInfo
      */
     constructor(discoveredDeviceInfo) {
         this.logger = new Logger(false, this, discoveredDeviceInfo.id);
@@ -173,7 +173,7 @@ export default class UKDiscoveredDevice {
     }
 
     /**
-     * @param {DiscoveredDeviceInfo} discoveredDeviceInfo
+     * @param {UKDiscoveredDeviceInfo} discoveredDeviceInfo
      */
     update(discoveredDeviceInfo) {
         const { id, name, deviceType, rssi, timestampDifference, ipAddress, connectionStatus, connectionType } =

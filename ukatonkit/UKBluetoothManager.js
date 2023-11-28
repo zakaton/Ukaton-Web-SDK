@@ -84,12 +84,12 @@ class UKBluetoothManager {
     }
 
     /**
-     * @typedef {import('./UKDiscoveredDevice.js').DiscoveredDeviceInfo} DiscoveredDeviceInfo
+     * @typedef {import('./UKDiscoveredDevice.js').UKDiscoveredDeviceInfo} UKDiscoveredDeviceInfo
      */
 
     /**
      *
-     * @param {[DiscoveredDeviceInfo]} discoveredDevicesInfo
+     * @param {[UKDiscoveredDeviceInfo]} discoveredDevicesInfo
      */
     #updateDiscoveredDevices(discoveredDevicesInfo) {
         const idsToDelete = new Set(Object.keys(this.#discoveredDevices));
