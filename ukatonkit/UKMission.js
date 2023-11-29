@@ -241,14 +241,60 @@ export default class UKMission {
     /** @type {object} */
     #sensorData;
     #updateSensorData(sensorData, timestamp) {
-        this.#sensorData = newValue;
+        this.#sensorData = sensorData;
         this.logger.log("received sensor data", sensorData);
-        this.dispatchEvent({ type: "sensorData", message: { sensorData, timestamp } });
         for (const sensorType in sensorData) {
             for (const sensorDataType in sensorData[sensorType]) {
                 const value = sensorData[sensorType][sensorDataType];
-                // FILL
+                this.#onSensorData(sensorType, sensorDataType, value, timestamp);
             }
+        }
+    }
+    #onSensorData(sensorType, sensorDataType, value, timestamp) {
+        switch (sensorType) {
+            case "motion":
+                switch (sensorDataType) {
+                    case "acceleration":
+                    case "gravity":
+                    case "linearAcceleration":
+                    case "rotationRate":
+                    case "magnetometer":
+                        const vector = new Vector3(...value);
+                        this.dispatchEvent({ type: sensorDataType, message: { [sensorDataType]: vector, timestamp } });
+                        break;
+                    case "quaternion":
+                        const quaternion = new Quaternion(...value);
+                        this.dispatchEvent({ type: "quaternion", message: { quaternion, timestamp } });
+
+                        const euler = new THREE.Euler().setFromQuaternion(quaternion);
+                        euler.reorder("YXZ");
+                        this.dispatchEvent({ type: "euler", message: { euler, timestamp } });
+                        break;
+                    default:
+                        this.logger.log(`uncaught motion data type ${sensorDataType}`);
+                        break;
+                }
+                break;
+            case "pressure":
+                switch (sensorDataType) {
+                    case "pressureSingleByte":
+                    case "pressureDoubleByte":
+                        this.dispatchEvent({ type: "pressure", message: { pressure: value, timestamp } });
+                        this.dispatchEvent({ type: sensorDataType, message: { [sensorDataType]: value, timestamp } });
+                        break;
+                    case "centerOfMass":
+                    case "mass":
+                    case "heelToToe":
+                        this.dispatchEvent({ type: sensorDataType, message: { [sensorDataType]: value, timestamp } });
+                        break;
+                    default:
+                        this.logger.log(`uncaught pressure data type ${sensorDataType}`);
+                        break;
+                }
+                break;
+            default:
+                this.logger.log(`uncaught sensor type ${sensorType}`);
+                break;
         }
     }
 

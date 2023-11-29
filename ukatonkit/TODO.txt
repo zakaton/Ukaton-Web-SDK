@@ -1,9 +1,3 @@
-UKMission.js
-    SensorData
-        dispatch events
-    Haptics
-        waveformEffects
-        waveforms
 basic webpage
     list devices
     connect/disconnect
