@@ -53,6 +53,19 @@ class Poll {
     #callback;
     /** @type {number} */
     #interval;
+    get interval() {
+        return this.#interval;
+    }
+    set interval(newValue) {
+        const isRunning = this.isRunning;
+        if (isRunning) {
+            this.stop();
+        }
+        this.#interval = newValue;
+        if (isRunning) {
+            this.start();
+        }
+    }
     /** @type {number|null} */
     #intervalId = null;
 

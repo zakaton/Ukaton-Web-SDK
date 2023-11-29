@@ -97,7 +97,7 @@ export default class UKMission {
                 this.#updateSensorDataConfigurations(message.sensorDataConfigurations);
                 break;
             case "sensorData":
-                // FILL
+                this.#updateSensorData(message.sensorData);
                 break;
             default:
                 this.logger.log(`uncaught message type ${message.type}`);
@@ -168,6 +168,39 @@ export default class UKMission {
     #updateSensorDataConfigurations(newValue) {
         this.#sensorDataConfigurations = newValue;
         this.dispatchEvent({ type: "sensorDataConfigurations", message: { sensorDataConfigurations: newValue } });
+        if (this.#isSensorDataConfigurationsEmpty) {
+            this.#sensorDataPoll.stop();
+        } else {
+            this.#sensorDataPoll.interval = this.#shortestSensorDataConfigurationInterval;
+            this.#sensorDataPoll.start();
+        }
+    }
+    /** @type {number} */
+    get #shortestSensorDataConfigurationInterval() {
+        var shortestInterval = Infinity;
+        for (const sensorType in this.#sensorDataConfigurations) {
+            for (const sensorDataType in this.#sensorDataConfigurations[sensorType]) {
+                const interval = this.#sensorDataConfigurations[sensorType][sensorDataType];
+                if (interval > 0) {
+                    shortestInterval = Math.min(shortestInterval, interval);
+                }
+            }
+        }
+        return shortestInterval;
+    }
+    /** @type {boolean} */
+    get #isSensorDataConfigurationsEmpty() {
+        var isEmpty = true;
+        traversal: for (const sensorType in this.#sensorDataConfigurations) {
+            for (const sensorDataType in this.#sensorDataConfigurations[sensorType]) {
+                if (this.#sensorDataConfigurations[sensorType][sensorDataType] > 0) {
+                    isEmpty = false;
+                    break traversal;
+                }
+            }
+        }
+        this.logger.log(`isSensorDataConfigurationsEmpty? ${isEmpty}`);
+        return isEmpty;
     }
 
     async getSensorDataConfigurations() {
@@ -199,12 +232,24 @@ export default class UKMission {
         });
     }
 
-    #sensorDataConfigurationsPoll = new Poll(this.#checkSensorDataConfigurations.bind(this), 200);
+    #sensorDataConfigurationsPoll = new Poll(this.#checkSensorDataConfigurations.bind(this), 1000);
     async #checkSensorDataConfigurations() {
         await this.#sendBackgroundMessage({ type: "getSensorDataConfigurations" });
     }
 
-    // FILL - SensorData
+    /** @type {object} */
+    #sensorData;
+    #updateSensorData(newValue) {
+        this.#sensorData = newValue;
+        this.logger.log("received sensor data", newValue);
+        this.dispatchEvent({ type: "sensorData", message: { sensorData: newValue } });
+        // FILL - parse sensor data
+    }
+
+    #sensorDataPoll = new Poll(this.#checkSensorData.bind(this), 200);
+    async #checkSensorData() {
+        await this.#sendBackgroundMessage({ type: "sensorData" });
+    }
 
     /**
      * @param {[number]} waveformEffects
@@ -223,6 +268,7 @@ export default class UKMission {
         this.logger.log("destroying self");
         removeBackgroundListener(this.#boundOnBackgroundMessage);
         this.#sensorDataConfigurationsPoll.stop();
+        this.#sensorDataPoll.stop();
         missionsManager.remove(this);
     }
 }

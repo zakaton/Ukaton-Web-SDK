@@ -258,7 +258,7 @@ export default class UKDiscoveredDevice {
                 this.#updateConnectionType(message.connectionType);
                 break;
             default:
-                this.logger.log(`uncaught message type ${message.type}`);
+                // this.logger.log(`uncaught message type ${message.type}`);
                 break;
         }
     }
