@@ -1,8 +1,4 @@
 UKMission.js
-    SensorDataConfig
-        camelcase <=> spaces
-        listen for sensorDataConfig update
-        poll for sensorDataConfig update
     SensorData
         poll for sensorData (smallest sensorDataConfig delta)
     Haptics

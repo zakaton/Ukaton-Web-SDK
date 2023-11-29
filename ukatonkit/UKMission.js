@@ -182,18 +182,26 @@ export default class UKMission {
     async setSensorDataConfigurations(sensorDataConfigurations = {}) {
         const promise = this.#waitForSensorDataConfigurations();
         this.#sendBackgroundMessage({ type: "setSensorDataConfigurations", sensorDataConfigurations });
+        this.#sensorDataConfigurationsPoll.start();
         return promise;
     }
     async #waitForSensorDataConfigurations() {
-        return Promise.resolve(() => {
+        return new Promise((resolve) => {
             this.addEventListener(
                 "sensorDataConfigurations",
                 (event) => {
+                    this.logger.log("received sensorDataConfigurations", event);
+                    this.#sensorDataConfigurationsPoll.stop();
                     resolve(event.message.sensorDataConfigurations);
                 },
                 { once: true }
             );
         });
+    }
+
+    #sensorDataConfigurationsPoll = new Poll(this.#checkSensorDataConfigurations.bind(this), 200);
+    async #checkSensorDataConfigurations() {
+        await this.#sendBackgroundMessage({ type: "getSensorDataConfigurations" });
     }
 
     // FILL - SensorData
@@ -214,6 +222,7 @@ export default class UKMission {
     destroy() {
         this.logger.log("destroying self");
         removeBackgroundListener(this.#boundOnBackgroundMessage);
+        this.#sensorDataConfigurationsPoll.stop();
         missionsManager.remove(this);
     }
 }
