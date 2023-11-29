@@ -2,6 +2,7 @@ import EventDispatcher from "./EventDispatcher.js";
 import { Logger, Poll, sendBackgroundMessage, addBackgroundListener, removeBackgroundListener } from "./utils.js";
 import UKDiscoveredDevice from "./UKDiscoveredDevice.js";
 import { missionsManager } from "./UkatonKit.js";
+import { Vector2, Vector3, Quaternion } from "./three.module.min.js";
 
 /** @typedef {import("./UKDiscoveredDevice.js").UKDeviceType} UKDeviceType */
 /** @typedef {import("./UKDiscoveredDevice.js").UKConnectionType} UKConnectionType */
@@ -97,7 +98,7 @@ export default class UKMission {
                 this.#updateSensorDataConfigurations(message.sensorDataConfigurations);
                 break;
             case "sensorData":
-                this.#updateSensorData(message.sensorData);
+                this.#updateSensorData(message.sensorData, message.timestamp);
                 break;
             default:
                 this.logger.log(`uncaught message type ${message.type}`);
@@ -239,11 +240,16 @@ export default class UKMission {
 
     /** @type {object} */
     #sensorData;
-    #updateSensorData(newValue) {
+    #updateSensorData(sensorData, timestamp) {
         this.#sensorData = newValue;
-        this.logger.log("received sensor data", newValue);
-        this.dispatchEvent({ type: "sensorData", message: { sensorData: newValue } });
-        // FILL - parse sensor data
+        this.logger.log("received sensor data", sensorData);
+        this.dispatchEvent({ type: "sensorData", message: { sensorData, timestamp } });
+        for (const sensorType in sensorData) {
+            for (const sensorDataType in sensorData[sensorType]) {
+                const value = sensorData[sensorType][sensorDataType];
+                // FILL
+            }
+        }
     }
 
     #sensorDataPoll = new Poll(this.#checkSensorData.bind(this), 200);
@@ -255,13 +261,17 @@ export default class UKMission {
      * @param {[number]} waveformEffects
      */
     async vibrateWaveformEffects(waveformEffects) {
-        await this.#sendBackgroundMessage({ type: "vibrateWaveformEffects", waveformEffects });
+        await this.#sendBackgroundMessage({
+            type: "vibrate",
+            vibrationType: "waveformEffects",
+            vibration: waveformEffects,
+        });
     }
     /**
      * @param {[UKVibrationWaveform]} waveforms
      */
     async vibrateWaveforms(waveforms) {
-        await this.#sendBackgroundMessage({ type: "vibrateWaveforms", waveforms });
+        await this.#sendBackgroundMessage({ type: "vibrate", vibrationType: "waveforms", vibration: waveforms });
     }
 
     destroy() {

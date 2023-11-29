@@ -1,6 +1,6 @@
 UKMission.js
     SensorData
-        poll for sensorData (smallest sensorDataConfig delta)
+        dispatch events
     Haptics
         waveformEffects
         waveforms
