@@ -38,6 +38,7 @@
         .discoveredDevice {
             display: flex;
             flex-direction: column;
+            gap: 0.5rem;
         }
 
         .discoveredDevice > .header {
@@ -55,8 +56,11 @@
         .discoveredDevice > .connection > div {
             display: flex;
             flex-direction: row;
-            gap: 1rem;
+            gap: 0.5rem;
             align-items: center;
+        }
+        body.iOS .udp {
+            display: none;
         }
         .discoveredDevice:not([data-connection-status="not connected"]) > .connection > .notConnected {
             display: none;
@@ -129,7 +133,7 @@
                         <div class="deviceType"></div>
                     </div>
                     <div class="connection">
-                        <div class="notConnected">
+                        <div class="notConnected center">
                             <div>connect via:</div>
                             <button class="connect bluetooth">bluetooth</button>
                             <button class="connect udp">udp</button>

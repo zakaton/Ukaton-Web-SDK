@@ -1,5 +1,10 @@
 import UKDiscoveredDevice from "./UKDiscoveredDevice.js";
 import { bluetoothManager, missionsManager } from "./UkatonKit.js";
+import { is_iOS } from "./utils.js";
+
+if (is_iOS) {
+    document.body.classList.add("iOS");
+}
 
 // SCAN
 const toggleScanButton = document.getElementById("toggleScan");
