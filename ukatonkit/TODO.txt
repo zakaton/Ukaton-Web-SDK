@@ -1,6 +1,4 @@
 basic webpage
-    list devices
-    connect/disconnect
     config sensorData
     haptics
 work with data-viz

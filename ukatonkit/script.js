@@ -4,15 +4,17 @@ import { bluetoothManager, missionsManager } from "./UkatonKit.js";
 // SCAN
 const toggleScanButton = document.getElementById("toggleScan");
 function updateToggleScanButton() {
+    if (bluetoothManager.isScanning) {
+        toggleScanButton.classList.add("pulsating");
+    } else {
+        toggleScanButton.classList.remove("pulsating");
+    }
     toggleScanButton.innerText = bluetoothManager.isScanning ? "scanning for devices..." : "scan for devices";
 }
 toggleScanButton.addEventListener("click", () => {
     bluetoothManager.toggleScan();
 });
 updateToggleScanButton();
-bluetoothManager.eventDispatcher.addEventListener("isScanning", () => {
-    updateToggleScanButton();
-});
 
 // DISCOVERED DEVICES
 const discoveredDevicesContainer = document.getElementById("discoveredDevices");
@@ -20,6 +22,15 @@ const discoveredDevicesContainer = document.getElementById("discoveredDevices");
 const discoveredDeviceContainers = {};
 /** @type {HTMLTemplateElement} */
 const discoveredDevicesTemplate = document.getElementById("discoveredDeviceTemplate");
+function updateDiscoveredDevicesContainer() {
+    discoveredDevicesContainer.dataset.isScanning = bluetoothManager.isScanning;
+}
+updateDiscoveredDevicesContainer();
+
+bluetoothManager.eventDispatcher.addEventListener("isScanning", () => {
+    updateToggleScanButton();
+    updateDiscoveredDevicesContainer();
+});
 
 function updateDiscoveredDevices() {
     const discoveredDevices = bluetoothManager.discoveredDevices;
@@ -43,15 +54,13 @@ function updateDiscoveredDevices() {
                 discoveredDevice.disconnect();
             });
 
+            container._destroy = () => {
+                delete discoveredDeviceContainers[id];
+                container.remove();
+            };
+
             discoveredDevice.eventDispatcher.addEventListener("update", () => updateDiscoveredDevice(discoveredDevice));
-            discoveredDevice.eventDispatcher.addEventListener(
-                "destroy",
-                () => {
-                    delete discoveredDeviceContainers[id];
-                    container.remove();
-                },
-                { once: true }
-            );
+            discoveredDevice.eventDispatcher.addEventListener("destroy", () => container._destroy(), { once: true });
 
             discoveredDeviceContainers[id] = container;
             discoveredDevicesContainer.appendChild(container);
@@ -65,7 +74,6 @@ function updateDiscoveredDevices() {
  * @param {UKDiscoveredDevice} discoveredDevice
  */
 function updateDiscoveredDevice(discoveredDevice) {
-    console.log("UPDATE DISCOVERED DEVICE", discoveredDevice);
     var container = discoveredDeviceContainers[discoveredDevice.id];
 
     container.querySelector(".name").innerText = discoveredDevice.name;
@@ -73,6 +81,8 @@ function updateDiscoveredDevice(discoveredDevice) {
     container.querySelector(".deviceType").innerText = discoveredDevice.deviceType;
 
     container.dataset.connectionStatus = discoveredDevice.connectionStatus;
+    container.dataset.isConnected = discoveredDevice.isConnected;
+    container.querySelectorAll(".connectionType").forEach((span) => (span.innerText = discoveredDevice.connectionType));
 
     container.querySelector(".rssi").innerText = discoveredDevice.rssi;
     if (discoveredDevice.timestampDifference) {

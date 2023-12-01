@@ -73,11 +73,6 @@
 
         .discoveredDevice > .status {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        .discoveredDevice > .status > div {
-            display: flex;
             flex-direction: row;
             justify-content: center;
             gap: 1rem;
@@ -91,17 +86,43 @@
         .discoveredDevice .ipAddress::before {
             content: "🛜 ";
         }
+
+        .discoveredDevice:not([data-connection-status="not connected"]) .scanning {
+            display: none;
+        }
+        #discoveredDevices:not([data-is-scanning="true"]) .scanning {
+            display: none;
+        }
+
+        .center {
+            justify-content: center;
+        }
+
+        @keyframes pulsateAnimation {
+            0% {
+                scale: 1;
+            }
+            100% {
+                scale: 0.95;
+            }
+        }
+        .pulsating {
+            scale: 1;
+            animation: pulsateAnimation 0.6s infinite;
+            animation-timing-function: ease-in-out;
+            animation-direction: alternate;
+        }
     </style>
     <body>
         <h1>UkatonKit.js</h1>
 
         <button id="toggleScan">start scan</button>
 
-        <h2>discovered devices</h2>
+        <h2>Discovered Devices</h2>
         <div id="discoveredDevices">
             <template id="discoveredDeviceTemplate">
                 <div class="discoveredDevice">
-                    <div class="header">
+                    <div class="header center">
                         <div>
                             <b><span class="name"></span></b>
                         </div>
@@ -113,23 +134,21 @@
                             <button class="connect bluetooth">bluetooth</button>
                             <button class="connect udp">udp</button>
                         </div>
-                        <div class="connecting">
-                            <button class="connect cancel">connecting via <span></span>...</button>
+                        <div class="connecting center">
+                            <button class="connect cancel pulsating">
+                                connecting via <span class="connectionType"></span>...
+                            </button>
                         </div>
                         <div class="connected">
-                            <div>connected via <span></span></div>
+                            <div>connected via <span class="connectionType"></span></div>
                             <button class="disconnect">disconnect</button>
                         </div>
-                        <div class="disconnecting">disconnecting...</div>
+                        <div class="disconnecting center pulsating"><span>disconnecting...</span></div>
                     </div>
                     <div class="status">
-                        <div>
-                            <div class="rssi"></div>
-                            <div class="timestampDifference"></div>
-                        </div>
-                        <div>
-                            <div class="ipAddress"></div>
-                        </div>
+                        <div class="rssi scanning"></div>
+                        <div class="timestampDifference scanning"></div>
+                        <div class="ipAddress"></div>
                     </div>
                 </div>
             </template>
