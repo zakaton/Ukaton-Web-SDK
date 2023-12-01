@@ -39,6 +39,7 @@ export default class UKDiscoveredDevice {
 
     #update(type, newValue) {
         this.logger.log(`updated ${type} to ${newValue}`);
+        this.eventDispatcher.dispatchEvent({ type: "update" });
         this.eventDispatcher.dispatchEvent({ type, message: { [type]: newValue } });
     }
 

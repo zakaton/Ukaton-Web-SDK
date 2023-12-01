@@ -3,11 +3,136 @@
         <title>UkatonKit.js | Ukaton</title>
         <link rel="icon" href="/favicon.png" />
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
-        <script src="/BaseMission.js"></script>
-        <script src="./UkatonKit.js" type="module"></script>
+        <script src="./script.js" type="module"></script>
     </head>
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+
+        body {
+            width: fit-content;
+            padding: 10px;
+
+            font-family: system-ui;
+            text-align: center;
+
+            font-size: larger;
+            margin: auto;
+        }
+
+        button {
+            font-size: large;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            /* Dark Mode styles go here. */
+        }
+
+        #discoveredDevices {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .discoveredDevice {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .discoveredDevice > .header {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+        }
+        .discoveredDevice[data-device-type~="insole"] .deviceType::before {
+            content: "👟 ";
+        }
+        .discoveredDevice[data-device-type="motion module"] .deviceType::before {
+            content: "📦 ";
+        }
+
+        .discoveredDevice > .connection > div {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            align-items: center;
+        }
+        .discoveredDevice:not([data-connection-status="not connected"]) > .connection > .notConnected {
+            display: none;
+        }
+        .discoveredDevice:not([data-connection-status="connecting"]) > .connection > .connecting {
+            display: none;
+        }
+        .discoveredDevice:not([data-connection-status="connected"]) > .connection > .connected {
+            display: none;
+        }
+        .discoveredDevice:not([data-connection-status="disconnecting"]) > .connection > .disconnecting {
+            display: none;
+        }
+
+        .discoveredDevice > .status {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .discoveredDevice > .status > div {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .discoveredDevice .rssi::before {
+            content: "📶 ";
+        }
+        .discoveredDevice .timestampDifference::before {
+            content: "⏱ ";
+        }
+        .discoveredDevice .ipAddress::before {
+            content: "🛜 ";
+        }
+    </style>
     <body>
         <h1>UkatonKit.js</h1>
+
+        <button id="toggleScan">start scan</button>
+
+        <h2>discovered devices</h2>
+        <div id="discoveredDevices">
+            <template id="discoveredDeviceTemplate">
+                <div class="discoveredDevice">
+                    <div class="header">
+                        <div>
+                            <b><span class="name"></span></b>
+                        </div>
+                        <div class="deviceType"></div>
+                    </div>
+                    <div class="connection">
+                        <div class="notConnected">
+                            <div>connect via:</div>
+                            <button class="connect bluetooth">bluetooth</button>
+                            <button class="connect udp">udp</button>
+                        </div>
+                        <div class="connecting">
+                            <button class="connect cancel">connecting via <span></span>...</button>
+                        </div>
+                        <div class="connected">
+                            <div>connected via <span></span></div>
+                            <button class="disconnect">disconnect</button>
+                        </div>
+                        <div class="disconnecting">disconnecting...</div>
+                    </div>
+                    <div class="status">
+                        <div>
+                            <div class="rssi"></div>
+                            <div class="timestampDifference"></div>
+                        </div>
+                        <div>
+                            <div class="ipAddress"></div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
     </body>
 </html>

@@ -62,7 +62,7 @@ export default class UKMission {
      * @param {UKDiscoveredDevice} discoveredDevice
      */
     constructor(discoveredDevice) {
-        this.logger = new Logger(true, this, discoveredDevice.id);
+        this.logger = new Logger(false, this, discoveredDevice.id);
         this.#discoveredDevice = discoveredDevice;
         this.#eventDispatcher = discoveredDevice.eventDispatcher;
 

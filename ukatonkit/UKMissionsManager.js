@@ -3,7 +3,7 @@ import UKMission from "./UKMission.js";
 import { Logger } from "./utils.js";
 
 class UKMissionsManager {
-    logger = new Logger(true, this);
+    logger = new Logger(false, this);
     eventDispatcher = new EventDispatcher();
 
     static #shared = new UKMissionsManager();
