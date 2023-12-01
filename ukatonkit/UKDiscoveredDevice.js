@@ -129,9 +129,11 @@ export default class UKDiscoveredDevice {
     }
     /** @param {UKConnectionStatus|undefined} newValue */
     #updateConnectionStatus(newValue) {
+        this.logger.log(`updateConnectionStatus from ${this.#connectionStatus} to ${newValue}`);
         if (this.#connectionStatus != newValue) {
             this.#connectionStatus = newValue;
             if (newValue == "connected" || newValue == "not connected") {
+                this.logger.log("stopping connectionStatusPoll");
                 this.#connectionStatusPoll.stop();
             }
 
@@ -166,7 +168,7 @@ export default class UKDiscoveredDevice {
      * @param {UKDiscoveredDeviceInfo} discoveredDeviceInfo
      */
     constructor(discoveredDeviceInfo) {
-        this.logger = new Logger(false, this, discoveredDeviceInfo.id);
+        this.logger = new Logger(true, this, discoveredDeviceInfo.id);
         this.update(discoveredDeviceInfo);
 
         this.#boundOnBackgroundMessage = this.#onBackgroundMessage.bind(this);
@@ -222,16 +224,18 @@ export default class UKDiscoveredDevice {
             this.logger.log(`unable to connect via ${connectionType} on iOS - changing to bluetooth`);
             connectionType = "bluetooth";
         }
-        await this.#sendBackgroundMessage({ type: "connect", connectionType });
+        this.logger.log("starting connectionStatusPoll");
         this.#connectionStatusPoll.start();
+        await this.#sendBackgroundMessage({ type: "connect", connectionType });
     }
     async disconnect() {
         if (this.connectionStatus == "not connected") {
             this.logger.log("can't disconnect - not connected");
             return;
         }
-        await this.#sendBackgroundMessage({ type: "disconnect" });
+        this.logger.log("starting connectionStatusPoll");
         this.#connectionStatusPoll.start();
+        await this.#sendBackgroundMessage({ type: "disconnect" });
     }
 
     /**
@@ -270,5 +274,6 @@ export default class UKDiscoveredDevice {
         this.logger.log(`destroying self`);
         this.#connectionStatusPoll.stop();
         removeBackgroundListener(this.#boundOnBackgroundMessage);
+        this.eventDispatcher.dispatchEvent({ type: "destroy" });
     }
 }

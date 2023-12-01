@@ -3,7 +3,7 @@ import { Poll, Logger, sendBackgroundMessage, addBackgroundListener } from "./ut
 import UKDiscoveredDevice from "./UKDiscoveredDevice.js";
 
 class UKBluetoothManager {
-    logger = new Logger(false, this);
+    logger = new Logger(true, this);
     eventDispatcher = new EventDispatcher();
 
     static #shared = new UKBluetoothManager();
@@ -15,9 +15,11 @@ class UKBluetoothManager {
     get isScanning() {
         return this.#isScanning;
     }
-    set isScanning(newValue) {
+    /** @param {boolean} newValue */
+    #updateIsScanning(newValue) {
         if (this.#isScanning != newValue) {
             this.#isScanning = newValue;
+            this.logger.log("stopping isScanningPoll");
             this.#isScanningPoll.stop();
 
             this.logger.log(`updated isScanning to ${this.isScanning}`);
@@ -27,8 +29,10 @@ class UKBluetoothManager {
             });
 
             if (this.isScanning) {
+                this.logger.log("starting discoveredDevicesPoll");
                 this.#discoveredDevicesPoll.start();
             } else {
+                this.logger.log("stopping discoveredDevicesPoll");
                 this.#discoveredDevicesPoll.stop();
             }
         }
@@ -46,21 +50,16 @@ class UKBluetoothManager {
         const response = await this.#sendBackgroundMessage({ type: "isScanning" });
         const { isScanning } = response;
         this.logger.log(`isScanning response: ${isScanning}`, response);
-        this.isScanning = isScanning;
+        this.#updateIsScanning(isScanning);
     }
 
     #isScanningPoll = new Poll(this.checkIsScanning.bind(this), 100);
 
     async setScan(newValue) {
         if (newValue != this.isScanning) {
-            const response = await this.#sendBackgroundMessage({ type: "setScan", newValue });
-            const { isScanning } = response;
-            this.logger.log(`setScan response: ${isScanning}`, response);
-            if (isScanning == newValue) {
-                this.isScanning = isScanning;
-            } else {
-                this.#isScanningPoll.start();
-            }
+            this.logger.log("starting isScanningPoll");
+            this.#isScanningPoll.start();
+            await this.#sendBackgroundMessage({ type: "setScan", newValue });
         } else {
             this.logger.log("redundant setScan");
         }
@@ -72,9 +71,9 @@ class UKBluetoothManager {
     #discoveredDevicesPoll = new Poll(this.checkDiscoveredDevices.bind(this), 200);
     async checkDiscoveredDevices() {
         const response = await this.#sendBackgroundMessage({ type: "discoveredDevices" });
-        const { discoveredDevices: discoveredDeviceInfo } = response;
-        this.logger.log(`discovered ${discoveredDeviceInfo.length} devices`, response);
-        this.#updateDiscoveredDevices(discoveredDeviceInfo);
+        const { discoveredDevices: discoveredDevicesInfo } = response;
+        this.logger.log(`discovered ${discoveredDevicesInfo.length} devices`, response);
+        this.#updateDiscoveredDevices(discoveredDevicesInfo);
     }
 
     /** @type {Object.<string, UKDiscoveredDevice>} */
@@ -103,10 +102,15 @@ class UKBluetoothManager {
 
             if (idsToDelete.has(id)) {
                 idsToDelete.delete(id);
+            }
+
+            if (this.#discoveredDevices[id]) {
                 const discoveredDevice = this.#discoveredDevices[id];
+                this.logger.log(`updating ${id}`, discoveredDevice);
                 discoveredDevice.update(discoveredDeviceInfo);
             } else {
                 const discoveredDevice = new UKDiscoveredDevice(discoveredDeviceInfo);
+                this.logger.log(`creating ${id}`, discoveredDevice);
                 this.#discoveredDevices[id] = discoveredDevice;
                 this.eventDispatcher.dispatchEvent({
                     type: "discoveredDeviceAdded",
@@ -114,8 +118,10 @@ class UKBluetoothManager {
                 });
             }
         });
+
         idsToDelete.forEach((id) => {
             const discoveredDevice = this.#discoveredDevices[id];
+            this.logger.log(`destroying ${id}`, discoveredDevice);
             discoveredDevice.destroy();
             delete this.#discoveredDevices[id];
             this.eventDispatcher.dispatchEvent({
@@ -160,7 +166,7 @@ class UKBluetoothManager {
 
         switch (message.type) {
             case "isScanning":
-                this.isScanning = message.isScanning;
+                this.#updateIsScanning(message.isScanning);
                 break;
             case "discoveredDevices":
                 this.#updateDiscoveredDevices(message.discoveredDevices);

@@ -23,7 +23,7 @@ const discoveredDevicesTemplate = document.getElementById("discoveredDeviceTempl
 
 function updateDiscoveredDevices() {
     const discoveredDevices = bluetoothManager.discoveredDevices;
-    console.log(discoveredDevices);
+    console.log("discoveredDevices", discoveredDevices);
     for (const id in discoveredDevices) {
         const discoveredDevice = discoveredDevices[id];
         var container = discoveredDeviceContainers[id];
@@ -44,6 +44,14 @@ function updateDiscoveredDevices() {
             });
 
             discoveredDevice.eventDispatcher.addEventListener("update", () => updateDiscoveredDevice(discoveredDevice));
+            discoveredDevice.eventDispatcher.addEventListener(
+                "destroy",
+                () => {
+                    delete discoveredDeviceContainers[id];
+                    container.remove();
+                },
+                { once: true }
+            );
 
             discoveredDeviceContainers[id] = container;
             discoveredDevicesContainer.appendChild(container);
@@ -52,10 +60,12 @@ function updateDiscoveredDevices() {
         updateDiscoveredDevice(discoveredDevice);
     }
 }
+
 /**
  * @param {UKDiscoveredDevice} discoveredDevice
  */
 function updateDiscoveredDevice(discoveredDevice) {
+    console.log("UPDATE DISCOVERED DEVICE", discoveredDevice);
     var container = discoveredDeviceContainers[discoveredDevice.id];
 
     container.querySelector(".name").innerText = discoveredDevice.name;
@@ -65,7 +75,7 @@ function updateDiscoveredDevice(discoveredDevice) {
     container.dataset.connectionStatus = discoveredDevice.connectionStatus;
 
     container.querySelector(".rssi").innerText = discoveredDevice.rssi;
-    if ("timestampDifference" in discoveredDevice) {
+    if (discoveredDevice.timestampDifference) {
         container.querySelector(".timestampDifference").innerText = discoveredDevice.timestampDifference.toFixed(3);
     }
 

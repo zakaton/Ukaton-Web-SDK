@@ -73,10 +73,13 @@ class Poll {
         return this.#intervalId != null;
     }
 
-    start() {
+    start(startImmediately = true) {
         if (!this.isRunning) {
             this.logger.log("starting poll");
             this.#intervalId = setInterval(() => this.#callback(), this.#interval);
+            if (startImmediately) {
+                this.#callback();
+            }
         }
     }
     stop() {
