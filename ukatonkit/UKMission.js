@@ -66,6 +66,24 @@ export default class UKMission {
         this.#discoveredDevice = discoveredDevice;
         this.#eventDispatcher = discoveredDevice.eventDispatcher;
 
+        this.pressure = Object.assign([], {
+            sum: 0,
+            mass: 0,
+            heelToToe: 0,
+            centerOfMass: { x: 0, y: 0 },
+        });
+        this.motion = {
+            acceleration: new Vector3(),
+            gravity: new Quaternion(),
+            linearAcceleration: new Vector3(),
+            rotationRate: new Euler(),
+            magnetometer: new Vector3(),
+            quaternion: new Quaternion(),
+            euler: new Euler(),
+
+            calibration: null,
+        };
+
         this.logger.log("adding self");
         missionsManager.add(this);
 
@@ -145,6 +163,15 @@ export default class UKMission {
     /** @type {UKDeviceType} */
     get deviceType() {
         return this.#discoveredDevice.deviceType;
+    }
+    get isInsole() {
+        return this.deviceType != "motion module";
+    }
+    get insoleSide() {
+        if (this.isInsole) {
+            return this.deviceType == "left insole" ? "left" : "right";
+        }
+        return null;
     }
     /** @param {UKDeviceType} newDeviceType */
     async setDeviceType(newDeviceType) {
@@ -316,12 +343,23 @@ export default class UKMission {
                 switch (sensorDataType) {
                     case "pressureSingleByte":
                     case "pressureDoubleByte":
-                        this.dispatchEvent({ type: "pressure", message: { pressure: value, timestamp } });
+                        value.sum = value.reduce((sum, object) => sum + object.rawValue, 0);
+                        this.pressure.sum = value.sum;
+                        value.forEach((object, index) => {
+                            this.pressure[index] = object.position;
+                            this.pressure[index].value = object.rawValue;
+                        });
+                        this.dispatchEvent({ type: "pressure", message: { pressure: this.pressure, timestamp } });
                         this.dispatchEvent({ type: sensorDataType, message: { [sensorDataType]: value, timestamp } });
                         break;
                     case "centerOfMass":
+                        const centerOfMass = new Vector2(...value);
+                        this.pressure.centerOfMass = centerOfMass;
+                        this.dispatchEvent({ type: sensorDataType, message: { centerOfMass, timestamp } });
+                        break;
                     case "mass":
                     case "heelToToe":
+                        this.pressure[sensorDataType] = value;
                         this.dispatchEvent({ type: sensorDataType, message: { [sensorDataType]: value, timestamp } });
                         break;
                     default:

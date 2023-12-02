@@ -29,14 +29,14 @@
         .visuals {
             display: flex;
             flex-direction: row;
-            width: 320px;
+            width: 280px;
             height: 400px;
             margin: auto;
             position: relative;
         }
 
         .visuals img {
-            object-fit: stretch;
+            object-fit: contain;
             width: 100%;
             height: 100%;
         }
@@ -74,11 +74,13 @@
             z-index: 4;
             background-color: green;
             box-shadow: 0 0 4px 12px green;
+            display: none;
         }
 
         .side > .centerOfMass {
             background-color: orange;
             box-shadow: 0 0 4px 12px orange;
+            display: none;
         }
 
         .heel-to-toe {
@@ -99,9 +101,11 @@
 
         .heel-to-toe .top {
             background-color: yellow;
+            display: none;
         }
         .heel-to-toe .bottom {
             background-color: teal;
+            display: none;
         }
 
         #ui.iframe > :not(.visuals) {
@@ -196,9 +200,7 @@
                         <div class="bottom"></div>
                     </div>
 
-                    <img
-                        src="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Finsole.png?v=1610331890536"
-                    />
+                    <img src="../assets/insole.svg" />
                 </div>
 
                 <div class="right side">
@@ -226,9 +228,7 @@
                         <div class="bottom"></div>
                     </div>
 
-                    <img
-                        src="https://cdn.glitch.com/024019a9-317f-4462-b4f9-7674047a399c%2Finsole.png?v=1610331890536"
-                    />
+                    <img src="../assets/insole.svg" />
                 </div>
             </div>
         </div>
@@ -305,6 +305,7 @@
         }
 
         window.missions = missions;
+        const bothPressureSensorElements = {};
         missions.sides.forEach((side) => {
             document.querySelector(`.connect .${side} input[type='button']`).addEventListener("click", (event) => {
                 if (connectionType == "bluetooth") {
@@ -324,6 +325,7 @@
                     const type = event.altKey ? "pressureDoubleByte" : "pressureSingleByte";
                     const otherType = !event.altKey ? "pressureDoubleByte" : "pressureSingleByte";
 
+                    console.log(missions[side]);
                     missions[side].setSensorDataConfigurations({
                         pressure: {
                             [type]: enabled ? 40 : 0,
@@ -333,37 +335,71 @@
                 });
             });
 
-            const pressureSensorElements = Array.from(document.querySelectorAll(`.${side} .sensor`));
+            bothPressureSensorElements[side] = Array.from(document.querySelectorAll(`.${side} .sensor`));
+
             const pressureTypes = ["pressure", "pressureDouble"];
             pressureTypes.forEach((type) => {
                 missions[side].addEventListener(type, (event) => {
-                    const { timestamp } = event.message;
-                    const pressure = event.message[type];
-                    pressure.forEach((sensor, index) => {
-                        pressureSensorElements[index].style.opacity =
-                            sensor.value / (type == "pressure" ? 2 ** 8 : 2 ** 12);
-                    });
-
-                    const _missions = event.missions || missions;
-
-                    centerOfMassElement.style.left = `${_missions.pressure.centerOfMass.x * 100}%`;
-                    centerOfMassElement.style.top = `${_missions.pressure.centerOfMass.y * 100}%`;
-
-                    document.querySelector(`.visuals .${side} .heel-to-toe .top`).style.flex = pressure.centerOfMass.y;
-                    document.querySelector(`.visuals .${side} .heel-to-toe .bottom`).style.flex =
-                        1 - pressure.centerOfMass.y;
-
-                    // local center
-                    document.querySelector(`.visuals .${side} .centerOfMass`).style.left = `${
-                        pressure.centerOfMass.x * 100
-                    }%`;
-                    document.querySelector(`.visuals .${side} .centerOfMass`).style.top = `${
-                        pressure.centerOfMass.y * 100
-                    }%`;
+                    onPressure(side, event, type);
                 });
             });
         });
 
+        function onPressure(side, event, type) {
+            const { timestamp } = event.message;
+            const pressure = event.message[type];
+            const pressureSensorElements = bothPressureSensorElements[side];
+            pressure.forEach((sensor, index) => {
+                pressureSensorElements[index].style.opacity = sensor.value / (type == "pressure" ? 2 ** 8 : 2 ** 12);
+            });
+
+            const _missions = event.missions || missions;
+
+            centerOfMassElement.style.left = `${_missions.pressure.centerOfMass.x * 100}%`;
+            centerOfMassElement.style.top = `${(1 - _missions.pressure.centerOfMass.y) * 100}%`;
+
+            document.querySelector(`.visuals .${side} .heel-to-toe .top`).style.flex = 1 - pressure.centerOfMass.y;
+            document.querySelector(`.visuals .${side} .heel-to-toe .bottom`).style.flex = pressure.centerOfMass.y;
+
+            // local center
+            document.querySelector(`.visuals .${side} .centerOfMass`).style.left = `${pressure.centerOfMass.x * 100}%`;
+            document.querySelector(`.visuals .${side} .centerOfMass`).style.top = `${
+                (1 - pressure.centerOfMass.y) * 100
+            }%`;
+        }
+
         const centerOfMassElement = document.querySelector(".centerOfMass");
+    </script>
+
+    <script type="module">
+        import { missionsManager } from "../ukatonkit/UkatonKit.js";
+        const connectionTypeSelect = document.querySelector(".connect select");
+        function setMission(mission) {
+            missions[mission.insoleSide].dispatchEvent({ type: "connected" });
+            missions.replaceInsole(mission);
+            mission.addEventListener("pressure", (event) => {
+                onPressure(mission.insoleSide, event, "pressure");
+            });
+        }
+        missionsManager.eventDispatcher.addEventListener("missions", () => onMissionsUpdated());
+        const foundInsoles = {
+            left: false,
+            right: false,
+            get foundAll() {
+                return this.left && this.right;
+            },
+        };
+        function onMissionsUpdated() {
+            if (!foundInsoles.foundAll) {
+                missionsManager.missions.some((mission) => {
+                    if (mission.isConnected && mission.isInsole && !foundInsoles[mission.insoleSide]) {
+                        setMission(mission);
+                        foundInsoles[mission.insoleSide] = true;
+                    }
+                    return foundInsoles.foundAll;
+                });
+            }
+        }
+        onMissionsUpdated();
     </script>
 </html>
