@@ -8,6 +8,7 @@
         <script src="/BluetoothMissionDevice.js"></script>
         <script src="/PeerBluetoothMissionDevice.js"></script>
         <script src="/WebSocketMissionDevice.js"></script>
+        <script src="../ukatonkit/UkatonKit.js" type="module"></script>
     </head>
     <style>
         body {
@@ -161,49 +162,97 @@
                     <li>
                         <label data-motion-sensor-data-type="acceleration">
                             Acceleration (ms)
-                            <input value="0" type="number" min="0" max="65535" step="10" />
+                            <select>
+                                <option value="0">0ms</option>
+                                <option value="20">20ms</option>
+                                <option value="40">40ms</option>
+                                <option value="80">80ms</option>
+                                <option value="100">100ms</option>
+                            </select>
                         </label>
                     </li>
                     <li>
                         <label data-motion-sensor-data-type="gravity">
                             Gravity (ms)
-                            <input value="0" type="number" min="0" max="65535" step="10" />
+                            <select>
+                                <option value="0">0ms</option>
+                                <option value="20">20ms</option>
+                                <option value="40">40ms</option>
+                                <option value="80">80ms</option>
+                                <option value="100">100ms</option>
+                            </select>
                         </label>
                     </li>
                     <li>
                         <label data-motion-sensor-data-type="linearAcceleration">
                             Linear Acceration (ms)
-                            <input value="0" type="number" min="0" max="65535" step="10" />
+                            <select>
+                                <option value="0">0ms</option>
+                                <option value="20">20ms</option>
+                                <option value="40">40ms</option>
+                                <option value="80">80ms</option>
+                                <option value="100">100ms</option>
+                            </select>
                         </label>
                     </li>
                     <li>
                         <label data-motion-sensor-data-type="rotationRate">
                             Rotation Rate (ms)
-                            <input value="0" type="number" min="0" max="65535" step="10" />
+                            <select>
+                                <option value="0">0ms</option>
+                                <option value="20">20ms</option>
+                                <option value="40">40ms</option>
+                                <option value="80">80ms</option>
+                                <option value="100">100ms</option>
+                            </select>
                         </label>
                     </li>
                     <li>
                         <label data-motion-sensor-data-type="magnetometer">
                             Magnetometer (ms)
-                            <input value="0" type="number" min="0" max="65535" step="10" />
+                            <select>
+                                <option value="0">0ms</option>
+                                <option value="20">20ms</option>
+                                <option value="40">40ms</option>
+                                <option value="80">80ms</option>
+                                <option value="100">100ms</option>
+                            </select>
                         </label>
                     </li>
                     <li>
                         <label data-motion-sensor-data-type="quaternion">
                             Quaternion (ms)
-                            <input value="0" type="number" min="0" max="65535" step="10" />
+                            <select>
+                                <option value="0">0ms</option>
+                                <option value="20">20ms</option>
+                                <option value="40">40ms</option>
+                                <option value="80">80ms</option>
+                                <option value="100">100ms</option>
+                            </select>
                         </label>
                     </li>
                     <li>
                         <label data-pressure-sensor-data-type="mass">
                             Mass (ms)
-                            <input value="0" type="number" min="0" max="65535" step="10" />
+                            <select>
+                                <option value="0">0ms</option>
+                                <option value="20">20ms</option>
+                                <option value="40">40ms</option>
+                                <option value="80">80ms</option>
+                                <option value="100">100ms</option>
+                            </select>
                         </label>
                     </li>
                     <li>
                         <label data-pressure-sensor-data-type="pressureSingleByte">
                             Pressure (ms)
-                            <input value="0" type="number" min="0" max="65535" step="10" />
+                            <select>
+                                <option value="0">0ms</option>
+                                <option value="20">20ms</option>
+                                <option value="40">40ms</option>
+                                <option value="80">80ms</option>
+                                <option value="100">100ms</option>
+                            </select>
                         </label>
                     </li>
                 </ul>
@@ -247,30 +296,16 @@
                     renderer="colorManagement: true;"
                 >
                     <a-assets>
-                        <a-asset-item
-                            id="caseAsset"
-                            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission.obj?v=1621228628422"
-                        ></a-asset-item>
-                        <a-asset-item
-                            id="lidAsset"
-                            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fside%20mission%20lid.obj?v=1621228763857"
-                        ></a-asset-item>
-                        <img
-                            id="logoAsset"
-                            src="https://cdn.glitch.com/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fname_logo.PNG?v=1621230110826"
-                        />
-                        <a-asset-item
-                            id="shoeAsset"
-                            src="https://cdn.glitch.me/6c283599-191e-4c4a-b236-e1e1f0d90e7a%2Fshoe%20model.glb?v=1635624986582"
-                        ></a-asset-item>
+                        <a-asset-item id="motionModuleAsset" src="/assets/monkey.gltf"></a-asset-item>
+                        <a-asset-item id="leftShoeAsset" src="/assets/leftShoe.gltf"></a-asset-item>
                     </a-assets>
                     <a-camera
                         id="camera"
                         camera="fov: 50; zoom: 2;"
-                        position="0 2 5"
+                        position="0 0 5"
                         orbit-controls="
               autoRotate: false;
-              target: #target;
+              target: #orbitTarget;
               enableDamping: true;
               dampingFactor: 0.125;
               rotateSpeed:0.25;
@@ -278,45 +313,29 @@
               maxDistance:100;
               "
                     ></a-camera>
+                    <a-entity id="orbitTarget"></a-entity>
                     <a-entity id="target"
                         ><a-entity id="leftShoe" visible="false">
-                            <a-entity scale="10 10 10">
-                                <a-entity rotation="-7.000 -92.07 11.210">
-                                    <a-entity position="-0.009 0.010 0.116">
-                                        <a-entity gltf-model="#shoeAsset"></a-entity>
+                            <a-entity scale="1 1 1">
+                                <a-entity rotation="0 0 0">
+                                    <a-entity position="0 0 0">
+                                        <a-entity gltf-model="#leftShoeAsset"></a-entity>
                                     </a-entity>
                                 </a-entity>
                             </a-entity>
                         </a-entity>
                         <a-entity id="rightShoe" visible="false" scale="-1 1 1">
-                            <a-entity scale="10 10 10">
-                                <a-entity rotation="-7.000 -92.07 11.210">
-                                    <a-entity position="-0.009 0.010 0.116">
-                                        <a-entity gltf-model="#shoeAsset"></a-entity>
+                            <a-entity scale="1 1 1">
+                                <a-entity rotation="0 0 0">
+                                    <a-entity position="0 0 0">
+                                        <a-entity gltf-model="#leftShoeAsset"></a-entity>
                                     </a-entity>
                                 </a-entity>
                             </a-entity>
                         </a-entity>
-                        <a-entity
-                            id="motionModule"
-                            position="0 0 0"
-                            rotation="0 0 0"
-                            visible="false"
-                            scale="0.9 0.9 0.9"
-                        >
-                            <a-image
-                                scale="1.8 1.8 1.8"
-                                rotation="-90 0 0"
-                                position="0 0.455 0"
-                                id="logo"
-                                src="#logoAsset"
-                            ></a-image>
-                            <a-entity scale="0.05 0.05 0.05" rotation="-90 90 0">
-                                <a-entity position="-20 -17.5 -10">
-                                    <a-entity id="case" obj-model="obj: #caseAsset;"></a-entity>
-                                    <a-entity id="lid" obj-model="obj: #lidAsset;"></a-entity>
-                                </a-entity>
-                            </a-entity> </a-entity
+
+                        <a-entity id="motionModule" position="0 0 0" rotation="0 0 0" scale="1 1 1" visible="false">
+                            <a-entity gltf-model="#motionModuleAsset"></a-entity> </a-entity
                     ></a-entity>
                     <a-sky color="darkgrey"></a-sky>
                 </a-scene>
@@ -329,12 +348,8 @@
         THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
 
         const url = new URL(location);
-
-        // our device
         let connectionType = url.searchParams.get("connectionType") || "bluetooth";
-        const missionDevice =
-            connectionType == "bluetooth" ? new BluetoothMissionDevice() : new WebSocketMissionDevice();
-        window.missionDevice = missionDevice;
+        console.log("connectionType", connectionType);
 
         const connectionTypeSelect = document.querySelector("#connection select");
         connectionTypeSelect.addEventListener("input", (event) => {
@@ -343,7 +358,6 @@
             url.searchParams.set("connectionType", connectionType);
             location = url.href;
         });
-        connectionTypeSelect.value = connectionType;
 
         function insertUrlParam(key, value) {
             if (history.pushState) {
@@ -385,99 +399,33 @@
                 missionDevice.connect(gateway);
             }
         });
-        missionDevice.addEventListener("connected", (event) => {
-            connectButton.remove();
-        });
 
         const batteryLevelSpan = document.querySelector("#connection .batteryLevel span");
-        missionDevice.addEventListener("batterylevel", (event) => {
-            const { batteryLevel } = event.message;
-            batteryLevelSpan.innerText = batteryLevel;
-        });
 
         const motionCalibrationContainer = document.querySelector("#connection .motionCalibration");
-        missionDevice.addEventListener("motioncalibration", (event) => {
-            const { motionCalibration } = event.message;
-            for (const key in motionCalibration) {
-                motionCalibrationContainer.querySelector(`[data-motion-calibration="${key}"] span`).innerText =
-                    motionCalibration[key];
-            }
-        });
 
         const typeSelect = document.querySelector("#connection .type select");
-        missionDevice.addEventListener("connected", async (event) => {
-            const type = await missionDevice.getType();
-            typeSelect.value = type;
-        });
+
         typeSelect.addEventListener("input", async (event) => {
             await missionDevice.setType(Number(event.target.value));
         });
 
         const nameInput = document.querySelector("#connection .name input");
         const nameButton = document.querySelector("#connection .name button");
-        missionDevice.addEventListener("name", async (event) => {
-            const name = await missionDevice.getName();
-            nameInput.value = name;
-        });
+
         nameButton.addEventListener("click", async (event) => {
             await missionDevice.setName(nameInput.value);
         });
 
         // A-Frame swap entity
-        const scene = document.querySelector("a-scene");
+
+        const _scene = scene.querySelector("a-scene");
         const entities = {
             LEFT_INSOLE: scene.querySelector("#leftShoe"),
             RIGHT_INSOLE: scene.querySelector("#rightShoe"),
             MOTION_MODULE: scene.querySelector("#motionModule"),
         };
         const targetEntity = scene.querySelector("#target");
-        scene.addEventListener("loaded", (event) => {
-            missionDevice.addEventListener("type", async (event) => {
-                const type = await missionDevice.getType();
-                for (const typeString in entities) {
-                    const entity = entities[typeString];
-                    const visible = missionDevice.TypeStrings[type] == typeString;
-                    entity.setAttribute("visible", visible);
-                }
-            });
-        });
-        missionDevice.addEventListener("quaternion", (event) => {
-            const { quaternion } = event.message;
-            targetEntity.object3D.quaternion.copy(quaternion);
-        });
-
-        // Sensor Data configuration
-        for (const sensorType in missionDevice.SensorTypes) {
-            for (const sensorDataType in missionDevice.SensorDataTypes[sensorType]) {
-                const input = document.querySelector(
-                    `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"]`
-                );
-                if (input) {
-                    input.addEventListener("input", async (event) => {
-                        const rate = Number(event.target.value);
-                        await missionDevice.setSensorDataConfigurations({
-                            [sensorType.toLowerCase()]: {
-                                [sensorDataType]: rate,
-                            },
-                        });
-                    });
-                }
-            }
-        }
-
-        missionDevice.addEventListener("sensordataconfigurations", (event) => {
-            const { sensorDataConfigurations } = event.message;
-            for (const sensorType in sensorDataConfigurations) {
-                for (const sensorDataType in sensorDataConfigurations[sensorType]) {
-                    const input = document.querySelector(
-                        `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"] input`
-                    );
-                    if (input) {
-                        input.value = sensorDataConfigurations[sensorType.toLowerCase()][sensorDataType];
-                    }
-                }
-            }
-        });
 
         // canvas stuff
         const dataComponents = {
@@ -505,57 +453,6 @@
             "mass",
             "heelToToe",
         ];
-        dataVisualizations.forEach((type) => {
-            const canvas = document.querySelector(`#${type} canvas`);
-            canvases[type] = canvas;
-            contexts[type] = canvases[type].getContext("2d");
-
-            const components = dataComponents[type] || dataComponents.default;
-
-            samples[type] = {};
-            components.forEach((component) => (samples[type][component] = new Array(numberOfSamples).fill(0)));
-
-            missionDevice.addEventListener(type, (event) => {
-                const { message } = event;
-                const { timestamp } = message;
-                components.forEach((component) => {
-                    const value = typeof message[type] == "number" ? message[type] : message[type][component];
-                    samples[type][component].unshift(value);
-                    samples[type][component].pop();
-                });
-
-                draw(type);
-            });
-
-            if (type == "heelAndToe") {
-                missionDevice.addEventListener("pressure", (event) => {
-                    const { message } = event;
-                    const { timestamp } = message;
-
-                    const { pressure } = message;
-                    let heel = 0;
-                    let toe = 0;
-                    pressure.forEach(({ value }, index) => {
-                        if (index <= 9) {
-                            toe += value;
-                        } else {
-                            heel += value;
-                        }
-                    });
-
-                    toe /= 10;
-                    heel /= 16 - 10;
-
-                    samples.heelAndToe.heel.unshift(heel);
-                    samples.heelAndToe.heel.pop();
-
-                    samples.heelAndToe.toe.unshift(toe);
-                    samples.heelAndToe.toe.pop();
-
-                    draw(type);
-                });
-            }
-        });
 
         const ranges = {
             default: {
@@ -692,8 +589,224 @@
             }
             drawAll();
         });
-        window.dispatchEvent(new Event("resize"));
 
-        drawAll();
+        // our device
+
+        window.addEventListener("load", () => {
+            setTimeout(() => {
+                connectionTypeSelect.value = connectionType;
+            }, 500);
+        });
+        console.log("updating", connectionTypeSelect.value, connectionType);
+        let missionDevice;
+        switch (connectionType) {
+            case "bluetooth":
+                setMission(new BluetoothMissionDevice());
+                break;
+            case "websocket":
+                setMission(new WebSocketMissionDevice());
+                break;
+            case "UKMission":
+                break;
+            default:
+                console.log(`uncaught connectionType "${connectionType}"`);
+                break;
+        }
+
+        function setMission(_mission) {
+            missionDevice = _mission;
+            console.log("missionDevice", missionDevice);
+            window.missionDevice = missionDevice;
+
+            missionDevice.addEventListener("connected", (event) => {
+                connectButton.remove();
+            });
+
+            missionDevice.addEventListener("batterylevel", (event) => {
+                const { batteryLevel } = event.message;
+                batteryLevelSpan.innerText = batteryLevel;
+            });
+
+            missionDevice.addEventListener("motioncalibration", (event) => {
+                const { motionCalibration } = event.message;
+                for (const key in motionCalibration) {
+                    motionCalibrationContainer.querySelector(`[data-motion-calibration="${key}"] span`).innerText =
+                        motionCalibration[key];
+                }
+            });
+
+            missionDevice.addEventListener("connected", async (event) => {
+                const type = await missionDevice.getType();
+                typeSelect.value = type;
+            });
+            if (missionDevice.isConnected) {
+                console.log(missionDevice.deviceType);
+                const deviceTypes = ["motion module", "left insole", "right insole"];
+                typeSelect.value = deviceTypes.indexOf(missionDevice.deviceType);
+            }
+
+            missionDevice.addEventListener("name", async (event) => {
+                const name = await missionDevice.getName();
+                nameInput.value = name;
+            });
+            if (missionDevice.isConnected) {
+                nameInput.value = missionDevice.name;
+            }
+
+            missionDevice.addEventListener("quaternion", (event) => {
+                const { quaternion } = event.message;
+                targetEntity.object3D.quaternion.copy(quaternion);
+            });
+            missionDevice.addEventListener("linearAcceleration", (event) => {
+                const { linearAcceleration } = event.message;
+                onAcceleration(linearAcceleration);
+            });
+            missionDevice.addEventListener("acceleration", (event) => {
+                const { acceleration } = event.message;
+                onAcceleration(acceleration);
+            });
+            function onAcceleration(acceleration) {
+                acceleration.multiplyScalar(0.1);
+                targetEntity.object3D.position.lerp(acceleration, 0.5);
+            }
+
+            missionDevice.addEventListener("sensorDataConfigurations", (event) => {
+                const { sensorDataConfigurations } = event.message;
+                for (const sensorType in sensorDataConfigurations) {
+                    for (const sensorDataType in sensorDataConfigurations[sensorType]) {
+                        const input = document.querySelector(
+                            `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"] select`
+                        );
+                        if (input) {
+                            input.value = sensorDataConfigurations[sensorType.toLowerCase()][sensorDataType];
+                        }
+                    }
+                }
+            });
+
+            function setupScene() {
+                function setModel(deviceType) {
+                    for (const typeString in entities) {
+                        const entity = entities[typeString];
+                        const visible = BaseMission.TypeStrings[deviceType] == typeString;
+                        entity.setAttribute("visible", visible);
+                    }
+                }
+                missionDevice.addEventListener("type", async (event) => {
+                    const type = await missionDevice.getType();
+                    setModel(type);
+                });
+                if (missionDevice.isConnected) {
+                    const deviceTypeEnum = ["motion module", "left insole", "right insole"].indexOf(
+                        missionDevice.deviceType
+                    );
+                    setModel(deviceTypeEnum);
+                }
+            }
+            _scene.addEventListener("loaded", (event) => {
+                setupScene();
+            });
+            if (_scene.hasLoaded) {
+                setupScene();
+            }
+
+            // Sensor Data configuration
+            for (const sensorType in BaseMission.SensorTypes) {
+                for (const sensorDataType in BaseMission.SensorDataTypes[sensorType]) {
+                    const input = document.querySelector(
+                        `[data-${sensorType.toLowerCase()}-sensor-data-type="${sensorDataType}"] select`
+                    );
+                    if (input) {
+                        input.addEventListener("input", async (event) => {
+                            const rate = Number(event.target.value);
+                            await missionDevice.setSensorDataConfigurations({
+                                [sensorType.toLowerCase()]: {
+                                    [sensorDataType]: rate,
+                                },
+                            });
+                        });
+                    }
+                }
+            }
+
+            dataVisualizations.forEach((type) => {
+                const canvas = document.querySelector(`#${type} canvas`);
+                canvases[type] = canvas;
+                contexts[type] = canvases[type].getContext("2d");
+
+                const components = dataComponents[type] || dataComponents.default;
+
+                samples[type] = {};
+                components.forEach((component) => (samples[type][component] = new Array(numberOfSamples).fill(0)));
+
+                missionDevice.addEventListener(type, (event) => {
+                    const { message } = event;
+                    const { timestamp } = message;
+                    components.forEach((component) => {
+                        const value = typeof message[type] == "number" ? message[type] : message[type][component];
+                        samples[type][component].unshift(value);
+                        samples[type][component].pop();
+                    });
+
+                    draw(type);
+                });
+
+                if (type == "heelAndToe") {
+                    missionDevice.addEventListener("pressure", (event) => {
+                        const { message } = event;
+                        const { timestamp } = message;
+
+                        const { pressure } = message;
+                        let heel = 0;
+                        let toe = 0;
+                        pressure.forEach(({ value }, index) => {
+                            if (index <= 9) {
+                                toe += value;
+                            } else {
+                                heel += value;
+                            }
+                        });
+
+                        toe /= 10;
+                        heel /= 16 - 10;
+
+                        samples.heelAndToe.heel.unshift(heel);
+                        samples.heelAndToe.heel.pop();
+
+                        samples.heelAndToe.toe.unshift(toe);
+                        samples.heelAndToe.toe.pop();
+
+                        draw(type);
+                    });
+                }
+            });
+
+            window.dispatchEvent(new Event("resize"));
+
+            drawAll();
+        }
+    </script>
+
+    <script type="module">
+        import { missionsManager } from "../ukatonkit/UkatonKit.js";
+        let mission;
+        const setDeviceTypeSelect = document.getElementById("setDeviceType");
+        const selectUKMissionOption = new Option("UKMission");
+        function setMission(newMission) {
+            if (mission != newMission) {
+                mission = newMission;
+                console.log("UKMission", mission);
+                setDeviceTypeSelect.appendChild(selectUKMissionOption);
+                window.setMission(newMission);
+            }
+        }
+        missionsManager.eventDispatcher.addEventListener("missions", () => onMissionsUpdated());
+        function onMissionsUpdated() {
+            const _mission = missionsManager.missions[0];
+            if (_mission?.isConnected && !mission?.isConnected) {
+                setMission(_mission);
+            }
+        }
+        onMissionsUpdated();
     </script>
 </html>

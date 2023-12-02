@@ -235,7 +235,7 @@
     </body>
 
     <script>
-        if (location.protocol != "https:")
+        if (false && location.protocol != "https:")
             location.replace(`https:${location.href.substring(location.protocol.length)}`);
 
         if (window.parent !== window) {

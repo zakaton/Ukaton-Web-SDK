@@ -102,7 +102,7 @@ function check_is_iOS() {
 }
 const is_iOS = check_is_iOS();
 
-const isInExtension = Boolean(browser.runtime.onMessage);
+const isInExtension = Boolean(window.browser?.runtime.onMessage);
 
 /**
  * @param {object} message
