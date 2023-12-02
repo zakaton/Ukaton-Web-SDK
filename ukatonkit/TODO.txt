@@ -1,4 +1,4 @@
 basic webpage
-    config sensorData
+    wait for sensorDataConfigurations to change
     haptics
 work with data-viz

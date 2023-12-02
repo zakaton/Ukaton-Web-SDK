@@ -2,7 +2,7 @@ import EventDispatcher from "./EventDispatcher.js";
 import { Logger, Poll, sendBackgroundMessage, addBackgroundListener, removeBackgroundListener } from "./utils.js";
 import UKDiscoveredDevice from "./UKDiscoveredDevice.js";
 import { missionsManager } from "./UkatonKit.js";
-import { Vector2, Vector3, Quaternion } from "./three.module.min.js";
+import { Vector2, Vector3, Quaternion, Euler } from "./three.module.min.js";
 
 /** @typedef {import("./UKDiscoveredDevice.js").UKDeviceType} UKDeviceType */
 /** @typedef {import("./UKDiscoveredDevice.js").UKConnectionType} UKConnectionType */
@@ -62,7 +62,7 @@ export default class UKMission {
      * @param {UKDiscoveredDevice} discoveredDevice
      */
     constructor(discoveredDevice) {
-        this.logger = new Logger(false, this, discoveredDevice.id);
+        this.logger = new Logger(true, this, discoveredDevice.id);
         this.#discoveredDevice = discoveredDevice;
         this.#eventDispatcher = discoveredDevice.eventDispatcher;
 
@@ -71,6 +71,8 @@ export default class UKMission {
 
         this.#boundOnBackgroundMessage = this.#onBackgroundMessage.bind(this);
         addBackgroundListener(this.#boundOnBackgroundMessage);
+
+        this.#sendBackgroundMessage({ type: "getSensorDataConfigurations" });
     }
 
     /**
@@ -165,16 +167,53 @@ export default class UKMission {
 
     /** @type {UKSensorDataConfigurations} */
     #sensorDataConfigurations;
+    get sensorDataConfigurations() {
+        return this.#sensorDataConfigurations;
+    }
     /** @param {UKSensorDataConfigurations} newValue */
     #updateSensorDataConfigurations(newValue) {
-        this.#sensorDataConfigurations = newValue;
-        this.dispatchEvent({ type: "sensorDataConfigurations", message: { sensorDataConfigurations: newValue } });
-        if (this.#isSensorDataConfigurationsEmpty) {
-            this.#sensorDataPoll.stop();
-        } else {
-            this.#sensorDataPoll.interval = this.#shortestSensorDataConfigurationInterval;
-            this.#sensorDataPoll.start();
+        if (this.#isSensorDataConfigurationsDifferent(newValue)) {
+            this.#sensorDataConfigurations = newValue;
+            this.logger.log("stopping sensorDataConfigurationsPoll");
+            this.#sensorDataConfigurationsPoll.stop();
+
+            this.logger.log(`updated sensorDataConfigurations ${JSON.stringify(newValue)}`);
+
+            this.dispatchEvent({ type: "sensorDataConfigurations", message: { sensorDataConfigurations: newValue } });
+
+            if (this.#isSensorDataConfigurationsEmpty) {
+                this.#sensorDataPoll.stop();
+            } else {
+                this.#sensorDataPoll.interval = this.#shortestSensorDataConfigurationInterval;
+                this.#sensorDataPoll.start();
+            }
         }
+    }
+    /**
+     *
+     * @param {UKSensorDataConfigurations} sensorDataConfigurations
+     * @returns {boolean}
+     */
+    #isSensorDataConfigurationsDifferent(sensorDataConfigurations) {
+        if (!this.#sensorDataConfigurations) {
+            return true;
+        }
+
+        console.log(sensorDataConfigurations, this.#sensorDataConfigurations);
+
+        var isDifferent = false;
+        loop: for (const sensorType in sensorDataConfigurations) {
+            for (const sensorDataType in sensorDataConfigurations[sensorType]) {
+                if (
+                    sensorDataConfigurations[sensorType][sensorDataType] !=
+                    this.#sensorDataConfigurations[sensorType][sensorDataType]
+                ) {
+                    isDifferent = true;
+                    break loop;
+                }
+            }
+        }
+        return isDifferent;
     }
     /** @type {number} */
     get #shortestSensorDataConfigurationInterval() {
@@ -204,36 +243,18 @@ export default class UKMission {
         return isEmpty;
     }
 
-    async getSensorDataConfigurations() {
-        if (this.#sensorDataConfigurations) {
-            return this.#sensorDataConfigurations;
-        }
-        const promise = this.#waitForSensorDataConfigurations();
-        this.#sendBackgroundMessage({ type: "getSensorDataConfigurations" });
-        return promise;
-    }
     /** @param {UKSensorDataConfigurations} sensorDataConfigurations */
-    async setSensorDataConfigurations(sensorDataConfigurations = {}) {
-        const promise = this.#waitForSensorDataConfigurations();
-        this.#sendBackgroundMessage({ type: "setSensorDataConfigurations", sensorDataConfigurations });
+    async setSensorDataConfigurations(sensorDataConfigurations) {
+        if (!this.#isSensorDataConfigurationsDifferent(sensorDataConfigurations)) {
+            this.logger.log("redundant sensorDataConfigurations");
+            return;
+        }
+        this.logger.log("starting sensorDataConfigurationsPoll");
         this.#sensorDataConfigurationsPoll.start();
-        return promise;
-    }
-    async #waitForSensorDataConfigurations() {
-        return new Promise((resolve) => {
-            this.addEventListener(
-                "sensorDataConfigurations",
-                (event) => {
-                    this.logger.log("received sensorDataConfigurations", event);
-                    this.#sensorDataConfigurationsPoll.stop();
-                    resolve(event.message.sensorDataConfigurations);
-                },
-                { once: true }
-            );
-        });
+        this.#sendBackgroundMessage({ type: "setSensorDataConfigurations", sensorDataConfigurations });
     }
 
-    #sensorDataConfigurationsPoll = new Poll(this.#checkSensorDataConfigurations.bind(this), 1000);
+    #sensorDataConfigurationsPoll = new Poll(this.#checkSensorDataConfigurations.bind(this), 50);
     async #checkSensorDataConfigurations() {
         await this.#sendBackgroundMessage({ type: "getSensorDataConfigurations" });
     }
@@ -266,7 +287,7 @@ export default class UKMission {
                         const quaternion = new Quaternion(...value);
                         this.dispatchEvent({ type: "quaternion", message: { quaternion, timestamp } });
 
-                        const euler = new THREE.Euler().setFromQuaternion(quaternion);
+                        const euler = new Euler().setFromQuaternion(quaternion);
                         euler.reorder("YXZ");
                         this.dispatchEvent({ type: "euler", message: { euler, timestamp } });
                         break;

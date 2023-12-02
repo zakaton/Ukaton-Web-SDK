@@ -67,6 +67,51 @@ function updateDiscoveredDevices() {
             discoveredDevice.eventDispatcher.addEventListener("update", () => updateDiscoveredDevice(discoveredDevice));
             discoveredDevice.eventDispatcher.addEventListener("destroy", () => container._destroy(), { once: true });
 
+            const toggleQuaternionDataButton = container.querySelector("button.toggleQuaternionData");
+            toggleQuaternionDataButton.addEventListener("click", async () => {
+                const { mission } = discoveredDevice;
+                if (mission) {
+                    console.log("toggling motion data");
+                    const isQuaternionEnabled = mission.sensorDataConfigurations.motion.quaternion > 0;
+                    mission.setSensorDataConfigurations({ motion: { quaternion: isQuaternionEnabled ? 0 : 20 } });
+                }
+            });
+
+            const togglePressureDataButton = container.querySelector("button.togglePressureData");
+            togglePressureDataButton.addEventListener("click", async () => {
+                const { mission } = discoveredDevice;
+                if (mission) {
+                    console.log("toggling presure data");
+                    const isPressureEnabled = mission.sensorDataConfigurations.pressure.pressureSingleByte > 0;
+                    mission.setSensorDataConfigurations({
+                        pressure: { pressureSingleByte: isPressureEnabled ? 0 : 20 },
+                    });
+                }
+            });
+
+            discoveredDevice.eventDispatcher.addEventListener("quaternion", (message) => {
+                console.log("FUCK", message);
+            });
+            discoveredDevice.eventDispatcher.addEventListener("pressure", (message) => {
+                console.log("FOO", message);
+            });
+
+            discoveredDevice.eventDispatcher.addEventListener("sensorDataConfigurations", (event) => {
+                const { sensorDataConfigurations } = event.message;
+                const isQuaternionEnabled = sensorDataConfigurations.motion.quaternion > 0;
+                const isPressureEnabled = sensorDataConfigurations.pressure.pressureSingleByte > 0;
+
+                console.log("isQuaternionEnabled", isQuaternionEnabled);
+                console.log("isPressureEnabled", isPressureEnabled);
+
+                toggleQuaternionDataButton.innerText = isQuaternionEnabled
+                    ? "disable quaternion data"
+                    : "enable quaternion data";
+                togglePressureDataButton.innerText = isPressureEnabled
+                    ? "disable pressure data"
+                    : "enable pressure data";
+            });
+
             discoveredDeviceContainers[id] = container;
             discoveredDevicesContainer.appendChild(container);
         }
@@ -94,11 +139,9 @@ function updateDiscoveredDevice(discoveredDevice) {
         container.querySelector(".timestampDifference").innerText = discoveredDevice.timestampDifference.toFixed(3);
     }
 
+    container.dataset.connectedToWifi = discoveredDevice.isConnectedToWifi;
     if (discoveredDevice.isConnectedToWifi) {
         container.querySelector(".ipAddress").innerText = discoveredDevice.ipAddress;
-        container.classList.add("connectedToWifi");
-    } else {
-        container.classList.remove("connectedToWifi");
     }
 }
 

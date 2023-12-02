@@ -62,16 +62,16 @@
         body.iOS .udp {
             display: none;
         }
-        .discoveredDevice:not([data-connection-status="not connected"]) > .connection > .notConnected {
+        .discoveredDevice:not([data-connection-status="not connected"]) .notConnected {
             display: none;
         }
-        .discoveredDevice:not([data-connection-status="connecting"]) > .connection > .connecting {
+        .discoveredDevice:not([data-connection-status="connecting"]) .connecting {
             display: none;
         }
-        .discoveredDevice:not([data-connection-status="connected"]) > .connection > .connected {
+        .discoveredDevice:not([data-connection-status="connected"]) .connected {
             display: none;
         }
-        .discoveredDevice:not([data-connection-status="disconnecting"]) > .connection > .disconnecting {
+        .discoveredDevice:not([data-connection-status="disconnecting"]) .disconnecting {
             display: none;
         }
 
@@ -98,6 +98,10 @@
             display: none;
         }
 
+        .discoveredDevice:not([data-connected-to-wifi="true"]) .connectedToWifi {
+            display: none;
+        }
+
         .center {
             justify-content: center;
         }
@@ -115,6 +119,10 @@
             animation: pulsateAnimation 0.6s infinite;
             animation-timing-function: ease-in-out;
             animation-direction: alternate;
+        }
+
+        .discoveredDevice:not([data-device-type~="insole"]) .pressureOnly {
+            display: none;
         }
     </style>
     <body>
@@ -152,8 +160,21 @@
                     <div class="status">
                         <div class="rssi scanning"></div>
                         <div class="timestampDifference scanning"></div>
-                        <div class="ipAddress"></div>
+                        <div class="ipAddress connectedToWifi"></div>
                     </div>
+
+                    <div class="connected sensorData">
+                        <div class="motionData">
+                            <button class="toggleQuaternionData">enable quaternion data</button>
+                            <div class="quaternionData"></div>
+                        </div>
+                        <div class="pressureData pressureOnly">
+                            <button class="togglePressureData">enable pressure data</button>
+                            <div class="pressureData"></div>
+                        </div>
+                    </div>
+
+                    <div class="connected haptics"></div>
                 </div>
             </template>
         </div>
