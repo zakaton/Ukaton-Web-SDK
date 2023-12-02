@@ -1,190 +1,209 @@
 <html>
-  <head>
-    <title>4-Side | Ukaton Side Mission</title>
+    <head>
+        <title>4-Side | Ukaton Side Mission</title>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="/PeerBluetoothMissionDevice.js"></script>
-  </head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="/PeerBluetoothMissionDevice.js"></script>
+    </head>
 
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #container {
-      position: relative;
-      width: 100%;
-      height: 100%;
-    }
-
-    #container > * {
-      position: absolute;
-    }
-
-    #container .cursor {
-      background-color: red;
-
-      width: 30px;
-      height: 30px;
-
-      z-index: 2;
-    }
-    #container .target {
-      background-color: #2196f3;
-      width: 10%;
-      height: 10%;
-
-      z-index: 1;
-    }
-
-    #container.onTarget .target {
-      background-color: #35ff35;
-    }
-
-    bbutton {
-      display: none;
-    }
-  </style>
-
-  <body>
-    <button data-side="left">
-      left
-    </button>
-    <button data-side="right">
-      right
-    </button>
-
-    <div id="container">
-      <div class="cursor"></div>
-      <div class="target"></div>
-    </div>
-  </body>
-
-  <script>
-    const missions = new BluetoothMissions();
-
-    missions.sides.forEach(side => {
-      const button = document.querySelector(`[data-side="${side}"]`);
-      button.addEventListener("click", event => {
-        missions[side].connect();
-      });
-      missions[side].addEventListener(
-        "connected",
-        async event => {
-          button.remove();
-          await missions[side].setSensorDataConfigurations({
-            pressure: { pressureDoubleByte: 20 }
-          });
-        },
-        { once: true }
-      );
-    });
-
-    const container = document.getElementById("container");
-    const cursor = container.querySelector(".cursor");
-    const target = container.querySelector(".target");
-
-    // https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/inverse-lerp-a-super-useful-yet-often-overlooked-function-r5230/
-    THREE.MathUtils.inverseLerp = function inverseLerp(x, y, value) {
-      if (x !== y) {
-        return (value - x) / (y - x);
-      } else {
-        return 0;
-      }
-    };
-    missions.sides.forEach(side => {
-      missions[side].addEventListener("pressure", event => {
-        const { centerOfMass } = missions.pressure;
-        let { x, y } = centerOfMass;
-        x = THREE.MathUtils.inverseLerp(0.3, 0.7, x);
-        y = THREE.MathUtils.inverseLerp(0.3, 0.7, y);
-        updateBalance(x, 1 - y);
-      });
-    });
-
-    let targetBalance = { x: 0, y: 0 };
-    let targetBalanceMargin = { x: 0, y: 0 };
-    let currentBalance = { x: 0, y: 0 };
-    let isOnTarget = false;
-    let onTargetTime = 0;
-    let targetTimeToWin = 1000;
-    const cursorSize = 30; // cursorSize
-    cursor.style.width = cursor.style.height = `${30}px`;
-    const updateBalance = (x, y) => {
-      Object.assign(currentBalance, { x, y });
-
-      const width = cursorSize / container.clientWidth;
-      const height = cursorSize / container.clientHeight;
-
-      cursor.style.left = `${(x - width / 2) * 100}%`;
-      cursor.style.bottom = `${(y - height / 2) * 100}%`;
-
-      const isCurrentlyOnTarget =
-        Math.abs(currentBalance.x - targetBalance.x) <
-          targetBalanceMargin.x + width / 2 &&
-        Math.abs(currentBalance.y - targetBalance.y) <
-          targetBalanceMargin.y + height / 2;
-      if (isCurrentlyOnTarget) {
-        if (!isOnTarget) {
-          onTargetTime = Date.now();
-          isOnTarget = true;
-          container.classList.add("onTarget", onTargetTime);
-          //console.log("on target!")
-        } else {
-          //console.log("still on target!", Date.now() - onTargetTime);
-          if (Date.now() - onTargetTime >= targetTimeToWin) {
-            isOnTarget = false;
-            container.classList.remove("onTarget");
-            resetTarget();
-            //console.log("winner!");
-          }
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
         }
-      } else {
-        if (isOnTarget) {
-          container.classList.remove("onTarget");
-          isOnTarget = false;
-          //console.log("off target!")
-        } else {
-          //console.log("still off target!");
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100%;
         }
-      }
-    };
-    const resetTarget = (x, y, xMargin, yMargin) => {
-      targetBalanceMargin.x = THREE.MathUtils.lerp(
-        0.05,
-        0.1,
-        !isNaN(xMargin) ? xMargin : Math.random()
-      );
-      targetBalanceMargin.y = THREE.MathUtils.lerp(
-        0.05,
-        0.15,
-        !isNaN(yMargin) ? yMargin : Math.random()
-      );
 
-      console.log("target margin", targetBalanceMargin);
+        #container > * {
+            position: absolute;
+        }
 
-      targetBalance.x = THREE.MathUtils.clamp(
-        !isNaN(x) ? x : Math.random(),
-        targetBalanceMargin.x,
-        1 - targetBalanceMargin.x
-      );
-      targetBalance.y = THREE.MathUtils.clamp(
-        !isNaN(y) ? y : Math.random(),
-        targetBalanceMargin.y,
-        1 - targetBalanceMargin.y
-      );
+        #container .cursor {
+            background-color: red;
 
-      console.log("target balance", targetBalance);
+            width: 30px;
+            height: 30px;
 
-      target.style.width = `${2 * targetBalanceMargin.x * 100}%`;
-      target.style.height = `${2 * targetBalanceMargin.y * 100}%`;
+            z-index: 2;
+        }
+        #container .target {
+            background-color: #2196f3;
+            width: 10%;
+            height: 10%;
 
-      target.style.left = `${(targetBalance.x - targetBalanceMargin.x) * 100}%`;
-      target.style.bottom = `${(targetBalance.y - targetBalanceMargin.y) *
-        100}%`;
-    };
-    resetTarget();
-  </script>
+            z-index: 1;
+        }
+
+        #container.onTarget .target {
+            background-color: #35ff35;
+        }
+
+        bbutton {
+            display: none;
+        }
+    </style>
+
+    <body>
+        <button data-side="left">left</button>
+        <button data-side="right">right</button>
+
+        <div id="container">
+            <div class="cursor"></div>
+            <div class="target"></div>
+        </div>
+    </body>
+
+    <script>
+        const missions = new BluetoothMissions();
+
+        missions.sides.forEach((side) => {
+            const button = document.querySelector(`[data-side="${side}"]`);
+            button.addEventListener("click", (event) => {
+                missions[side].connect();
+            });
+            missions[side].addEventListener(
+                "connected",
+                async (event) => {
+                    button.remove();
+                    setMission(missions[side]);
+                },
+                { once: true }
+            );
+        });
+
+        async function setMission(mission) {
+            setTimeout(async () => {
+                await mission.setSensorDataConfigurations({
+                    pressure: { pressureDoubleByte: 20 },
+                });
+            }, 1000);
+
+            mission.addEventListener("pressure", (event) => {
+                const { centerOfMass } = missions.pressure;
+                let { x, y } = centerOfMass;
+                x = THREE.MathUtils.inverseLerp(0.3, 0.7, x);
+                y = THREE.MathUtils.inverseLerp(0.3, 0.7, y);
+                updateBalance(x, y);
+            });
+        }
+
+        const container = document.getElementById("container");
+        const cursor = container.querySelector(".cursor");
+        const target = container.querySelector(".target");
+
+        // https://www.gamedev.net/tutorials/programming/general-and-gameplay-programming/inverse-lerp-a-super-useful-yet-often-overlooked-function-r5230/
+        THREE.MathUtils.inverseLerp = function inverseLerp(x, y, value) {
+            if (x !== y) {
+                return (value - x) / (y - x);
+            } else {
+                return 0;
+            }
+        };
+
+        let targetBalance = { x: 0, y: 0 };
+        let targetBalanceMargin = { x: 0, y: 0 };
+        let currentBalance = { x: 0, y: 0 };
+        let isOnTarget = false;
+        let onTargetTime = 0;
+        let targetTimeToWin = 1000;
+        const cursorSize = 30; // cursorSize
+        cursor.style.width = cursor.style.height = `${30}px`;
+        const updateBalance = (x, y) => {
+            Object.assign(currentBalance, { x, y });
+
+            const width = cursorSize / container.clientWidth;
+            const height = cursorSize / container.clientHeight;
+
+            cursor.style.left = `${(x - width / 2) * 100}%`;
+            cursor.style.bottom = `${(y - height / 2) * 100}%`;
+
+            const isCurrentlyOnTarget =
+                Math.abs(currentBalance.x - targetBalance.x) < targetBalanceMargin.x + width / 2 &&
+                Math.abs(currentBalance.y - targetBalance.y) < targetBalanceMargin.y + height / 2;
+            if (isCurrentlyOnTarget) {
+                if (!isOnTarget) {
+                    onTargetTime = Date.now();
+                    isOnTarget = true;
+                    container.classList.add("onTarget", onTargetTime);
+                    //console.log("on target!")
+                } else {
+                    //console.log("still on target!", Date.now() - onTargetTime);
+                    if (Date.now() - onTargetTime >= targetTimeToWin) {
+                        isOnTarget = false;
+                        container.classList.remove("onTarget");
+                        resetTarget();
+                        //console.log("winner!");
+                    }
+                }
+            } else {
+                if (isOnTarget) {
+                    container.classList.remove("onTarget");
+                    isOnTarget = false;
+                    //console.log("off target!")
+                } else {
+                    //console.log("still off target!");
+                }
+            }
+        };
+        const resetTarget = (x, y, xMargin, yMargin) => {
+            targetBalanceMargin.x = THREE.MathUtils.lerp(0.05, 0.1, !isNaN(xMargin) ? xMargin : Math.random());
+            targetBalanceMargin.y = THREE.MathUtils.lerp(0.05, 0.15, !isNaN(yMargin) ? yMargin : Math.random());
+
+            console.log("target margin", targetBalanceMargin);
+
+            targetBalance.x = THREE.MathUtils.clamp(
+                !isNaN(x) ? x : Math.random(),
+                targetBalanceMargin.x,
+                1 - targetBalanceMargin.x
+            );
+            targetBalance.y = THREE.MathUtils.clamp(
+                !isNaN(y) ? y : Math.random(),
+                targetBalanceMargin.y,
+                1 - targetBalanceMargin.y
+            );
+
+            console.log("target balance", targetBalance);
+
+            target.style.width = `${2 * targetBalanceMargin.x * 100}%`;
+            target.style.height = `${2 * targetBalanceMargin.y * 100}%`;
+
+            target.style.left = `${(targetBalance.x - targetBalanceMargin.x) * 100}%`;
+            target.style.bottom = `${(targetBalance.y - targetBalanceMargin.y) * 100}%`;
+        };
+        resetTarget();
+    </script>
+
+    <script type="module">
+        import { missionsManager } from "../ukatonkit/UkatonKit.js";
+        const connectionTypeSelect = document.querySelector(".connect select");
+        function setMission(mission) {
+            missions.replaceInsole(mission);
+            window.setMission(mission);
+        }
+        missionsManager.eventDispatcher.addEventListener("missions", () => onMissionsUpdated());
+        const foundInsoles = {
+            left: false,
+            right: false,
+            get foundAll() {
+                return this.left && this.right;
+            },
+        };
+        function onMissionsUpdated() {
+            if (!foundInsoles.foundAll) {
+                missionsManager.missions.some((mission) => {
+                    if (mission.isConnected && mission.isInsole && !foundInsoles[mission.insoleSide]) {
+                        setMission(mission);
+                        foundInsoles[mission.insoleSide] = true;
+                    }
+                    return foundInsoles.foundAll;
+                });
+            }
+        }
+        onMissionsUpdated();
+    </script>
 </html>

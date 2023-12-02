@@ -1,171 +1,199 @@
 <html>
-  <head>
-    <title>Ball | Ukaton Side Mission</title>
+    <head>
+        <title>Ball | Ukaton Side Mission</title>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="/PeerBluetoothMissionDevice.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="/PeerBluetoothMissionDevice.js"></script>
 
-    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
-  </head>
+        <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+        <script src="https://unpkg.com/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+    </head>
 
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    a-scene {
-      width: 100%;
-      height: 100%;
-    }
-  </style>
-
-  <body>
-    <button data-side="left">
-      left
-    </button>
-    <button data-side="right">
-      right
-    </button>
-
-    <a-scene
-      device-orientation-permission-ui="enabled: false"
-      physics="gravity: -10;"
-      vr-mode-ui="enabled: false"
-      embedded
-    >
-      <a-camera
-        id="camera"
-        fov="80"
-        position="0 8 8"
-        rotation="-50 0 0"
-        look-controls="enabled: false;"
-        wasd-controls-enabled="false;"
-      ></a-camera>
-      <a-sphere
-        dynamic-body
-        color="red"
-        radius="0.5"
-        position="0 5 0"
-        shadow="receive: false; cast: true;"
-      ></a-sphere>
-      <a-plane
-        shadow="receive: true; cast: false;"
-        class="floor"
-        static-body
-        color="#66ff66"
-        width="12"
-        height="12"
-        rotation="-90 0 0"
-      ></a-plane>
-      <a-plane
-        class="reset"
-        static-body
-        visible="false"
-        width="100"
-        height="100"
-        position="0 -4 0"
-        rotation="-90 0 0"
-      ></a-plane>
-      <a-sky color="#dbfbff"></a-sky>
-    </a-scene>
-  </body>
-
-  <script></script>
-
-  <script>
-    const missions = new BluetoothMissions();
-
-    missions.sides.forEach(side => {
-      const button = document.querySelector(`[data-side="${side}"]`);
-      button.addEventListener("click", event => {
-        missions[side].connect();
-      });
-      missions[side].addEventListener(
-        "connected",
-        async event => {
-          button.remove();
-          await missions[side].setSensorDataConfigurations({
-            pressure: { pressureDoubleByte: 20 }
-          });
-        },
-        { once: true }
-      );
-    });
-
-    missions.sides.forEach(side => {
-      missions[side].addEventListener("pressure", event => {
-        const { centerOfMass } = missions.pressure;
-        const { x, y } = centerOfMass;
-        updateBalance(x, y);
-      });
-    });
-
-    const plane = document.querySelector("a-plane.floor");
-    const onPlaneLoaded = () => {
-      plane.object3D.rotation.order = "XYZ";
-    };
-    if (plane.hasLoaded) {
-      onPlaneLoaded();
-    } else {
-      plane.addEventListener("loaded", event => {
-        onPlaneLoaded();
-      });
-    }
-
-    const sphere = document.querySelector("a-sphere");
-    const planeRotationConstraints = {
-      pitch: {
-        min: -0.5,
-        max: 0.5,
-        lerp(value) {
-          return THREE.Math.lerp(this.min, this.max, value);
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
         }
-      },
-      roll: {
-        min: -0.5,
-        max: 0.5,
-        lerp(value) {
-          return THREE.Math.lerp(this.min, this.max, value);
+        a-scene {
+            width: 100%;
+            height: 100%;
         }
-      }
-    };
-    const pitchOffset = -Math.PI / 2;
-    const targetEuler = new THREE.Euler();
-    targetEuler.x = pitchOffset;
-    const updateBalance = (x, y) => {
-      const newPitch = pitchOffset + planeRotationConstraints.pitch.lerp(y);
-      const newRoll = planeRotationConstraints.roll.lerp(x);
-      targetEuler.x = newPitch;
-      targetEuler.y = newRoll;
-    };
-    const resetPlane = document.querySelector("a-plane.reset");
-    sphere.addEventListener("collide", event => {
-      if (event.detail.body.el == resetPlane) {
-        resetSphere();
-      }
-    });
-    const resetSphere = () => {
-      sphere.removeAttribute("dynamic-body");
-      sphere.setAttribute("position", "0 5 0");
-      sphere.setAttribute("dynamic-body", "");
-    };
+    </style>
 
-    const fromVector = new THREE.Vector3();
-    const toVector = new THREE.Vector3();
-    let approachedToVector = true;
-    const onAnimationFrame = () => {
-      if (true || (missions.left.isConnected && missions.right.isConnected)) {
-        const planeEuler = plane.object3D.rotation;
-        planeEuler.toVector3(fromVector);
-        targetEuler.toVector3(toVector);
-        fromVector.lerp(toVector, 0.1);
-        planeEuler.setFromVector3(fromVector);
-      }
-      requestAnimationFrame(onAnimationFrame);
-    };
-    requestAnimationFrame(onAnimationFrame);
-  </script>
+    <body>
+        <button data-side="left">left</button>
+        <button data-side="right">right</button>
+
+        <a-scene
+            device-orientation-permission-ui="enabled: false"
+            physics="gravity: -10;"
+            vr-mode-ui="enabled: false"
+            embedded
+        >
+            <a-camera
+                id="camera"
+                fov="80"
+                position="0 8 8"
+                rotation="-50 0 0"
+                look-controls="enabled: false;"
+                wasd-controls-enabled="false;"
+            ></a-camera>
+            <a-sphere
+                dynamic-body
+                color="red"
+                radius="0.5"
+                position="0 5 0"
+                shadow="receive: false; cast: true;"
+            ></a-sphere>
+            <a-plane
+                shadow="receive: true; cast: false;"
+                class="floor"
+                static-body
+                color="#66ff66"
+                width="12"
+                height="12"
+                rotation="-90 0 0"
+            ></a-plane>
+            <a-plane
+                class="reset"
+                static-body
+                visible="false"
+                width="100"
+                height="100"
+                position="0 -4 0"
+                rotation="-90 0 0"
+            ></a-plane>
+            <a-sky color="#dbfbff"></a-sky>
+        </a-scene>
+    </body>
+
+    <script></script>
+
+    <script>
+        const missions = new BluetoothMissions();
+
+        missions.sides.forEach((side) => {
+            const button = document.querySelector(`[data-side="${side}"]`);
+            button.addEventListener("click", (event) => {
+                missions[side].connect();
+            });
+            missions[side].addEventListener(
+                "connected",
+                async (event) => {
+                    button.remove();
+                    setMission(missions[side]);
+                },
+                { once: true }
+            );
+        });
+
+        async function setMission(mission) {
+            setTimeout(async () => {
+                await mission.setSensorDataConfigurations({
+                    pressure: { pressureDoubleByte: 20 },
+                });
+            }, 1000);
+            mission.addEventListener("pressure", (event) => {
+                const { centerOfMass } = missions.pressure;
+                const { x, y } = centerOfMass;
+                updateBalance(x, 1 - y);
+            });
+        }
+
+        const plane = document.querySelector("a-plane.floor");
+        const onPlaneLoaded = () => {
+            plane.object3D.rotation.order = "XYZ";
+        };
+        if (plane.hasLoaded) {
+            onPlaneLoaded();
+        } else {
+            plane.addEventListener("loaded", (event) => {
+                onPlaneLoaded();
+            });
+        }
+
+        const sphere = document.querySelector("a-sphere");
+        const planeRotationConstraints = {
+            pitch: {
+                min: -0.5,
+                max: 0.5,
+                lerp(value) {
+                    return THREE.Math.lerp(this.min, this.max, value);
+                },
+            },
+            roll: {
+                min: -0.5,
+                max: 0.5,
+                lerp(value) {
+                    return THREE.Math.lerp(this.min, this.max, value);
+                },
+            },
+        };
+        const pitchOffset = -Math.PI / 2;
+        const targetEuler = new THREE.Euler();
+        targetEuler.x = pitchOffset;
+        const updateBalance = (x, y) => {
+            const newPitch = pitchOffset + planeRotationConstraints.pitch.lerp(y);
+            const newRoll = planeRotationConstraints.roll.lerp(x);
+            targetEuler.x = newPitch;
+            targetEuler.y = newRoll;
+        };
+        const resetPlane = document.querySelector("a-plane.reset");
+        sphere.addEventListener("collide", (event) => {
+            if (event.detail.body.el == resetPlane) {
+                resetSphere();
+            }
+        });
+        const resetSphere = () => {
+            sphere.removeAttribute("dynamic-body");
+            sphere.setAttribute("position", "0 5 0");
+            sphere.setAttribute("dynamic-body", "");
+        };
+
+        const fromVector = new THREE.Vector3();
+        const toVector = new THREE.Vector3();
+        let approachedToVector = true;
+        const onAnimationFrame = () => {
+            if (true || (missions.left.isConnected && missions.right.isConnected)) {
+                const planeEuler = plane.object3D.rotation;
+                planeEuler.toVector3(fromVector);
+                targetEuler.toVector3(toVector);
+                fromVector.lerp(toVector, 0.1);
+                planeEuler.setFromVector3(fromVector);
+            }
+            requestAnimationFrame(onAnimationFrame);
+        };
+        requestAnimationFrame(onAnimationFrame);
+    </script>
+
+    <script type="module">
+        import { missionsManager } from "../ukatonkit/UkatonKit.js";
+        const connectionTypeSelect = document.querySelector(".connect select");
+        function setMission(mission) {
+            missions.replaceInsole(mission);
+            window.setMission(mission);
+        }
+        missionsManager.eventDispatcher.addEventListener("missions", () => onMissionsUpdated());
+        const foundInsoles = {
+            left: false,
+            right: false,
+            get foundAll() {
+                return this.left && this.right;
+            },
+        };
+        function onMissionsUpdated() {
+            if (!foundInsoles.foundAll) {
+                missionsManager.missions.some((mission) => {
+                    if (mission.isConnected && mission.isInsole && !foundInsoles[mission.insoleSide]) {
+                        setMission(mission);
+                        foundInsoles[mission.insoleSide] = true;
+                    }
+                    return foundInsoles.foundAll;
+                });
+            }
+        }
+        onMissionsUpdated();
+    </script>
 </html>

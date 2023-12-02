@@ -1,169 +1,208 @@
 <html>
-  <head>
-    <title>2-Side | Ukaton Side Mission</title>
+    <head>
+        <title>2-Side | Ukaton Side Mission</title>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
-    <script src="/BaseMission.js"></script>
-    <script src="/BluetoothMissionDevice.js"></script>
-    <script src="/PeerBluetoothMissionDevice.js"></script>
-  </head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.min.js"></script>
+        <script src="/BaseMission.js"></script>
+        <script src="/BluetoothMissionDevice.js"></script>
+        <script src="/PeerBluetoothMissionDevice.js"></script>
+    </head>
 
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #container {
-      width: 100%;
-      height: 100%;
-
-      display: flex;
-      flex-direction: row;
-      justify-content: space-evenly;
-      align-items: center;
-    }
-    [data-side] {
-      width: 100px;
-      height: 100%;
-      position: relative;
-    }
-    [data-side] > * {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-    }
-    [data-side] > .target {
-      height: 50px;
-      width: calc(100% + 50px);
-      opacity: 0.5;
-      left: -25px;
-      z-index: 2;
-      background-color: #2196f3;
-      bottom: 0;
-    }
-    [data-side] > .fill {
-      background: linear-gradient(#e66465, white);
-      z-index: 1;
-      margin: auto;
-      bottom: 0;
-    }
-    
-    #container.onTarget .target {
-      background-color: #35ff35;
-    }
-    
-    bbutton {
-      display: none;
-    }
-  </style>
-
-  <body>
-    <button data-side="left">
-      left
-    </button>
-    <button data-side="right">
-      right
-    </button>
-
-    <div id="container">
-      <div data-side="left">
-        <div class="target"></div>
-        <div class="fill"></div>
-      </div>
-      <div data-side="right">
-        <div class="target"></div>
-        <div class="fill"></div>
-      </div>
-    </div>
-  </body>
-  <script>
-    const missions = new BluetoothMissions();
-
-    missions.sides.forEach(side => {
-      const button = document.querySelector(`[data-side="${side}"]`);
-      button.addEventListener("click", event => {
-        missions[side].connect();
-      });
-      missions[side].addEventListener(
-        "connected",
-        async event => {
-          button.remove();
-          await missions[side].setSensorDataConfigurations({
-            pressure: { pressureDoubleByte: 20 }
-          });
-        },
-        { once: true }
-      );
-    });
-
-    const container = document.getElementById("container");
-    const divs = {};
-    const divFills = {};
-    const divTargets = {};
-    missions.sides.forEach(side => {
-      divs[side] = container.querySelector(`[data-side="${side}"]`);
-      divFills[side] = divs[side].querySelector(".fill");
-      divTargets[side] = divs[side].querySelector(".target");
-
-      missions[side].addEventListener("pressure", event => {
-        const { centerOfMass } = missions.pressure;
-        updateBalance(centerOfMass.x);
-      });
-    });
-    
-    let targetBalance = 0;
-    let targetBalanceMargin = 0;
-    let currentBalance = 0;
-    let isOnTarget = false;
-    let onTargetTime = 0;
-    let targetTimeToWin = 1500;
-    const updateBalance = (newBalance) => {
-      currentBalance = newBalance;
-      
-      divFills.left.style.height = `${(1 - currentBalance)*100}%`;
-      divFills.right.style.height = `${(currentBalance)*100}%`;
-      
-      const isCurrentlyOnTarget = Math.abs(currentBalance - targetBalance) < targetBalanceMargin;
-      if (isCurrentlyOnTarget) {
-        if (!isOnTarget) {
-          onTargetTime = Date.now();
-          isOnTarget = true;
-          container.classList.add("onTarget", onTargetTime);
-          //console.log("on target!")
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
         }
-        else {
-          //console.log("still on target!", Date.now() - onTargetTime);
-          if ((Date.now() - onTargetTime) >= targetTimeToWin) {
-            isOnTarget = false;
-            container.classList.remove("onTarget");
-            resetTarget();
-            //console.log("winner!");
-          }
+        #container {
+            width: 100%;
+            height: 100%;
+
+            display: flex;
+            flex-direction: row;
+            justify-content: space-evenly;
+            align-items: center;
         }
-      }
-      else {
-        if (isOnTarget) {
-          container.classList.remove("onTarget");
-          isOnTarget = false;
-          //console.log("off target!")
+        [data-side] {
+            width: 100px;
+            height: 100%;
+            position: relative;
         }
-        else {
-          //console.log("still off target!");
+        [data-side] > * {
+            position: absolute;
+            width: 100%;
+            height: 100%;
         }
-      }
-    }
-    const resetTarget = (newTarget, newTargetMargin) => {
-      targetBalanceMargin = THREE.MathUtils.lerp(0.05, 0.15, !isNaN(newTargetMargin)? newTargetMargin : Math.random());
-      targetBalance = THREE.MathUtils.clamp(!isNaN(newTarget)? newTarget : Math.random(), targetBalanceMargin, 1-targetBalanceMargin);
-      
-      console.log(`target balance of ${targetBalance.toFixed(2)} with a margin of ${targetBalanceMargin.toFixed(2)}`);
-      
-      divTargets.left.style.height = `${2*targetBalanceMargin * 100}%`;
-      divTargets.right.style.height = `${2*targetBalanceMargin * 100}%`;
-      
-      divTargets.left.style.bottom = `${(1-(targetBalance+(targetBalanceMargin)))*100}%`;
-      divTargets.right.style.bottom = `${(targetBalance-(targetBalanceMargin))*100}%`;
-    }
-    resetTarget(0.5);
-  </script>
+        [data-side] > .target {
+            height: 50px;
+            width: calc(100% + 50px);
+            opacity: 0.5;
+            left: -25px;
+            z-index: 2;
+            background-color: #2196f3;
+            bottom: 0;
+        }
+        [data-side] > .fill {
+            background: linear-gradient(#e66465, white);
+            z-index: 1;
+            margin: auto;
+            bottom: 0;
+        }
+
+        #container.onTarget .target {
+            background-color: #35ff35;
+        }
+
+        bbutton {
+            display: none;
+        }
+    </style>
+
+    <body>
+        <button data-side="left">left</button>
+        <button data-side="right">right</button>
+
+        <div id="container">
+            <div data-side="left">
+                <div class="target"></div>
+                <div class="fill"></div>
+            </div>
+            <div data-side="right">
+                <div class="target"></div>
+                <div class="fill"></div>
+            </div>
+        </div>
+    </body>
+    <script>
+        const missions = new BluetoothMissions();
+
+        missions.sides.forEach((side) => {
+            const button = document.querySelector(`[data-side="${side}"]`);
+            button.addEventListener("click", (event) => {
+                missions[side].connect();
+            });
+            missions[side].addEventListener(
+                "connected",
+                async (event) => {
+                    setMission(missions[side], side);
+                },
+                { once: true }
+            );
+        });
+
+        async function setMission(mission, side) {
+            const button = document.querySelector(`[data-side="${side}"]`);
+            button.remove();
+            setTimeout(async () => {
+                await mission.setSensorDataConfigurations({
+                    pressure: { pressureDoubleByte: 20 },
+                });
+            }, 1000);
+
+            mission.addEventListener("pressure", (event) => {
+                const { centerOfMass } = missions.pressure;
+                updateBalance(centerOfMass.x);
+            });
+        }
+
+        const container = document.getElementById("container");
+        const divs = {};
+        const divFills = {};
+        const divTargets = {};
+        missions.sides.forEach((side) => {
+            divs[side] = container.querySelector(`[data-side="${side}"]`);
+            divFills[side] = divs[side].querySelector(".fill");
+            divTargets[side] = divs[side].querySelector(".target");
+        });
+
+        let targetBalance = 0;
+        let targetBalanceMargin = 0;
+        let currentBalance = 0;
+        let isOnTarget = false;
+        let onTargetTime = 0;
+        let targetTimeToWin = 1500;
+        const updateBalance = (newBalance) => {
+            currentBalance = newBalance;
+
+            divFills.left.style.height = `${(1 - currentBalance) * 100}%`;
+            divFills.right.style.height = `${currentBalance * 100}%`;
+
+            const isCurrentlyOnTarget = Math.abs(currentBalance - targetBalance) < targetBalanceMargin;
+            if (isCurrentlyOnTarget) {
+                if (!isOnTarget) {
+                    onTargetTime = Date.now();
+                    isOnTarget = true;
+                    container.classList.add("onTarget", onTargetTime);
+                    //console.log("on target!")
+                } else {
+                    //console.log("still on target!", Date.now() - onTargetTime);
+                    if (Date.now() - onTargetTime >= targetTimeToWin) {
+                        isOnTarget = false;
+                        container.classList.remove("onTarget");
+                        resetTarget();
+                        //console.log("winner!");
+                    }
+                }
+            } else {
+                if (isOnTarget) {
+                    container.classList.remove("onTarget");
+                    isOnTarget = false;
+                    //console.log("off target!")
+                } else {
+                    //console.log("still off target!");
+                }
+            }
+        };
+        const resetTarget = (newTarget, newTargetMargin) => {
+            targetBalanceMargin = THREE.MathUtils.lerp(
+                0.05,
+                0.15,
+                !isNaN(newTargetMargin) ? newTargetMargin : Math.random()
+            );
+            targetBalance = THREE.MathUtils.clamp(
+                !isNaN(newTarget) ? newTarget : Math.random(),
+                targetBalanceMargin,
+                1 - targetBalanceMargin
+            );
+
+            console.log(
+                `target balance of ${targetBalance.toFixed(2)} with a margin of ${targetBalanceMargin.toFixed(2)}`
+            );
+
+            divTargets.left.style.height = `${2 * targetBalanceMargin * 100}%`;
+            divTargets.right.style.height = `${2 * targetBalanceMargin * 100}%`;
+
+            divTargets.left.style.bottom = `${(1 - (targetBalance + targetBalanceMargin)) * 100}%`;
+            divTargets.right.style.bottom = `${(targetBalance - targetBalanceMargin) * 100}%`;
+        };
+        resetTarget(0.5);
+    </script>
+
+    <script type="module">
+        import { missionsManager } from "../ukatonkit/UkatonKit.js";
+        const connectionTypeSelect = document.querySelector(".connect select");
+        function setMission(mission) {
+            missions.replaceInsole(mission);
+            window.setMission(mission, mission.insoleSide);
+        }
+        missionsManager.eventDispatcher.addEventListener("missions", () => onMissionsUpdated());
+        const foundInsoles = {
+            left: false,
+            right: false,
+            get foundAll() {
+                return this.left && this.right;
+            },
+        };
+        function onMissionsUpdated() {
+            if (!foundInsoles.foundAll) {
+                missionsManager.missions.some((mission) => {
+                    if (mission.isConnected && mission.isInsole && !foundInsoles[mission.insoleSide]) {
+                        setMission(mission);
+                        foundInsoles[mission.insoleSide] = true;
+                    }
+                    return foundInsoles.foundAll;
+                });
+            }
+        }
+        onMissionsUpdated();
+    </script>
 </html>
