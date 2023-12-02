@@ -168,7 +168,7 @@ export default class UKDiscoveredDevice {
      * @param {UKDiscoveredDeviceInfo} discoveredDeviceInfo
      */
     constructor(discoveredDeviceInfo) {
-        this.logger = new Logger(true, this, discoveredDeviceInfo.id);
+        this.logger = new Logger(false, this, discoveredDeviceInfo.id);
         this.update(discoveredDeviceInfo);
 
         this.#boundOnBackgroundMessage = this.#onBackgroundMessage.bind(this);

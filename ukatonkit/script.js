@@ -73,7 +73,7 @@ function updateDiscoveredDevices() {
                 if (mission) {
                     console.log("toggling motion data");
                     const isQuaternionEnabled = mission.sensorDataConfigurations.motion.quaternion > 0;
-                    mission.setSensorDataConfigurations({ motion: { quaternion: isQuaternionEnabled ? 0 : 20 } });
+                    mission.setSensorDataConfigurations({ motion: { quaternion: isQuaternionEnabled ? 0 : 1000 } });
                 }
             });
 
@@ -84,16 +84,18 @@ function updateDiscoveredDevices() {
                     console.log("toggling presure data");
                     const isPressureEnabled = mission.sensorDataConfigurations.pressure.pressureSingleByte > 0;
                     mission.setSensorDataConfigurations({
-                        pressure: { pressureSingleByte: isPressureEnabled ? 0 : 20 },
+                        pressure: { pressureSingleByte: isPressureEnabled ? 0 : 1000 },
                     });
                 }
             });
 
-            discoveredDevice.eventDispatcher.addEventListener("quaternion", (message) => {
-                console.log("FUCK", message);
+            const quaternionDataContainer = container.querySelector(".quaternionData");
+            discoveredDevice.eventDispatcher.addEventListener("quaternion", (event) => {
+                quaternionDataContainer.innerText = JSON.stringify(event.message.quaternion);
             });
-            discoveredDevice.eventDispatcher.addEventListener("pressure", (message) => {
-                console.log("FOO", message);
+            const pressureDataContainer = container.querySelector(".rawPressureData");
+            discoveredDevice.eventDispatcher.addEventListener("pressure", (event) => {
+                pressureDataContainer.innerText = JSON.stringify(event.message.pressure);
             });
 
             discoveredDevice.eventDispatcher.addEventListener("sensorDataConfigurations", (event) => {
@@ -110,6 +112,24 @@ function updateDiscoveredDevices() {
                 togglePressureDataButton.innerText = isPressureEnabled
                     ? "disable pressure data"
                     : "enable pressure data";
+            });
+
+            const triggerWaveformEffectButton = container.querySelector(".triggerWaveformEffect");
+            triggerWaveformEffectButton.addEventListener("click", () => {
+                const { mission } = discoveredDevice;
+                if (mission) {
+                    console.log("triggering waveform effect");
+                    mission.vibrateWaveformEffects([2, 3, 4]);
+                }
+            });
+
+            const triggerWaveformButton = container.querySelector(".triggerWaveform");
+            triggerWaveformButton.addEventListener("click", () => {
+                const { mission } = discoveredDevice;
+                if (mission) {
+                    console.log("triggering waveform");
+                    mission.vibrateWaveforms([{ intensity: 1, delay: 1000 }]);
+                }
             });
 
             discoveredDeviceContainers[id] = container;

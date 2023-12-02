@@ -62,7 +62,7 @@ export default class UKMission {
      * @param {UKDiscoveredDevice} discoveredDevice
      */
     constructor(discoveredDevice) {
-        this.logger = new Logger(true, this, discoveredDevice.id);
+        this.logger = new Logger(false, this, discoveredDevice.id);
         this.#discoveredDevice = discoveredDevice;
         this.#eventDispatcher = discoveredDevice.eventDispatcher;
 
@@ -73,6 +73,12 @@ export default class UKMission {
         addBackgroundListener(this.#boundOnBackgroundMessage);
 
         this.#sendBackgroundMessage({ type: "getSensorDataConfigurations" });
+
+        window.addEventListener("unload", () => {
+            if (this.isConnected) {
+                this.clearSensorDataConfigurations();
+            }
+        });
     }
 
     /**
@@ -199,10 +205,12 @@ export default class UKMission {
             return true;
         }
 
-        console.log(sensorDataConfigurations, this.#sensorDataConfigurations);
-
         var isDifferent = false;
         loop: for (const sensorType in sensorDataConfigurations) {
+            if (sensorType == "pressure" && this.deviceType == "motion module") {
+                continue;
+            }
+
             for (const sensorDataType in sensorDataConfigurations[sensorType]) {
                 if (
                     sensorDataConfigurations[sensorType][sensorDataType] !=
@@ -252,6 +260,14 @@ export default class UKMission {
         this.logger.log("starting sensorDataConfigurationsPoll");
         this.#sensorDataConfigurationsPoll.start();
         this.#sendBackgroundMessage({ type: "setSensorDataConfigurations", sensorDataConfigurations });
+    }
+
+    async clearSensorDataConfigurations() {
+        if (!this.#isSensorDataConfigurationsEmpty) {
+            this.logger.log("starting sensorDataConfigurationsPoll");
+            this.#sensorDataConfigurationsPoll.start();
+            this.#sendBackgroundMessage({ type: "clearSensorDataConfigurations" });
+        }
     }
 
     #sensorDataConfigurationsPoll = new Poll(this.#checkSensorDataConfigurations.bind(this), 50);

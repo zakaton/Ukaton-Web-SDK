@@ -3,7 +3,7 @@ import { Poll, Logger, sendBackgroundMessage, addBackgroundListener } from "./ut
 import UKDiscoveredDevice from "./UKDiscoveredDevice.js";
 
 class UKBluetoothManager {
-    logger = new Logger(true, this);
+    logger = new Logger(false, this);
     eventDispatcher = new EventDispatcher();
 
     static #shared = new UKBluetoothManager();
