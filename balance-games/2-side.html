@@ -50,6 +50,20 @@
 
         #container.onTarget .target {
             background-color: #35ff35;
+
+            transform: scaleX(1);
+            animation: pulsateAnimation 0.4s infinite;
+            animation-timing-function: ease-in-out;
+            animation-direction: alternate;
+        }
+
+        @keyframes pulsateAnimation {
+            0% {
+                transform: scaleX(1);
+            }
+            100% {
+                transform: scaleX(1.25);
+            }
         }
 
         bbutton {
@@ -94,7 +108,7 @@
             button.remove();
             setTimeout(async () => {
                 await mission.setSensorDataConfigurations({
-                    pressure: { pressureDoubleByte: 20 },
+                    pressure: { pressureSingleByte: 20 },
                 });
             }, 1000);
 

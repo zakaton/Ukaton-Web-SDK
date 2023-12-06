@@ -94,7 +94,7 @@ export default class UKMission {
 
         window.addEventListener("unload", () => {
             if (this.isConnected) {
-                this.clearSensorDataConfigurations();
+                //this.clearSensorDataConfigurations();
             }
         });
     }
@@ -304,8 +304,11 @@ export default class UKMission {
 
     /** @type {object} */
     #sensorData;
+    /** @type {number} */
+    #sensorDataTimestamp = 0;
     #updateSensorData(sensorData, timestamp) {
         this.#sensorData = sensorData;
+        this.#sensorDataTimestamp = timestamp;
         this.logger.log("received sensor data", sensorData);
         for (const sensorType in sensorData) {
             for (const sensorDataType in sensorData[sensorType]) {
@@ -375,7 +378,7 @@ export default class UKMission {
 
     #sensorDataPoll = new Poll(this.#checkSensorData.bind(this), 200);
     async #checkSensorData() {
-        await this.#sendBackgroundMessage({ type: "sensorData" });
+        await this.#sendBackgroundMessage({ type: "sensorData", timestamp: this.#sensorDataTimestamp });
     }
 
     /**

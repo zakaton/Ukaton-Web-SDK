@@ -1,0 +1,46 @@
+<html>
+    <head>
+        <title>CMHeadphoneMotionManager | Ukaton</title>
+        <link rel="icon" href="/favicon.png" />
+    </head>
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+
+        body {
+            width: fit-content;
+            padding: 10px;
+
+            font-family: system-ui;
+            text-align: center;
+
+            font-size: larger;
+            margin: auto;
+        }
+
+        button {
+            font-size: large;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            /* Dark Mode styles go here. */
+        }
+    </style>
+    <body>
+        <h1>CMHeadphoneMotionManager</h1>
+    </body>
+
+    <script type="module">
+        import { headphoneMotionManager } from "../ukatonkit/UkatonKit.js";
+        console.log(headphoneMotionManager);
+        /*
+        TODO
+            - check if available
+            - enable (poll if active)
+            - poll for data
+            - disable (poll if inactive)
+            - stop polling
+        */
+    </script>
+</html>

@@ -328,8 +328,9 @@
                     console.log(missions[side]);
                     missions[side].setSensorDataConfigurations({
                         pressure: {
-                            [type]: enabled ? 40 : 0,
-                            [otherType]: 0,
+                            //[type]: enabled ? 40 : 0,
+                            //[otherType]: 0,
+                            pressureSingleByte: enabled ? 40 : 0,
                         },
                     });
                 });
@@ -373,12 +374,20 @@
 
     <script type="module">
         import { missionsManager } from "../ukatonkit/UkatonKit.js";
+
         const connectionTypeSelect = document.querySelector(".connect select");
+        const checkBoxes = {};
         function setMission(mission) {
             missions[mission.insoleSide].dispatchEvent({ type: "connected" });
             missions.replaceInsole(mission);
+            checkBoxes[mission.insoleSide] = document.querySelector(`.pressure .${mission.insoleSide} .enable input`);
             mission.addEventListener("pressure", (event) => {
                 onPressure(mission.insoleSide, event, "pressure");
+            });
+            mission.addEventListener("sensorDataConfigurations", (event) => {
+                console.log(mission.insoleSide, mission.sensorDataConfigurations.pressure.pressureSingleByte);
+                checkBoxes[mission.insoleSide].checked =
+                    mission.sensorDataConfigurations.pressure.pressureSingleByte > 0;
             });
         }
         missionsManager.eventDispatcher.addEventListener("missions", () => onMissionsUpdated());
