@@ -1,6 +1,6 @@
 import EventDispatcher from "./EventDispatcher.js";
 import { Poll, Logger, sendBackgroundMessage, addBackgroundListener } from "./utils.js";
-import { Vector3, Quaternion, Euler } from "./three.module.min.js";
+import { Vector3, Quaternion, Euler, MathUtils } from "./three.module.min.js";
 
 /** @typedef {"default" | "left headphone" | "right headphone" | "unknown"} UKHeadphoneMotionSensorLocation */
 
@@ -12,6 +12,8 @@ import { Vector3, Quaternion, Euler } from "./three.module.min.js";
  * @property {UKHeadphoneMotionSensorLocation} sensorLocation
  * @property {[number]} quaternion
  * @property {[number]} userAcceleration
+ * @property {[number]} rotationRate
+ * @property {[number]} gravity
  */
 
 /**
@@ -23,6 +25,8 @@ import { Vector3, Quaternion, Euler } from "./three.module.min.js";
  * @property {Quaternion} quaternion
  * @property {Vector3} userAcceleration
  * @property {Euler} euler
+ * @property {Euler} rotationRate
+ * @property {Vector3} gravity
  *
  */
 
@@ -177,6 +181,8 @@ class UKHeadphoneMotionManager {
             sensorLocation,
             quaternion: quaternionArray,
             userAcceleration: userAccelerationArray,
+            gravity: gravityArray,
+            rotationRate: rotationRateArray,
         } = rawMotionData;
 
         /** @type {UKHeadphoneMotionData} */
@@ -185,6 +191,8 @@ class UKHeadphoneMotionManager {
             sensorLocation,
             quaternion: new Quaternion(...quaternionArray),
             userAcceleration: new Vector3(...userAccelerationArray),
+            gravity: new Vector3(...gravityArray),
+            rotationRate: new Euler(...rotationRateArray.map((value) => value)),
         };
         motionData.euler = new Euler().setFromQuaternion(motionData.quaternion).reorder("YXZ");
         this.#motionData = motionData;

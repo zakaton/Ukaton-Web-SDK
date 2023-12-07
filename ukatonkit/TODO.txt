@@ -1,3 +1,4 @@
 UKCMHeadphoneMotionManager
-    webpage
+    monkey mode
+    mirror mode
 Reset orientation for data-viz

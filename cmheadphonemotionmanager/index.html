@@ -18,7 +18,8 @@
             margin: auto;
         }
 
-        button {
+        button,
+        select {
             font-size: large;
         }
 
@@ -28,17 +29,47 @@
 
         a-scene {
             width: 340px;
-            height: 500px;
+            height: 475px;
             margin: auto;
-            margin-top: 20px;
+            margin-top: 10px;
             border-radius: 40px;
             overflow: hidden;
+        }
+
+        #controls {
+            display: inline-flex;
+            gap: 0.5rem;
+            flex-direction: column;
+        }
+
+        h1 {
+            margin-bottom: 10px;
         }
     </style>
     <body>
         <h1>Headphone Motion</h1>
-        <span id="isActive"></span>
-        <button disabled id="toggleMotionUpdates">start motion updates</button>
+        <div id="controls">
+            <button disabled id="toggleMotionUpdates">start motion updates</button>
+            <div style="display: flex; flex-direction: row; gap: 1rem; align-items: center">
+                <label>
+                    orientation
+                    <select id="orientation">
+                        <option>quaternion</option>
+                        <option>rotation rate</option>
+                        <option>none</option>
+                    </select>
+                </label>
+                <button id="resetYaw">reset</button>
+            </div>
+            <label>
+                translation
+                <select id="translation">
+                    <option>none</option>
+                    <option>user acceleration</option>
+                    <option>gravity</option>
+                </select>
+            </label>
+        </div>
         <a-scene
             embedded
             vr-mode-ui="enabled: false"
@@ -67,9 +98,11 @@
 
             <a-entity id="orbitTarget"></a-entity>
 
-            <a-entity id="target">
-                <a-entity id="default" gltf-model="#defaultAsset" visible="false"></a-entity>
-                <a-entity id="rightAirpod" gltf-model="#rightAirpodAsset" visible="false"></a-entity>
+            <a-entity id="targetCorrection">
+                <a-entity id="target">
+                    <a-entity id="default" gltf-model="#defaultAsset" visible="false"></a-entity>
+                    <a-entity id="rightAirpod" gltf-model="#rightAirpodAsset" visible="false"></a-entity>
+                </a-entity>
             </a-entity>
 
             <a-sky color="lightgray"></a-sky>
@@ -85,9 +118,36 @@
         console.log(headphoneMotionManager);
 
         const targetEntity = document.getElementById("target");
+        const targetCorrectionEntity = document.getElementById("targetCorrection");
 
         const defaultEntity = document.getElementById("default");
         const rightAirpodEntity = document.getElementById("rightAirpod");
+
+        const orientationSelect = document.getElementById("orientation");
+        var orientationType = orientationSelect.value;
+        orientationSelect.addEventListener("input", (event) => {
+            targetEntity.object3D.quaternion.identity();
+            orientationType = orientationSelect.value;
+        });
+        const translationSelect = document.getElementById("translation");
+        var translationType = translationSelect.value;
+        translationSelect.addEventListener("input", (event) => {
+            targetEntity.object3D.position.set(0, 0, 0);
+            translationType = translationSelect.value;
+        });
+
+        const resetYawButton = document.getElementById("resetYaw");
+        resetYawButton.addEventListener("click", () => {
+            resetYaw();
+        });
+
+        var yawOffset = 0;
+        var eulerOffset = new THREE.Euler(0, 0, 0, "YXZ");
+        function resetYaw() {
+            const { quaternion } = headphoneMotionManager.motionData;
+            eulerOffset.setFromQuaternion(quaternion);
+            yawOffset = eulerOffset.y;
+        }
 
         const toggleMotionUpdatesButton = document.getElementById("toggleMotionUpdates");
         toggleMotionUpdatesButton.addEventListener("click", () => {
@@ -102,25 +162,55 @@
         onIsActiveUpdate();
 
         function onIsAvailableUpdate() {
-            toggleMotionUpdatesButton.disabled = !headphoneMotionManager.isAvailable;
+            const disabled = !headphoneMotionManager.isAvailable;
+            toggleMotionUpdatesButton.disabled = disabled;
+            orientationSelect.disabled = disabled;
+            translationSelect.disabled = disabled;
         }
         headphoneMotionManager.eventDispatcher.addEventListener("isAvailable", () => onIsAvailableUpdate());
         onIsAvailableUpdate();
 
-        window.shouldCorrect = true;
+        window.shouldCorrect = false;
         let inverseQuaternion = new THREE.Quaternion();
+        var euler = new THREE.Euler(0, 0, 0, "YXZ");
         headphoneMotionManager.eventDispatcher.addEventListener("motionData", (event) => {
             const { motionData } = event.message;
-            const { sensorLocation: newSensorLocation, quaternion, userAcceleration, euler } = motionData;
+            const {
+                sensorLocation: newSensorLocation,
+                quaternion,
+                userAcceleration,
+                euler,
+                rotationRate,
+                gravity,
+            } = motionData;
             onSensorLocationUpdate(newSensorLocation);
             if (window.shouldCorrect) {
                 quaternion.multiply(inverseQuaternion);
             }
-            targetEntity.object3D.quaternion.copy(quaternion);
+
+            switch (translationType) {
+                case "user acceleration":
+                    targetEntity.object3D.position.copy(userAcceleration);
+                    break;
+                case "gravity":
+                    targetEntity.object3D.position.copy(gravity);
+                    break;
+            }
+            switch (orientationType) {
+                case "quaternion":
+                    euler.setFromQuaternion(quaternion);
+                    euler.y -= eulerOffset.y;
+                    targetEntity.object3D.rotation.copy(euler);
+                    break;
+                case "rotation rate":
+                    targetEntity.object3D.rotation.copy(rotationRate);
+                    break;
+            }
         });
         window.updateInverseQuaternion = (x, y, z, order) => {
             const euler = new THREE.Euler(x, y, z, order);
             inverseQuaternion.setFromEuler(euler);
+            targetCorrectionEntity.object3D.quaternion.copy(inverseQuaternion);
         };
         //updateInverseQuaternion(1.0, -0.12, -0.25, "YXZ");
         var sensorLocation = null;
