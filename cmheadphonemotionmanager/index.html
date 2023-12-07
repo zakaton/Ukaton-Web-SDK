@@ -45,12 +45,19 @@
         h1 {
             margin-bottom: 10px;
         }
+
+        .row {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            align-items: center;
+        }
     </style>
     <body>
         <h1>Headphone Motion</h1>
         <div id="controls">
             <button disabled id="toggleMotionUpdates">start motion updates</button>
-            <div style="display: flex; flex-direction: row; gap: 1rem; align-items: center">
+            <div class="row">
                 <label>
                     orientation
                     <select id="orientation">
@@ -61,14 +68,17 @@
                 </label>
                 <button id="resetYaw">reset</button>
             </div>
-            <label>
-                translation
-                <select id="translation">
-                    <option>none</option>
-                    <option>user acceleration</option>
-                    <option>gravity</option>
-                </select>
-            </label>
+            <div class="row">
+                <label>
+                    translation
+                    <select id="translation">
+                        <option>none</option>
+                        <option>user acceleration</option>
+                        <option>gravity</option>
+                    </select>
+                </label>
+                <button id="toggleMirrorMode">🐵</button>
+            </div>
         </div>
         <a-scene
             embedded
@@ -98,8 +108,8 @@
 
             <a-entity id="orbitTarget"></a-entity>
 
-            <a-entity id="targetCorrection">
-                <a-entity id="target">
+            <a-entity id="target">
+                <a-entity id="targetCorrection">
                     <a-entity id="default" gltf-model="#defaultAsset" visible="false"></a-entity>
                     <a-entity id="rightAirpod" gltf-model="#rightAirpodAsset" visible="false"></a-entity>
                 </a-entity>
@@ -170,6 +180,21 @@
         headphoneMotionManager.eventDispatcher.addEventListener("isAvailable", () => onIsAvailableUpdate());
         onIsAvailableUpdate();
 
+        const toggleMirrorModeButton = document.getElementById("toggleMirrorMode");
+        toggleMirrorModeButton.addEventListener("click", () => toggleMirrorMode());
+
+        var isMirrorModeEnabled = false;
+        function toggleMirrorMode() {
+            isMirrorModeEnabled = !isMirrorModeEnabled;
+            toggleMirrorModeButton.innerText = isMirrorModeEnabled ? "🙈" : "🐵";
+
+            if (isMirrorModeEnabled) {
+                onSensorLocationUpdate(null);
+                rightAirpodEntity.object3D.visible = false;
+                defaultEntity.object3D.visible = true;
+            }
+        }
+
         window.shouldCorrect = false;
         let inverseQuaternion = new THREE.Quaternion();
         var euler = new THREE.Euler(0, 0, 0, "YXZ");
@@ -183,28 +208,50 @@
                 rotationRate,
                 gravity,
             } = motionData;
-            onSensorLocationUpdate(newSensorLocation);
+
+            if (!isMirrorModeEnabled) {
+                onSensorLocationUpdate(newSensorLocation);
+            }
+
             if (window.shouldCorrect) {
                 quaternion.multiply(inverseQuaternion);
             }
 
+            var newPosition;
             switch (translationType) {
                 case "user acceleration":
-                    targetEntity.object3D.position.copy(userAcceleration);
+                    newPosition = userAcceleration.clone();
                     break;
                 case "gravity":
-                    targetEntity.object3D.position.copy(gravity);
+                    newPosition = gravity.clone();
                     break;
             }
+            if (newPosition) {
+                targetEntity.object3D.position.copy(newPosition);
+            }
+
+            var newOrientation;
             switch (orientationType) {
                 case "quaternion":
                     euler.setFromQuaternion(quaternion);
                     euler.y -= eulerOffset.y;
-                    targetEntity.object3D.rotation.copy(euler);
+                    euler.z -= eulerOffset.z;
+                    newOrientation = euler.clone();
                     break;
                 case "rotation rate":
-                    targetEntity.object3D.rotation.copy(rotationRate);
+                    newOrientation = rotationRate.clone();
                     break;
+            }
+            if (newOrientation) {
+                if (isMirrorModeEnabled) {
+                    if (orientationType == "rotation rate") {
+                        newOrientation.x *= -1;
+                    }
+                    newOrientation.z *= -1;
+                    newOrientation.y *= -1;
+                    newOrientation.y += Math.PI;
+                }
+                targetEntity.object3D.rotation.copy(newOrientation);
             }
         });
         window.updateInverseQuaternion = (x, y, z, order) => {
@@ -220,11 +267,12 @@
                 let shouldShowRightAirpod = false;
                 let shouldShowDefault = false;
                 let shouldMirrorRightAirpod = false;
+                let rightAirpodScaleX = 1;
 
                 switch (sensorLocation) {
                     case "left headphone":
                         shouldShowRightAirpod = true;
-                        shouldMirrorRightAirpod = true;
+                        rightAirpodScaleX = -1;
                         updateInverseQuaternion(0.85, 0.7, 0.55, "YXZ");
                         break;
                     case "right headphone":
@@ -236,18 +284,16 @@
                         updateInverseQuaternion(0, 0, 0, "YXZ");
                         break;
                 }
-                if (shouldMirrorRightAirpod) {
-                    rightAirpodEntity.object3D.scale.x = -1;
+                if (rightAirpodEntity.object3D.scale.x != rightAirpodScaleX) {
+                    rightAirpodEntity.object3D.scale.x = rightAirpodScaleX;
                 }
-                rightAirpodEntity.object3D.visible = shouldShowRightAirpod;
-                defaultEntity.object3D.visible = shouldShowDefault;
+                if (rightAirpodEntity.object3D.visible != shouldShowRightAirpod) {
+                    rightAirpodEntity.object3D.visible = shouldShowRightAirpod;
+                }
+                if (defaultEntity.object3D.visible != shouldShowDefault) {
+                    defaultEntity.object3D.visible = shouldShowDefault;
+                }
             }
         }
-
-        /*
-        TODO
-            - update 3d model
-            - acceleration data
-        */
     </script>
 </html>

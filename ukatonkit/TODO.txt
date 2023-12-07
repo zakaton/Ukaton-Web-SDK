@@ -1,4 +1,7 @@
 UKCMHeadphoneMotionManager
-    monkey mode
-    mirror mode
+    mirror acceleration
+        invert x/z axes
+    mirror orientation
+        add 180degrees
+        invert yaw
 Reset orientation for data-viz
