@@ -1,5 +1,3 @@
 UKCMHeadphoneMotionManager
-    poll for active
-    parse raw data
     webpage
 Reset orientation for data-viz

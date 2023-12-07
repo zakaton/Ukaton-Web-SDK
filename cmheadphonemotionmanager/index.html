@@ -2,6 +2,8 @@
     <head>
         <title>CMHeadphoneMotionManager | Ukaton</title>
         <link rel="icon" href="/favicon.png" />
+        <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+        <script src="https://cdn.rawgit.com/tizzle/aframe-orbit-controls-component/v0.1.14/dist/aframe-orbit-controls-component.min.js"></script>
     </head>
     <style>
         :root {
@@ -9,13 +11,10 @@
         }
 
         body {
-            width: fit-content;
-            padding: 10px;
-
             font-family: system-ui;
             text-align: center;
 
-            font-size: larger;
+            font-size: large;
             margin: auto;
         }
 
@@ -26,21 +25,139 @@
         @media (prefers-color-scheme: dark) {
             /* Dark Mode styles go here. */
         }
+
+        a-scene {
+            width: 340px;
+            height: 500px;
+            margin: auto;
+            margin-top: 20px;
+            border-radius: 40px;
+            overflow: hidden;
+        }
     </style>
     <body>
-        <h1>CMHeadphoneMotionManager</h1>
+        <h1>Headphone Motion</h1>
+        <span id="isActive"></span>
+        <button disabled id="toggleMotionUpdates">start motion updates</button>
+        <a-scene
+            embedded
+            vr-mode-ui="enabled: false"
+            device-orientation-permission-ui="enabled: false"
+            renderer="colorManagement: true;"
+        >
+            <a-assets>
+                <a-asset-item id="defaultAsset" src="/assets/monkey.gltf"></a-asset-item>
+                <a-asset-item id="rightAirpodAsset" src="/assets/rightAirpod.gltf"></a-asset-item>
+            </a-assets>
+
+            <a-camera
+                id="camera"
+                camera="fov: 50; zoom: 3;"
+                position="0 0 8"
+                orbit-controls="
+              autoRotate: false;
+              target: #orbitTarget;
+              enableDamping: true;
+              dampingFactor: 0.125;
+              rotateSpeed:0.25;
+              minDistance:3;
+              maxDistance:100;
+              "
+            ></a-camera>
+
+            <a-entity id="orbitTarget"></a-entity>
+
+            <a-entity id="target">
+                <a-entity id="default" gltf-model="#defaultAsset" visible="false"></a-entity>
+                <a-entity id="rightAirpod" gltf-model="#rightAirpodAsset" visible="false"></a-entity>
+            </a-entity>
+
+            <a-sky color="lightgray"></a-sky>
+        </a-scene>
     </body>
+
+    <script>
+        THREE.Quaternion.prototype.inverse = THREE.Quaternion.prototype.invert;
+    </script>
 
     <script type="module">
         import { headphoneMotionManager } from "../ukatonkit/UkatonKit.js";
         console.log(headphoneMotionManager);
+
+        const targetEntity = document.getElementById("target");
+
+        const defaultEntity = document.getElementById("default");
+        const rightAirpodEntity = document.getElementById("rightAirpod");
+
+        const toggleMotionUpdatesButton = document.getElementById("toggleMotionUpdates");
+        toggleMotionUpdatesButton.addEventListener("click", () => {
+            headphoneMotionManager.toggleMotionUpdates();
+        });
+        function onIsActiveUpdate() {
+            toggleMotionUpdatesButton.innerText = headphoneMotionManager.isActive
+                ? "stop motion updates"
+                : "start motion updates";
+        }
+        headphoneMotionManager.eventDispatcher.addEventListener("isActive", () => onIsActiveUpdate());
+        onIsActiveUpdate();
+
+        function onIsAvailableUpdate() {
+            toggleMotionUpdatesButton.disabled = !headphoneMotionManager.isAvailable;
+        }
+        headphoneMotionManager.eventDispatcher.addEventListener("isAvailable", () => onIsAvailableUpdate());
+        onIsAvailableUpdate();
+
+        window.shouldCorrect = true;
+        let inverseQuaternion = new THREE.Quaternion();
+        headphoneMotionManager.eventDispatcher.addEventListener("motionData", (event) => {
+            const { motionData } = event.message;
+            const { sensorLocation: newSensorLocation, quaternion, userAcceleration, euler } = motionData;
+            onSensorLocationUpdate(newSensorLocation);
+            if (window.shouldCorrect) {
+                quaternion.multiply(inverseQuaternion);
+            }
+            targetEntity.object3D.quaternion.copy(quaternion);
+        });
+        window.updateInverseQuaternion = (x, y, z, order) => {
+            const euler = new THREE.Euler(x, y, z, order);
+            inverseQuaternion.setFromEuler(euler);
+        };
+        //updateInverseQuaternion(1.0, -0.12, -0.25, "YXZ");
+        var sensorLocation = null;
+        function onSensorLocationUpdate(newSensorLocation) {
+            if (sensorLocation != newSensorLocation) {
+                sensorLocation = newSensorLocation;
+                let shouldShowRightAirpod = false;
+                let shouldShowDefault = false;
+                let shouldMirrorRightAirpod = false;
+
+                switch (sensorLocation) {
+                    case "left headphone":
+                        shouldShowRightAirpod = true;
+                        shouldMirrorRightAirpod = true;
+                        updateInverseQuaternion(0.85, 0.7, 0.55, "YXZ");
+                        break;
+                    case "right headphone":
+                        shouldShowRightAirpod = true;
+                        updateInverseQuaternion(1.0, -0.12, -0.25, "YXZ");
+                        break;
+                    default:
+                        shouldShowDefault = true;
+                        updateInverseQuaternion(0, 0, 0, "YXZ");
+                        break;
+                }
+                if (shouldMirrorRightAirpod) {
+                    rightAirpodEntity.object3D.scale.x = -1;
+                }
+                rightAirpodEntity.object3D.visible = shouldShowRightAirpod;
+                defaultEntity.object3D.visible = shouldShowDefault;
+            }
+        }
+
         /*
         TODO
-            - check if available
-            - enable (poll if active)
-            - poll for data
-            - disable (poll if inactive)
-            - stop polling
+            - update 3d model
+            - acceleration data
         */
     </script>
 </html>

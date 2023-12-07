@@ -1,20 +1,33 @@
 import EventDispatcher from "./EventDispatcher.js";
 import { Poll, Logger, sendBackgroundMessage, addBackgroundListener } from "./utils.js";
+import { Vector3, Quaternion, Euler } from "./three.module.min.js";
 
-/**
- * @typedef UKHeadphoneMotionData
- * @type {object}
- *
- */
+/** @typedef {"default" | "left headphone" | "right headphone" | "unknown"} UKHeadphoneMotionSensorLocation */
 
 /**
  * @typedef UKHeadphoneMotionRawData
  * @type {object}
  *
+ * @property {number} timestamp
+ * @property {UKHeadphoneMotionSensorLocation} sensorLocation
+ * @property {[number]} quaternion
+ * @property {[number]} userAcceleration
+ */
+
+/**
+ * @typedef UKHeadphoneMotionData
+ * @type {object}
+ *
+ * @property {number} timestamp
+ * @property {UKHeadphoneMotionSensorLocation} sensorLocation
+ * @property {Quaternion} quaternion
+ * @property {Vector3} userAcceleration
+ * @property {Euler} euler
+ *
  */
 
 class UKHeadphoneMotionManager {
-    logger = new Logger(true, this);
+    logger = new Logger(false, this);
     eventDispatcher = new EventDispatcher();
 
     static #shared = new UKHeadphoneMotionManager();
@@ -32,6 +45,11 @@ class UKHeadphoneMotionManager {
 
         window.addEventListener("load", () => {
             this.checkIsAvailable();
+        });
+        window.addEventListener("unload", () => {
+            if (this.#isActive) {
+                //this.stopMotionUpdates();
+            }
         });
     }
 
@@ -128,6 +146,18 @@ class UKHeadphoneMotionManager {
         await this.#sendBackgroundMessage({ type: "stopHeadphoneMotionUpdates" });
     }
 
+    async toggleMotionUpdates() {
+        if (!this.isAvailable) {
+            this.logger.log("not available");
+            return;
+        }
+        if (this.isActive) {
+            this.stopMotionUpdates();
+        } else {
+            this.startMotionUpdates();
+        }
+    }
+
     /** @type {UKHeadphoneMotionData} */
     #motionData;
     get motionData() {
@@ -137,21 +167,36 @@ class UKHeadphoneMotionManager {
     get #motionDataTimestamp() {
         return this.motionData?.timestamp || 0;
     }
-    /** @type {UKHeadphoneMotionRawData} */
+    /**
+     *
+     * @param {UKHeadphoneMotionRawData} rawMotionData
+     */
     #updateMotionData(rawMotionData) {
+        const {
+            timestamp,
+            sensorLocation,
+            quaternion: quaternionArray,
+            userAcceleration: userAccelerationArray,
+        } = rawMotionData;
+
         /** @type {UKHeadphoneMotionData} */
         const motionData = {
-            // FILL
+            timestamp,
+            sensorLocation,
+            quaternion: new Quaternion(...quaternionArray),
+            userAcceleration: new Vector3(...userAccelerationArray),
         };
+        motionData.euler = new Euler().setFromQuaternion(motionData.quaternion).reorder("YXZ");
         this.#motionData = motionData;
         this.logger.log("received headphone motion data", motionData);
+        this.eventDispatcher.dispatchEvent({ type: "motionData", message: { motionData } });
     }
 
     async checkMotionData() {
         this.logger.log("checkMotionData");
         await this.#sendBackgroundMessage({ type: "headphoneMotionData", timestamp: this.#motionDataTimestamp });
     }
-    #motionDataPoll = new Poll(this.checkMotionData.bind(this), 500);
+    #motionDataPoll = new Poll(this.checkMotionData.bind(this), 20);
 
     /**
      * @param {object} message
