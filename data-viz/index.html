@@ -17,7 +17,8 @@
 
             font-size: large;
         }
-        select {
+        select,
+        button {
             font-size: large;
         }
         #container {
@@ -235,6 +236,7 @@
                                 <option value="100">100ms</option>
                             </select>
                         </label>
+                        <button id="resetYaw">reset</button>
                     </li>
                     <li>
                         <label data-pressure-sensor-data-type="mass">
@@ -658,9 +660,21 @@
                 nameInput.value = missionDevice.name;
             }
 
+            const resetYawButton = document.getElementById("resetYaw");
+            var offsetEuler = new THREE.Euler(0, 0, 0, "YXZ");
+            var latestQuaternion;
+            var offsetQuaternion = new THREE.Quaternion();
+            resetYawButton.addEventListener("click", () => {
+                if (latestQuaternion) {
+                    offsetEuler.setFromQuaternion(latestQuaternion);
+                    offsetEuler.x = offsetEuler.z = 0;
+                    offsetQuaternion.setFromEuler(offsetEuler).invert();
+                }
+            });
             missionDevice.addEventListener("quaternion", (event) => {
                 const { quaternion } = event.message;
-                targetEntity.object3D.quaternion.copy(quaternion);
+                latestQuaternion = quaternion;
+                targetEntity.object3D.quaternion.multiplyQuaternions(offsetQuaternion, quaternion);
             });
             missionDevice.addEventListener("linearAcceleration", (event) => {
                 const { linearAcceleration } = event.message;
