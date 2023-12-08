@@ -115,7 +115,7 @@
                 </a-entity>
             </a-entity>
 
-            <a-sky color="lightgray"></a-sky>
+            <a-sky color="gray"></a-sky>
         </a-scene>
     </body>
 
@@ -227,7 +227,7 @@
                     break;
             }
             if (newPosition) {
-                targetEntity.object3D.position.copy(newPosition);
+                targetEntity.object3D.position.lerp(newPosition, 0.5);
             }
 
             var newOrientation;

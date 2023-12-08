@@ -28,7 +28,7 @@
 
         <a-scene
             device-orientation-permission-ui="enabled: false"
-            physics="gravity: -13;"
+            physics="gravity: -20;"
             vr-mode-ui="enabled: false"
             embedded
         >
@@ -94,7 +94,7 @@
                 await mission.setSensorDataConfigurations({
                     pressure: { pressureSingleByte: 40 },
                 });
-            }, 1000);
+            }, 300);
             mission.addEventListener("pressure", (event) => {
                 const { centerOfMass } = missions.pressure;
                 const { x, y } = centerOfMass;

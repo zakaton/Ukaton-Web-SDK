@@ -110,7 +110,7 @@
                 await mission.setSensorDataConfigurations({
                     pressure: { pressureSingleByte: 20 },
                 });
-            }, 1000);
+            }, 300);
 
             mission.addEventListener("pressure", (event) => {
                 const { centerOfMass } = missions.pressure;
